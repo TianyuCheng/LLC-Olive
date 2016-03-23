@@ -14,8 +14,11 @@ RESET=`tput sgr0`
 $(EXE): llc_olive.cpp
 	(cd $(TOOL_ROOT); make -j6)
 
-llc_olive.cpp:
-	@$(OLIVE) ./llc_olive.brg
+llc_olive.cpp: llc_olive.brg
+	@$(OLIVE) $<
+
+llc_olive.brg: llc_olive.py
+	./$<
 
 clean:
 	@rm -rf $(TEST_DIR)/*.bc

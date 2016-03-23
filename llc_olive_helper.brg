@@ -1,0 +1,11 @@
+
+%term BURP=0 ADDI=309 ADDRLP=295
+%declare<void> stmt<int indent>;
+%%
+stmt: BURP
+    { return 1; }
+    = {
+        std::cout<< "Hello World!" << std::endl;
+    };
+%%
+    

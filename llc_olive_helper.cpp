@@ -1,70 +1,7 @@
-%{
-#include <iostream>
-#include <fstream>
-#include <cassert>
-#include <vector>
-#include <map>
-
-#include <llvm/Support/CommandLine.h>
-#include <llvm/IR/Module.h>
-#include <llvm/IRReader/IRReader.h>
-#include <llvm/IR/LLVMContext.h>
-#include <llvm/Support/MemoryBuffer.h>
-#include <llvm/Support/raw_ostream.h>
-#include <llvm/Support/SourceMgr.h>
-
-#define PARSE_DEBUG 0
-
-typedef struct tree {
-	int op;
-	struct tree *kids[2];
-	int val;
-	struct { struct burm_state *state; } x;
-} *NODEPTR, *Tree;
-#define GET_KIDS(p)	((p)->kids)
-#define PANIC printf
-#define STATE_LABEL(p) ((p)->x.state)
-#define SET_STATE(p,s) (p)->x.state=(s)
-#define DEFAULT_COST	break
-#define NO_ACTION(x)
-
-typedef struct COST {
-    int cost;
-} COST;
-#define COST_LESS(a,b) ((a).cost < (b).cost)
-
-static COST COST_INFINITY = { 32767 };
-static COST COST_ZERO     = { 0 };
-
-/*static char* burm_string = "FOO";*/
-static int _ern = 0;
-
-static int shouldTrace = 0;
-static int shouldCover = 0;
-
-int OP_LABEL(NODEPTR p) {
-	switch (p->op) {
-	case CNSTI:  if (p->val == 0) return 661 /* I0I */;
-	default:     return p->op;
-	}
-}
-
-static void burm_trace(NODEPTR, int, COST);
-%}
-
-%term BURP=0 ADDI=309 ADDRLP=295
-%declare<void> stmt<int indent>;
-%%
-stmt: BURP
-    { return 1; }
-    = {
-        std::cout<< "Hello World!\n" << std::endl;
-    };
-%%
-
-
 /* burm_trace - print trace message for matching p */
 static void burm_trace(NODEPTR p, int eruleno, COST cost) {
+    if (shouldTrace)
+        std::cerr << "0x" << p << " matched " << burm_string[eruleno] << " = " << eruleno << " with cost " << cost.cost << "\n";
 }
 
 using namespace llvm;
@@ -111,7 +48,7 @@ void gen_expr_tree(std::string filename) {
 int main(int argc, char *argv[])
 {
     cl::ParseCommandLineOptions(argc, argv, "llc-olive\n");
-#if PARSE_DEBUG
+#if 0
     std::cout << "Input: " << InputFilename << std::endl;
     std::cout << "Output:" << OutputFilename << std::endl;
     std::cout << "num regs:" << NumRegs << std::endl;
