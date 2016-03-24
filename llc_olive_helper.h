@@ -76,4 +76,4 @@ int OP_LABEL(NODEPTR p) {
 static void burm_trace(NODEPTR, int, COST);
 
 
-enum { REG, IMM, MEM };
+enum { REG=900, IMM=901, MEM=902, DUMMY = 999 };

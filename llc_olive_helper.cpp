@@ -36,22 +36,72 @@ static cl::opt<int>
 NumRegs("num_regs", cl::desc("<number of registers available>"), cl::init(32));
 
 /**
+ * Wrapper for tree
+ * */
+class TreeReference
+{
+public:
+    TreeReference(int opcode, Tree l = nullptr, Tree r = nullptr): reference(0) {
+        t = tree(opcode, l, r);
+    }
+    virtual ~TreeReference() {
+        free(t);
+    }
+    void SetValue(VALUE v) {
+        t->val = v;
+    }
+    void SetChild(int n, Tree t) {
+        if (n < 2) {
+            t->kids[n] = t;
+        } else {
+            // TODO: IMPLEMENT A WAY TO STORE MORE THAN 2 CHILDREN
+            errs() << "SetChild for n=" << n << " is not implemented yet!\n";
+        }
+    }
+    Tree GetTreeReference() { reference++; return t; }
+    int GetRefCount() const { return reference; }
+
+private:
+    Tree t;
+    int reference;
+};
+
+/**
  * Generate expression trees for a function
  * */
 void FunctionToExprTrees(Function &func) {
     Function::BasicBlockListType &basic_blocks = func.getBasicBlockList();
-    std::map<Instruction*, Tree> tree_map;
+    std::map<Instruction*, TreeReference*> treeMap;
     for (BasicBlock &bb : basic_blocks) {
         for (auto inst = bb.begin(); inst != bb.end(); inst++) {
             Instruction &instruction = *inst;
-            instruction.print(errs()); errs() << "\n";
-            // Tree t = new tree;
-            // t->op = instruction.getOpcode();
-            // int num_operands = instruction.getNumOperands();
-            // for (int i = 0; i < num_operands; i++) {
-            //     Value *v = instruction.getOperand(i);
-            //     Instruction *def = dyn_cast<Instruction>(v);
-            // }
+#if 1
+            errs() << "OperandNum: " << instruction.getNumOperands() << "\t";
+            instruction.print(errs()); 
+            errs() << "\n";
+#endif
+            TreeReference t = TreeReference(instruction.getOpcode());
+            int num_operands = instruction.getNumOperands();
+            for (int i = 0; i < num_operands; i++) {
+                Value *v = instruction.getOperand(i);
+                // find the value's definition
+                Instruction *def = dyn_cast<Instruction>(v);
+                // // or the value is some constant
+                // Constant *const = dyn_cast<Constant>(v);
+
+                if (def) {
+                    auto it = treeMap.find(def);
+                    assert(it != treeMap.end() && "operands must be previously defined");
+                    t.SetChild(i, it->second->GetTreeReference());
+                    errs() << "FOUND DEF:\t"; it->first->print(errs()); errs() << "\n";
+                }
+                else  {
+                    // for example: alloca i32, ...
+                    errs() << "FAILED TO FIND DEF:\t"; instruction.print(errs()); errs() << "\n";
+                }
+            }
+            // store the current tree in map
+            treeMap.insert(std::pair<Instruction*, TreeReference*>(&instruction, &t));
         } // end of instruction loop
     } // end of basic block loop
 }
