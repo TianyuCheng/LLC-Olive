@@ -160,19 +160,6 @@ imm:   IMM(_) { return 1; } = { /* TODO: match imm here */ };
 mem:   MEM(_) { return 1; } = { /* TODO: match mem here */ };
     '''
     print >> f, gen_binary_rules(binary_ops)
-
-#     # print every instruction rule needed here
-#     print >> f, '''
-# stmt:  add { return 1; } = { };
-#
-# add:   ADD(ri, rim) 
-#     { return 1; }
-#     =
-#     {
-#         std::cerr << "matched ADD(ri, mri)" << std::endl;
-#     };
-# %%
-#     '''
     print >> f, "%%"
 
 #   ____                           _              
