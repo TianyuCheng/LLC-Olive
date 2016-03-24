@@ -11,11 +11,11 @@ RED  =`tput setaf 1`
 GREEN=`tput setaf 2`
 RESET=`tput sgr0`
 
-$(EXE): llc_olive.cpp
+$(EXE): llc_olive.cpp llc_olive.brg
 	(cd $(TOOL_ROOT); make -j6)
 
 llc_olive.cpp: llc_olive.brg
-	@$(OLIVE) $<
+	$(OLIVE) $<
 
 llc_olive.brg: llc_olive.py
 	./$<
@@ -24,6 +24,6 @@ clean:
 	@rm -rf $(TEST_DIR)/*.bc
 	@rm -rf $(TEST_DIR)/*.log
 	@rm -rf $(TEST_DIR)/.*.swp
-	@rm -rf ./llc_olive.h ./llc_olive.cpp
+	@rm -rf ./llc_olive.h ./llc_olive.cpp ./llc_olive.brg
 
 .PHONY: compile tar test run push clean

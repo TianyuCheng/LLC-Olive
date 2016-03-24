@@ -10,6 +10,7 @@
 #include <llvm/Support/MemoryBuffer.h>
 #include <llvm/Support/raw_ostream.h>
 #include <llvm/Support/SourceMgr.h>
+#include <llvm/IR/Instruction.h>
 
 typedef struct tree {
 	int op;
@@ -45,3 +46,9 @@ int OP_LABEL(NODEPTR p) {
 }
 
 static void burm_trace(NODEPTR, int, COST);
+
+
+enum {
+    REG, IMM, MEM,
+    ADD, SUB, MUL, DIV
+};

@@ -45,6 +45,25 @@ void gen_expr_tree(std::string filename) {
 }
 #endif
 
+static Tree tree(int op, Tree l, Tree r) {
+	Tree t = (Tree) malloc(sizeof *t);
+	t->op = op;
+	t->kids[0] = l; t->kids[1] = r;
+	t->val = 0;
+	t->x.state = 0;
+	return t;
+}
+
+static void gen(NODEPTR p) {
+	if (burm_label(p) == 0)
+		std::cerr << "no cover\n";
+	else {
+		stmt_action(p->x.state,0);
+		if (shouldCover != 0)
+			dumpCover(p, 1, 0);
+	}
+}
+
 int main(int argc, char *argv[])
 {
     cl::ParseCommandLineOptions(argc, argv, "llc-olive\n");
@@ -53,5 +72,11 @@ int main(int argc, char *argv[])
     std::cout << "Output:" << OutputFilename << std::endl;
     std::cout << "num regs:" << NumRegs << std::endl;
 #endif
+    // Tree t;
+    // t = tree(ADD, 
+    //         (t = tree(REG, nullptr, nullptr), t->val = 1, t), 
+    //         (t = tree(IMM, nullptr, nullptr), t->val = 2, t)
+    //     );
+    // gen(t);
     return 0;
 }

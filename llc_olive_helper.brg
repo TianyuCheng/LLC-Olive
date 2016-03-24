@@ -1,11 +1,76 @@
+%term REG IMM MEM
+%term CatchSwitch=10 CatchRet=9 Unreachable=7 Ret=1 Invoke=5 CleanupRet=8 Switch=3 Br=2 Resume=6 IndirectBr=4
+%term FRem=22 FAdd=12 FSub=14 Add=11 UDiv=17 FDiv=19 Sub=13 SRem=21 Mul=15 URem=20 FMul=16 SDiv=18
+%term AShr=25 LShr=24 Or=27 Xor=28 And=26 Shl=23
+%term Load=30 Fence=33 GetElementPtr=32 AtomicRMW=35 Alloca=29 Store=31 AtomicCmpXchg=34
+%term FPExt=44 FPToUI=39 ZExt=37 FPToSI=40 AddrSpaceCast=48 SIToFP=42 UIToFP=41 IntToPtr=46 BitCast=47 SExt=38 PtrToInt=45 FPTrunc=43 Trunc=36
+%term CleanupPad=49 CatchPad=50
+%term VAArg=58 ShuffleVector=61 Call=54 PHI=53 LandingPad=64 UserOp2=57 UserOp1=56 ICmp=51 FCmp=52 Select=55 InsertElement=60 ExtractElement=59 InsertValue=63 ExtractValue=62
 
-%term BURP=0 ADDI=309 ADDRLP=295
 %declare<void> stmt<int indent>;
-%%
-stmt: BURP
-    { return 1; }
-    = {
-        std::cout<< "Hello World!" << std::endl;
-    };
-%%
+%declare<void> rim<int indent>;
+%declare<void> ri<int indent>;
+%declare<void> reg<int indent>;
+%declare<void> imm<int indent>;
+%declare<void> mem<int indent>;
     
+%declare<void> frem<int indent>;
+%declare<void> fadd<int indent>;
+%declare<void> fsub<int indent>;
+%declare<void> add<int indent>;
+%declare<void> udiv<int indent>;
+%declare<void> fdiv<int indent>;
+%declare<void> sub<int indent>;
+%declare<void> srem<int indent>;
+%declare<void> mul<int indent>;
+%declare<void> urem<int indent>;
+%declare<void> fmul<int indent>;
+%declare<void> sdiv<int indent>;
+%%
+
+rim:   reg    { return 1; } = { /* TODO: match reg here */ };
+rim:   imm    { return 1; } = { /* TODO: match imm here */ };
+rim:   mem    { return 1; } = { /* TODO: match mem here */ };
+ri:    reg    { return 1; } = { /* TODO: match reg here */ };
+ri:    imm    { return 1; } = { /* TODO: match imm here */ };
+reg:   REG(_) { return 1; } = { /* TODO: match reg here */ };
+imm:   IMM(_) { return 1; } = { /* TODO: match imm here */ };
+mem:   MEM(_) { return 1; } = { /* TODO: match mem here */ };
+    
+stmt:	frem { return 1; } = { };
+frem:	FRem(ri, rim) { return 1; } = { };
+
+stmt:	fadd { return 1; } = { };
+fadd:	FAdd(ri, rim) { return 1; } = { };
+
+stmt:	fsub { return 1; } = { };
+fsub:	FSub(ri, rim) { return 1; } = { };
+
+stmt:	add { return 1; } = { };
+add:	Add(ri, rim) { return 1; } = { };
+
+stmt:	udiv { return 1; } = { };
+udiv:	UDiv(ri, rim) { return 1; } = { };
+
+stmt:	fdiv { return 1; } = { };
+fdiv:	FDiv(ri, rim) { return 1; } = { };
+
+stmt:	sub { return 1; } = { };
+sub:	Sub(ri, rim) { return 1; } = { };
+
+stmt:	srem { return 1; } = { };
+srem:	SRem(ri, rim) { return 1; } = { };
+
+stmt:	mul { return 1; } = { };
+mul:	Mul(ri, rim) { return 1; } = { };
+
+stmt:	urem { return 1; } = { };
+urem:	URem(ri, rim) { return 1; } = { };
+
+stmt:	fmul { return 1; } = { };
+fmul:	FMul(ri, rim) { return 1; } = { };
+
+stmt:	sdiv { return 1; } = { };
+sdiv:	SDiv(ri, rim) { return 1; } = { };
+
+%%
