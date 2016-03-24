@@ -11,6 +11,10 @@ RED  =`tput setaf 1`
 GREEN=`tput setaf 2`
 RESET=`tput sgr0`
 
+run: $(EXE)
+	@echo "=================================================================="
+	$(EXE) --num_regs=32 ./testcases/simpleSum.bc -o ./testcases/simpleSum.s
+
 $(EXE): llc_olive.cpp llc_olive.brg
 	(cd $(TOOL_ROOT); make -j6) ; rm llc_olive.brg
 
@@ -19,6 +23,15 @@ llc_olive.cpp: llc_olive.brg
 
 llc_olive.brg: llc_olive.py
 	./$<
+
+tests:=$(patsubst %.c,%.s,$(wildcard $(TEST_DIR)/*.c))
+test: clean $(EXE) $(tests)
+
+%.s: %.bc
+	$(EXE) --num_regs=32 $< -o $@
+
+%.bc: %.c
+	@$(CC) -O0 -emit-llvm $< -S -o $@
 
 clean:
 	@rm -rf $(TEST_DIR)/*.bc

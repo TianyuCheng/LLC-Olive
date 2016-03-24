@@ -35,52 +35,42 @@ OutputFilename("o", cl::desc("<output filename>"), cl::value_desc("filename"));
 static cl::opt<int>
 NumRegs("num_regs", cl::desc("<number of registers available>"), cl::init(32));
 
-#if 0
 /**
- * Generate an expression tree from
- * a bitcode file
+ * Generate expression trees for a function
  * */
-void gen_expr_tree(std::string filename) {
-    LLVMContext context;
-    SMDiagnostic error;
-    std::unique_ptr<Module> module = parseIRFile(StringRef(filename.c_str()), error, context);
-    Module::FunctionListType &function_list = module->getFunctionList();
-
-    for (Function &func : function_list) {
-        Function::BasicBlockListType &basic_blocks = func.getBasicBlockList();
-        std::map<Instruction*, Tree> tree_map;
-        for (BasicBlock &bb : basic_blocks) {
-            for (auto inst = bb.begin(); inst != bb.end(); inst++) {
-                // Instruction &instruction = *inst;
-                // Tree t = new tree;
-                // t->op = instruction.getOpcode();
-                // int num_operands = instruction.getNumOperands();
-                // for (int i = 0; i < num_operands; i++) {
-                //     Value *v = instruction.getOperand(i);
-                //     Instruction *def = dyn_cast<Instruction>(v);
-                // }
-            } // end of instruction loop
-        } // end of basic block loop
-    } // end of function loop
+void FunctionToExprTrees(Function &func) {
+    Function::BasicBlockListType &basic_blocks = func.getBasicBlockList();
+    std::map<Instruction*, Tree> tree_map;
+    for (BasicBlock &bb : basic_blocks) {
+        for (auto inst = bb.begin(); inst != bb.end(); inst++) {
+            Instruction &instruction = *inst;
+            instruction.print(errs()); errs() << "\n";
+            // Tree t = new tree;
+            // t->op = instruction.getOpcode();
+            // int num_operands = instruction.getNumOperands();
+            // for (int i = 0; i < num_operands; i++) {
+            //     Value *v = instruction.getOperand(i);
+            //     Instruction *def = dyn_cast<Instruction>(v);
+            // }
+        } // end of instruction loop
+    } // end of basic block loop
 }
-#endif
 
 int main(int argc, char *argv[])
 {
+    // parse arguments from command line
     cl::ParseCommandLineOptions(argc, argv, "llc-olive\n");
-#if 0
-    std::cout << "Input: " << InputFilename << std::endl;
-    std::cout << "Output:" << OutputFilename << std::endl;
-    std::cout << "num regs:" << NumRegs << std::endl;
-#endif
 
-#if 0
-    Tree t;
-    t = tree(Add, 
-            tree(REG, nullptr, nullptr, 1), 
-            tree(IMM, nullptr, nullptr, 1)
-        );
-    gen(t);
-#endif
+    // prepare llvm context to read bitcode file
+    LLVMContext context;
+    SMDiagnostic error;
+    std::unique_ptr<Module> module = parseIRFile(StringRef(InputFilename.c_str()), error, context);
+
+    // obtain a function list in module, and iterate over function
+    Module::FunctionListType &function_list = module->getFunctionList();
+    for (Function &func : function_list) {
+        FunctionToExprTrees(func);
+    }
+
     return 0;
 }
