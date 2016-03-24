@@ -1,0 +1,7 @@
+enum { CatchSwitch=10, CatchRet=9, Unreachable=7, Ret=1, Invoke=5, CleanupRet=8, Switch=3, Br=2, Resume=6, IndirectBr=4 };
+enum { FRem=22, FAdd=12, FSub=14, Add=11, UDiv=17, FDiv=19, Sub=13, SRem=21, Mul=15, URem=20, FMul=16, SDiv=18 };
+enum { AShr=25, LShr=24, Or=27, Xor=28, And=26, Shl=23 };
+enum { Load=30, Fence=33, GetElementPtr=32, AtomicRMW=35, Alloca=29, Store=31, AtomicCmpXchg=34 };
+enum { FPExt=44, FPToUI=39, ZExt=37, FPToSI=40, AddrSpaceCast=48, SIToFP=42, UIToFP=41, IntToPtr=46, BitCast=47, SExt=38, PtrToInt=45, FPTrunc=43, Trunc=36 };
+enum { CleanupPad=49, CatchPad=50 };
+enum { VAArg=58, ShuffleVector=61, Call=54, PHI=53, LandingPad=64, UserOp2=57, UserOp1=56, ICmp=51, FCmp=52, Select=55, InsertElement=60, ExtractElement=59, InsertValue=63, ExtractValue=62 };

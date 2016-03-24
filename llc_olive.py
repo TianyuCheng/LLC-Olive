@@ -95,6 +95,9 @@ cast_ops = map(lambda (x, y): (x, y.strip()), cast_ops)
 first_funclepad_ops = map(lambda (x, y): (x, y.strip()), first_funclepad_ops)
 other_ops = map(lambda (x, y): (x, y.strip()), other_ops)
 
+def gen_enums(ops):
+    return "enum { " + ', '.join(map(lambda (num, name): "%s=%d" % (name, num), ops)) + " };"
+
 def gen_terms(ops):
     return  '%term ' + ' '.join(map(lambda (num, name): "%s=%d" % (name, num), ops))
 
@@ -162,6 +165,22 @@ mem:   MEM(_) { return 1; } = { /* TODO: match mem here */ };
     print >> f, gen_binary_rules(binary_ops)
     print >> f, "%%"
 
+
+#  _____                            
+# | ____|_ __  _   _ _ __ ___  ___  
+# |  _| | '_ \| | | | '_ ` _ \/ __| 
+# | |___| | | | |_| | | | | | \__ \ 
+# |_____|_| |_|\__,_|_| |_| |_|___/ 
+#                                   
+with open("./llc_olive_helper.enums", "w") as f:
+    print >> f, gen_enums(term_ops)
+    print >> f, gen_enums(binary_ops)
+    print >> f, gen_enums(logical_ops)
+    print >> f, gen_enums(memory_ops)
+    print >> f, gen_enums(cast_ops)
+    print >> f, gen_enums(first_funclepad_ops)
+    print >> f, gen_enums(other_ops)
+
 #   ____                           _              
 #  / ___| ___ _ __   ___ _ __ __ _| |_ ___  _ __  
 # | |  _ / _ \ '_ \ / _ \ '__/ _` | __/ _ \| '__| 
@@ -170,18 +189,22 @@ mem:   MEM(_) { return 1; } = { /* TODO: match mem here */ };
 #                                                 
 with open("./llc_olive.brg", "w") as f:
     include = file("./llc_olive_helper.h", "r")
+    enums   = file("./llc_olive_helper.enums", "r")
     grammar = file("./llc_olive_helper.brg", "r")
     implemt = file("./llc_olive_helper.cpp", "r")
 
     # combine and write out
     print >> f, """%%{
 %s
+
+%s
 %%}
 %s
 
-%s """ % (include.read(), grammar.read(), implemt.read())
+%s """ % (include.read(), enums.read(), grammar.read(), implemt.read())
 
     # close file handles
     include.close()
+    enums.close()
     grammar.close()
     implemt.close()

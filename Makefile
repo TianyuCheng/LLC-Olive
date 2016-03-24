@@ -12,7 +12,7 @@ GREEN=`tput setaf 2`
 RESET=`tput sgr0`
 
 $(EXE): llc_olive.cpp llc_olive.brg
-	(cd $(TOOL_ROOT); make -j6)
+	(cd $(TOOL_ROOT); make -j6) ; rm llc_olive.brg
 
 llc_olive.cpp: llc_olive.brg
 	$(OLIVE) $<
