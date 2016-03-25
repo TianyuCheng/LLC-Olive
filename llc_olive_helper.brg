@@ -1,11 +1,11 @@
-%term REG IMM MEM
-%term CatchSwitch=10 CatchRet=9 Unreachable=7 Ret=1 Invoke=5 CleanupRet=8 Switch=3 Br=2 Resume=6 IndirectBr=4
-%term FRem=22 FAdd=12 FSub=14 Add=11 UDiv=17 FDiv=19 Sub=13 SRem=21 Mul=15 URem=20 FMul=16 SDiv=18
-%term AShr=25 LShr=24 Or=27 Xor=28 And=26 Shl=23
-%term Load=30 Fence=33 GetElementPtr=32 AtomicRMW=35 Alloca=29 Store=31 AtomicCmpXchg=34
-%term FPExt=44 FPToUI=39 ZExt=37 FPToSI=40 AddrSpaceCast=48 SIToFP=42 UIToFP=41 IntToPtr=46 BitCast=47 SExt=38 PtrToInt=45 FPTrunc=43 Trunc=36
+%term Ret=1 Br=2 Switch=3 IndirectBr=4 Invoke=5 Resume=6 Unreachable=7 CleanupRet=8 CatchRet=9 CatchSwitch=10
+%term Add=11 FAdd=12 Sub=13 FSub=14 Mul=15 FMul=16 UDiv=17 SDiv=18 FDiv=19 URem=20 SRem=21 FRem=22
+%term Shl=23 LShr=24 AShr=25 And=26 Or=27 Xor=28
+%term Alloca=29 Load=30 Store=31 GetElementPtr=32 Fence=33 AtomicCmpXchg=34 AtomicRMW=35
+%term Trunc=36 ZExt=37 SExt=38 FPToUI=39 FPToSI=40 UIToFP=41 SIToFP=42 FPTrunc=43 FPExt=44 PtrToInt=45 IntToPtr=46 BitCast=47 AddrSpaceCast=48
 %term CleanupPad=49 CatchPad=50
-%term VAArg=58 ShuffleVector=61 Call=54 PHI=53 LandingPad=64 UserOp2=57 UserOp1=56 ICmp=51 FCmp=52 Select=55 InsertElement=60 ExtractElement=59 InsertValue=63 ExtractValue=62
+%term ICmp=51 FCmp=52 PHI=53 Call=54 Select=55 UserOp1=56 UserOp2=57 VAArg=58 ExtractElement=59 InsertElement=60 ShuffleVector=61 ExtractValue=62 InsertValue=63 LandingPad=64
+%term REG IMM MEM
 
 %declare<void> stmt<int indent>;
 %declare<void> rim<int indent>;
@@ -14,63 +14,133 @@
 %declare<void> imm<int indent>;
 %declare<void> mem<int indent>;
     
-%declare<void> frem<int indent>;
-%declare<void> fadd<int indent>;
-%declare<void> fsub<int indent>;
+%declare<void> ret<int indent>;
+%declare<void> br<int indent>;
+%declare<void> switch<int indent>;
+%declare<void> indirectbr<int indent>;
+%declare<void> invoke<int indent>;
+%declare<void> resume<int indent>;
+%declare<void> unreachable<int indent>;
+%declare<void> cleanupret<int indent>;
+%declare<void> catchret<int indent>;
+%declare<void> catchswitch<int indent>;
 %declare<void> add<int indent>;
-%declare<void> udiv<int indent>;
-%declare<void> fdiv<int indent>;
+%declare<void> fadd<int indent>;
 %declare<void> sub<int indent>;
-%declare<void> srem<int indent>;
+%declare<void> fsub<int indent>;
 %declare<void> mul<int indent>;
-%declare<void> urem<int indent>;
 %declare<void> fmul<int indent>;
+%declare<void> udiv<int indent>;
 %declare<void> sdiv<int indent>;
+%declare<void> fdiv<int indent>;
+%declare<void> urem<int indent>;
+%declare<void> srem<int indent>;
+%declare<void> frem<int indent>;
+%declare<void> alloca<int indent>;
+%declare<void> load<int indent>;
+%declare<void> store<int indent>;
+%declare<void> getelementptr<int indent>;
+%declare<void> fence<int indent>;
+%declare<void> atomiccmpxchg<int indent>;
+%declare<void> atomicrmw<int indent>;
 %%
 
+ri:    stmt   { return 1; } = { /* TODO: match reg here */ };
+rim:   stmt   { return 1; } = { /* TODO: match reg here */ };
 rim:   reg    { return 1; } = { /* TODO: match reg here */ };
 rim:   imm    { return 1; } = { /* TODO: match imm here */ };
 rim:   mem    { return 1; } = { /* TODO: match mem here */ };
 ri:    reg    { return 1; } = { /* TODO: match reg here */ };
 ri:    imm    { return 1; } = { /* TODO: match imm here */ };
-reg:   REG(_) { return 1; } = { /* TODO: match reg here */ };
-imm:   IMM(_) { return 1; } = { /* TODO: match imm here */ };
-mem:   MEM(_) { return 1; } = { /* TODO: match mem here */ };
+reg:   REG    { return 1; } = { /* TODO: match reg here */ };
+imm:   IMM    { return 1; } = { /* TODO: match imm here */ };
+mem:   MEM    { return 1; } = { /* TODO: match mem here */ };
     
-stmt:	frem { return 1; } = { };
-frem:	FRem(ri, rim) { return 1; } = { };
+stmt:	ret { return 1; } = { };
+ret:	Ret(ri) { return 1; } = { };
 
-stmt:	fadd { return 1; } = { };
-fadd:	FAdd(ri, rim) { return 1; } = { };
+stmt:	br { return 1; } = { };
+br:	Br(ri) { return 1; } = { };
 
-stmt:	fsub { return 1; } = { };
-fsub:	FSub(ri, rim) { return 1; } = { };
+stmt:	switch { return 1; } = { };
+switch:	Switch(ri) { return 1; } = { };
+
+stmt:	indirectbr { return 1; } = { };
+indirectbr:	IndirectBr(ri) { return 1; } = { };
+
+stmt:	invoke { return 1; } = { };
+invoke:	Invoke(ri) { return 1; } = { };
+
+stmt:	resume { return 1; } = { };
+resume:	Resume(ri) { return 1; } = { };
+
+stmt:	unreachable { return 1; } = { };
+unreachable:	Unreachable(ri) { return 1; } = { };
+
+stmt:	cleanupret { return 1; } = { };
+cleanupret:	CleanupRet(ri) { return 1; } = { };
+
+stmt:	catchret { return 1; } = { };
+catchret:	CatchRet(ri) { return 1; } = { };
+
+stmt:	catchswitch { return 1; } = { };
+catchswitch:	CatchSwitch(ri) { return 1; } = { };
 
 stmt:	add { return 1; } = { };
-add:	Add(ri, rim) { return 1; } = { };
+add:	Add(rim, ri) { return 1; } = { };
 
-stmt:	udiv { return 1; } = { };
-udiv:	UDiv(ri, rim) { return 1; } = { };
-
-stmt:	fdiv { return 1; } = { };
-fdiv:	FDiv(ri, rim) { return 1; } = { };
+stmt:	fadd { return 1; } = { };
+fadd:	FAdd(rim, ri) { return 1; } = { };
 
 stmt:	sub { return 1; } = { };
-sub:	Sub(ri, rim) { return 1; } = { };
+sub:	Sub(rim, ri) { return 1; } = { };
 
-stmt:	srem { return 1; } = { };
-srem:	SRem(ri, rim) { return 1; } = { };
+stmt:	fsub { return 1; } = { };
+fsub:	FSub(rim, ri) { return 1; } = { };
 
 stmt:	mul { return 1; } = { };
-mul:	Mul(ri, rim) { return 1; } = { };
-
-stmt:	urem { return 1; } = { };
-urem:	URem(ri, rim) { return 1; } = { };
+mul:	Mul(rim, ri) { return 1; } = { };
 
 stmt:	fmul { return 1; } = { };
-fmul:	FMul(ri, rim) { return 1; } = { };
+fmul:	FMul(rim, ri) { return 1; } = { };
+
+stmt:	udiv { return 1; } = { };
+udiv:	UDiv(rim, ri) { return 1; } = { };
 
 stmt:	sdiv { return 1; } = { };
-sdiv:	SDiv(ri, rim) { return 1; } = { };
+sdiv:	SDiv(rim, ri) { return 1; } = { };
+
+stmt:	fdiv { return 1; } = { };
+fdiv:	FDiv(rim, ri) { return 1; } = { };
+
+stmt:	urem { return 1; } = { };
+urem:	URem(rim, ri) { return 1; } = { };
+
+stmt:	srem { return 1; } = { };
+srem:	SRem(rim, ri) { return 1; } = { };
+
+stmt:	frem { return 1; } = { };
+frem:	FRem(rim, ri) { return 1; } = { };
+
+stmt:	alloca { return 1; } = { };
+alloca:	Alloca(ri) { return 1; } = { };
+
+stmt:	load { return 1; } = { };
+load:	Load(ri) { return 1; } = { };
+
+stmt:	store { return 1; } = { };
+store:	Store(rim, ri) { return 1; } = { };
+
+stmt:	getelementptr { return 1; } = { };
+getelementptr:	GetElementPtr(rim, ri) { return 1; } = { };
+
+stmt:	fence { return 1; } = { };
+fence:	Fence(rim, ri) { return 1; } = { };
+
+stmt:	atomiccmpxchg { return 1; } = { };
+atomiccmpxchg:	AtomicCmpXchg(rim, ri) { return 1; } = { };
+
+stmt:	atomicrmw { return 1; } = { };
+atomicrmw:	AtomicRMW(rim, ri) { return 1; } = { };
 
 %%

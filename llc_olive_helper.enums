@@ -1,7 +1,8 @@
-enum { CatchSwitch=10, CatchRet=9, Unreachable=7, Ret=1, Invoke=5, CleanupRet=8, Switch=3, Br=2, Resume=6, IndirectBr=4 };
-enum { FRem=22, FAdd=12, FSub=14, Add=11, UDiv=17, FDiv=19, Sub=13, SRem=21, Mul=15, URem=20, FMul=16, SDiv=18 };
-enum { AShr=25, LShr=24, Or=27, Xor=28, And=26, Shl=23 };
-enum { Load=30, Fence=33, GetElementPtr=32, AtomicRMW=35, Alloca=29, Store=31, AtomicCmpXchg=34 };
-enum { FPExt=44, FPToUI=39, ZExt=37, FPToSI=40, AddrSpaceCast=48, SIToFP=42, UIToFP=41, IntToPtr=46, BitCast=47, SExt=38, PtrToInt=45, FPTrunc=43, Trunc=36 };
+enum { Ret=1, Br=2, Switch=3, IndirectBr=4, Invoke=5, Resume=6, Unreachable=7, CleanupRet=8, CatchRet=9, CatchSwitch=10 };
+enum { Add=11, FAdd=12, Sub=13, FSub=14, Mul=15, FMul=16, UDiv=17, SDiv=18, FDiv=19, URem=20, SRem=21, FRem=22 };
+enum { Shl=23, LShr=24, AShr=25, And=26, Or=27, Xor=28 };
+enum { Alloca=29, Load=30, Store=31, GetElementPtr=32, Fence=33, AtomicCmpXchg=34, AtomicRMW=35 };
+enum { Trunc=36, ZExt=37, SExt=38, FPToUI=39, FPToSI=40, UIToFP=41, SIToFP=42, FPTrunc=43, FPExt=44, PtrToInt=45, IntToPtr=46, BitCast=47, AddrSpaceCast=48 };
 enum { CleanupPad=49, CatchPad=50 };
-enum { VAArg=58, ShuffleVector=61, Call=54, PHI=53, LandingPad=64, UserOp2=57, UserOp1=56, ICmp=51, FCmp=52, Select=55, InsertElement=60, ExtractElement=59, InsertValue=63, ExtractValue=62 };
+enum { ICmp=51, FCmp=52, PHI=53, Call=54, Select=55, UserOp1=56, UserOp2=57, VAArg=58, ExtractElement=59, InsertElement=60, ShuffleVector=61, ExtractValue=62, InsertValue=63, LandingPad=64 };
+enum { REG=65, IMM=66, MEM=67, DUMMY=68 };

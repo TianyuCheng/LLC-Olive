@@ -11,6 +11,7 @@
 #include <llvm/Support/raw_ostream.h>
 #include <llvm/Support/SourceMgr.h>
 #include <llvm/IR/Instruction.h>
+#include <llvm/IR/Constants.h>
 
 typedef struct VALUE {
     union {
@@ -44,6 +45,8 @@ typedef struct tree {
 	int op;
 	struct tree *kids[2];
 	VALUE val;
+    int level;
+    int refcnt;
 	struct { struct burm_state *state; } x;
 } *NODEPTR, *Tree;
 
@@ -69,11 +72,8 @@ static int shouldCover = 1;
 
 int OP_LABEL(NODEPTR p) {
 	switch (p->op) {
-	default:     return p->op;
+	default:     return p->op - 1;      // -1 for offset in array
 	}
 }
 
 static void burm_trace(NODEPTR, int, COST);
-
-
-enum { REG=900, IMM=901, MEM=902, DUMMY = 999 };

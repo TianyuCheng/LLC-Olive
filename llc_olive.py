@@ -87,13 +87,13 @@ other_ops = {
 }
 
 # clean up spacing
-term_ops = map(lambda (x, y): (x, y.strip()), term_ops)
-binary_ops = map(lambda (x, y): (x, y.strip()), binary_ops)
-logical_ops = map(lambda (x, y): (x, y.strip()), logical_ops)
-memory_ops = map(lambda (x, y): (x, y.strip()), memory_ops)
-cast_ops = map(lambda (x, y): (x, y.strip()), cast_ops)
-first_funclepad_ops = map(lambda (x, y): (x, y.strip()), first_funclepad_ops)
-other_ops = map(lambda (x, y): (x, y.strip()), other_ops)
+term_ops            = sorted(map(lambda (x, y): (x, y.strip()), term_ops), key=lambda (x, _): x)
+binary_ops          = sorted(map(lambda (x, y): (x, y.strip()), binary_ops), key=lambda (x, _): x)
+logical_ops         = sorted(map(lambda (x, y): (x, y.strip()), logical_ops), key=lambda (x, _): x)
+memory_ops          = sorted(map(lambda (x, y): (x, y.strip()), memory_ops), key=lambda (x, _): x)
+cast_ops            = sorted(map(lambda (x, y): (x, y.strip()), cast_ops), key=lambda (x, _): x)
+first_funclepad_ops = sorted(map(lambda (x, y): (x, y.strip()), first_funclepad_ops), key=lambda (x, _): x)
+other_ops           = sorted(map(lambda (x, y): (x, y.strip()), other_ops), key=lambda (x, _): x)
 
 def gen_enums(ops):
     return "enum { " + ', '.join(map(lambda (num, name): "%s=%d" % (name, num), ops)) + " };"
@@ -108,7 +108,32 @@ def gen_binary_rules(ops):
     ret = []
     for _, op in ops:
         s1 = """stmt:\t%s { return 1; } = { };""" % (op.lower())
-        s2 = """%s:\t%s(ri, rim) { return 1; } = { };""" % (op.lower(), op)
+        s2 = """%s:\t%s(rim, ri) { return 1; } = { };""" % (op.lower(), op)
+        ret.append(s1)
+        ret.append(s2)
+        ret.append("")
+    return '\n'.join(ret)
+
+def gen_memory_rules(ops):
+    ret = []
+    for _, op in ops:
+        s1 = """stmt:\t%s { return 1; } = { };""" % (op.lower())
+        if op == "Load":
+            s2 = """%s:\t%s(ri) { return 1; } = { };""" % (op.lower(), op)
+        elif op == "Alloca":
+            s2 = """%s:\t%s(ri) { return 1; } = { };""" % (op.lower(), op)
+        else:
+            s2 = """%s:\t%s(rim, ri) { return 1; } = { };""" % (op.lower(), op)
+        ret.append(s1)
+        ret.append(s2)
+        ret.append("")
+    return '\n'.join(ret)
+
+def gen_term_rules(ops):
+    ret = []
+    for _, op in ops:
+        s1 = """stmt:\t%s { return 1; } = { };""" % (op.lower())
+        s2 = """%s:\t%s(ri) { return 1; } = { };""" % (op.lower(), op)
         ret.append(s1)
         ret.append(s2)
         ret.append("")
@@ -122,8 +147,6 @@ def gen_binary_rules(ops):
 #                                                  
 with open("./llc_olive_helper.brg", "w") as f:
     # generate all terminals here
-    print >> f, "%term REG IMM MEM"
-    # print every instruction needed here
     print >> f, gen_terms(term_ops)
     print >> f, gen_terms(binary_ops)
     print >> f, gen_terms(logical_ops)
@@ -131,6 +154,7 @@ with open("./llc_olive_helper.brg", "w") as f:
     print >> f, gen_terms(cast_ops)
     print >> f, gen_terms(first_funclepad_ops)
     print >> f, gen_terms(other_ops)
+    print >> f, "%term REG IMM MEM"
 
     # generate all non-terminals here
     print >> f, '''
@@ -142,10 +166,10 @@ with open("./llc_olive_helper.brg", "w") as f:
 %declare<void> mem<int indent>;
     '''
     # print every instruction needed here
-    # print >> f, gen_nonterms(term_ops)
+    print >> f, gen_nonterms(term_ops)
     print >> f, gen_nonterms(binary_ops)
     # print >> f, gen_nonterms(logical_ops)
-    # print >> f, gen_nonterms(memory_ops)
+    print >> f, gen_nonterms(memory_ops)
     # print >> f, gen_nonterms(cast_ops)
     # print >> f, gen_nonterms(first_funclepad_ops)
     # print >> f, gen_nonterms(other_ops)
@@ -153,16 +177,20 @@ with open("./llc_olive_helper.brg", "w") as f:
 
     # generate all rules here
     print >> f, '''
+ri:    stmt   { return 1; } = { /* TODO: match reg here */ };
+rim:   stmt   { return 1; } = { /* TODO: match reg here */ };
 rim:   reg    { return 1; } = { /* TODO: match reg here */ };
 rim:   imm    { return 1; } = { /* TODO: match imm here */ };
 rim:   mem    { return 1; } = { /* TODO: match mem here */ };
 ri:    reg    { return 1; } = { /* TODO: match reg here */ };
 ri:    imm    { return 1; } = { /* TODO: match imm here */ };
-reg:   REG(_) { return 1; } = { /* TODO: match reg here */ };
-imm:   IMM(_) { return 1; } = { /* TODO: match imm here */ };
-mem:   MEM(_) { return 1; } = { /* TODO: match mem here */ };
+reg:   REG    { return 1; } = { /* TODO: match reg here */ };
+imm:   IMM    { return 1; } = { /* TODO: match imm here */ };
+mem:   MEM    { return 1; } = { /* TODO: match mem here */ };
     '''
+    print >> f, gen_term_rules(term_ops)
     print >> f, gen_binary_rules(binary_ops)
+    print >> f, gen_memory_rules(memory_ops)
     print >> f, "%%"
 
 
@@ -180,6 +208,7 @@ with open("./llc_olive_helper.enums", "w") as f:
     print >> f, gen_enums(cast_ops)
     print >> f, gen_enums(first_funclepad_ops)
     print >> f, gen_enums(other_ops)
+    print >> f, "enum { REG=65, IMM=66, MEM=67, DUMMY=68 };"
 
 #   ____                           _              
 #  / ___| ___ _ __   ___ _ __ __ _| |_ ___  _ __  
