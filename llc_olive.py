@@ -105,8 +105,14 @@ def gen_nonterms(ops):
     return '\n'.join(map(lambda (_, name): "%%declare<void> %s<int indent>;" % name.lower(), ops))
 
 def gen_binary_rules(ops):
+    op_costs = {
+        "Add": 1, "FAdd": 5, "Sub": 1, "FSub": 5, "Mul": 2, "FMul": 10,
+        "UDiv": 4, "SDiv": 4, "FDiv": 20, "URem": 6, "SRem": 6, "FRem": 30
+    }
     ret = []
     for _, op in ops:
+        # s1 = """stmt:\t%s { $cost[0].cost = $cost[1].cost; } = { };""" % (op.lower())
+        # s2 = """%s:\t%s(rim, ri) { $cost[0].cost = $cost[2].cost + $cost[3].cost + %d; } = { };""" % (op.lower(), op, op_costs[op])
         s1 = """stmt:\t%s { return 1; } = { };""" % (op.lower())
         s2 = """%s:\t%s(rim, ri) { return 1; } = { };""" % (op.lower(), op)
         ret.append(s1)
@@ -117,13 +123,13 @@ def gen_binary_rules(ops):
 def gen_memory_rules(ops):
     ret = []
     for _, op in ops:
-        s1 = """stmt:\t%s { return 1; } = { };""" % (op.lower())
+        s1 = """stmt:\t%s { $cost[0].cost = $cost[1].cost; } = { };""" % (op.lower())
         if op == "Load":
-            s2 = """%s:\t%s(ri) { return 1; } = { };""" % (op.lower(), op)
+            s2 = """%s:\t%s(ri) { $cost[0].cost = $cost[2].cost + 1; } = { };""" % (op.lower(), op)
         elif op == "Alloca":
-            s2 = """%s:\t%s(ri) { return 1; } = { };""" % (op.lower(), op)
+            s2 = """%s:\t%s(ri) { $cost[0].cost = $cost[2].cost + 1; } = { };""" % (op.lower(), op)
         else:
-            s2 = """%s:\t%s(rim, ri) { return 1; } = { };""" % (op.lower(), op)
+            s2 = """%s:\t%s(rim, ri) { $cost[0].cost = $cost[2].cost + $cost[3].cost + 1; } = { };""" % (op.lower(), op)
         ret.append(s1)
         ret.append(s2)
         ret.append("")
@@ -132,8 +138,11 @@ def gen_memory_rules(ops):
 def gen_term_rules(ops):
     ret = []
     for _, op in ops:
-        s1 = """stmt:\t%s { return 1; } = { };""" % (op.lower())
-        s2 = """%s:\t%s(ri) { return 1; } = { };""" % (op.lower(), op)
+        s1 = """stmt:\t%s { $cost[0].cost = $cost[1].cost; } = { };""" % (op.lower())
+        if op == "Ret":
+            s2 = """%s:\t%s(ri) { $cost[0].cost = $cost[2].cost + 1; } = { };""" % (op.lower(), op)
+        else:
+            s2 = """%s:\t%s(ri) { $cost[0].cost = $cost[2].cost + 1; } = { };""" % (op.lower(), op)
         ret.append(s1)
         ret.append(s2)
         ret.append("")
@@ -177,16 +186,16 @@ with open("./llc_olive_helper.brg", "w") as f:
 
     # generate all rules here
     print >> f, '''
-ri:    stmt   { return 1; } = { /* TODO: match reg here */ };
-rim:   stmt   { return 1; } = { /* TODO: match reg here */ };
-rim:   reg    { return 1; } = { /* TODO: match reg here */ };
-rim:   imm    { return 1; } = { /* TODO: match imm here */ };
-rim:   mem    { return 1; } = { /* TODO: match mem here */ };
-ri:    reg    { return 1; } = { /* TODO: match reg here */ };
-ri:    imm    { return 1; } = { /* TODO: match imm here */ };
-reg:   REG    { return 1; } = { /* TODO: match reg here */ };
-imm:   IMM    { return 1; } = { /* TODO: match imm here */ };
-mem:   MEM    { return 1; } = { /* TODO: match mem here */ };
+ri:    stmt   { $cost[0].cost = $cost[1].cost; } = { /* TODO: match reg here */ };
+rim:   stmt   { $cost[0].cost = $cost[1].cost; } = { /* TODO: match reg here */ };
+rim:   reg    { $cost[0].cost = $cost[1].cost; } = { /* TODO: match reg here */ };
+rim:   imm    { $cost[0].cost = $cost[1].cost; } = { /* TODO: match imm here */ };
+rim:   mem    { $cost[0].cost = $cost[1].cost; } = { /* TODO: match mem here */ };
+ri:    reg    { $cost[0].cost = $cost[1].cost; } = { /* TODO: match reg here */ };
+ri:    imm    { $cost[0].cost = $cost[1].cost; } = { /* TODO: match imm here */ };
+reg:   REG    { $cost[0].cost = 1;             } = { /* TODO: match reg here */ };
+imm:   IMM    { $cost[0].cost = 0;             } = { /* TODO: match imm here */ };
+mem:   MEM    { $cost[0].cost = 10;            } = { /* TODO: match mem here */ };
     '''
     print >> f, gen_term_rules(term_ops)
     print >> f, gen_binary_rules(binary_ops)

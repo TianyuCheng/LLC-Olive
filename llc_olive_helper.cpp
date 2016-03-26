@@ -4,7 +4,7 @@
 /* burm_trace - print trace message for matching p */
 static void burm_trace(NODEPTR p, int eruleno, COST cost) {
     if (shouldTrace)
-        std::cerr << "0x" << p << " matched " << burm_string[eruleno] << " = " << eruleno << " with cost " << cost.cost << "\n";
+        std::cerr << p << " matched " << burm_string[eruleno] << " = " << eruleno << " with cost " << cost.cost << "\n";
 }
 
 

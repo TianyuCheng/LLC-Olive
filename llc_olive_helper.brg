@@ -45,46 +45,46 @@
 %declare<void> atomicrmw<int indent>;
 %%
 
-ri:    stmt   { return 1; } = { /* TODO: match reg here */ };
-rim:   stmt   { return 1; } = { /* TODO: match reg here */ };
-rim:   reg    { return 1; } = { /* TODO: match reg here */ };
-rim:   imm    { return 1; } = { /* TODO: match imm here */ };
-rim:   mem    { return 1; } = { /* TODO: match mem here */ };
-ri:    reg    { return 1; } = { /* TODO: match reg here */ };
-ri:    imm    { return 1; } = { /* TODO: match imm here */ };
-reg:   REG    { return 1; } = { /* TODO: match reg here */ };
-imm:   IMM    { return 1; } = { /* TODO: match imm here */ };
-mem:   MEM    { return 1; } = { /* TODO: match mem here */ };
+ri:    stmt   { $cost[0].cost = $cost[1].cost; } = { /* TODO: match reg here */ };
+rim:   stmt   { $cost[0].cost = $cost[1].cost; } = { /* TODO: match reg here */ };
+rim:   reg    { $cost[0].cost = $cost[1].cost; } = { /* TODO: match reg here */ };
+rim:   imm    { $cost[0].cost = $cost[1].cost; } = { /* TODO: match imm here */ };
+rim:   mem    { $cost[0].cost = $cost[1].cost; } = { /* TODO: match mem here */ };
+ri:    reg    { $cost[0].cost = $cost[1].cost; } = { /* TODO: match reg here */ };
+ri:    imm    { $cost[0].cost = $cost[1].cost; } = { /* TODO: match imm here */ };
+reg:   REG    { $cost[0].cost = 1;             } = { /* TODO: match reg here */ };
+imm:   IMM    { $cost[0].cost = 0;             } = { /* TODO: match imm here */ };
+mem:   MEM    { $cost[0].cost = 10;            } = { /* TODO: match mem here */ };
     
-stmt:	ret { return 1; } = { };
-ret:	Ret(ri) { return 1; } = { };
+stmt:	ret { $cost[0].cost = $cost[1].cost; } = { };
+ret:	Ret(ri) { $cost[0].cost = $cost[2].cost + 1; } = { };
 
-stmt:	br { return 1; } = { };
-br:	Br(ri) { return 1; } = { };
+stmt:	br { $cost[0].cost = $cost[1].cost; } = { };
+br:	Br(ri) { $cost[0].cost = $cost[2].cost + 1; } = { };
 
-stmt:	switch { return 1; } = { };
-switch:	Switch(ri) { return 1; } = { };
+stmt:	switch { $cost[0].cost = $cost[1].cost; } = { };
+switch:	Switch(ri) { $cost[0].cost = $cost[2].cost + 1; } = { };
 
-stmt:	indirectbr { return 1; } = { };
-indirectbr:	IndirectBr(ri) { return 1; } = { };
+stmt:	indirectbr { $cost[0].cost = $cost[1].cost; } = { };
+indirectbr:	IndirectBr(ri) { $cost[0].cost = $cost[2].cost + 1; } = { };
 
-stmt:	invoke { return 1; } = { };
-invoke:	Invoke(ri) { return 1; } = { };
+stmt:	invoke { $cost[0].cost = $cost[1].cost; } = { };
+invoke:	Invoke(ri) { $cost[0].cost = $cost[2].cost + 1; } = { };
 
-stmt:	resume { return 1; } = { };
-resume:	Resume(ri) { return 1; } = { };
+stmt:	resume { $cost[0].cost = $cost[1].cost; } = { };
+resume:	Resume(ri) { $cost[0].cost = $cost[2].cost + 1; } = { };
 
-stmt:	unreachable { return 1; } = { };
-unreachable:	Unreachable(ri) { return 1; } = { };
+stmt:	unreachable { $cost[0].cost = $cost[1].cost; } = { };
+unreachable:	Unreachable(ri) { $cost[0].cost = $cost[2].cost + 1; } = { };
 
-stmt:	cleanupret { return 1; } = { };
-cleanupret:	CleanupRet(ri) { return 1; } = { };
+stmt:	cleanupret { $cost[0].cost = $cost[1].cost; } = { };
+cleanupret:	CleanupRet(ri) { $cost[0].cost = $cost[2].cost + 1; } = { };
 
-stmt:	catchret { return 1; } = { };
-catchret:	CatchRet(ri) { return 1; } = { };
+stmt:	catchret { $cost[0].cost = $cost[1].cost; } = { };
+catchret:	CatchRet(ri) { $cost[0].cost = $cost[2].cost + 1; } = { };
 
-stmt:	catchswitch { return 1; } = { };
-catchswitch:	CatchSwitch(ri) { return 1; } = { };
+stmt:	catchswitch { $cost[0].cost = $cost[1].cost; } = { };
+catchswitch:	CatchSwitch(ri) { $cost[0].cost = $cost[2].cost + 1; } = { };
 
 stmt:	add { return 1; } = { };
 add:	Add(rim, ri) { return 1; } = { };
@@ -122,25 +122,25 @@ srem:	SRem(rim, ri) { return 1; } = { };
 stmt:	frem { return 1; } = { };
 frem:	FRem(rim, ri) { return 1; } = { };
 
-stmt:	alloca { return 1; } = { };
-alloca:	Alloca(ri) { return 1; } = { };
+stmt:	alloca { $cost[0].cost = $cost[1].cost; } = { };
+alloca:	Alloca(ri) { $cost[0].cost = $cost[2].cost + 1; } = { };
 
-stmt:	load { return 1; } = { };
-load:	Load(ri) { return 1; } = { };
+stmt:	load { $cost[0].cost = $cost[1].cost; } = { };
+load:	Load(ri) { $cost[0].cost = $cost[2].cost + 1; } = { };
 
-stmt:	store { return 1; } = { };
-store:	Store(rim, ri) { return 1; } = { };
+stmt:	store { $cost[0].cost = $cost[1].cost; } = { };
+store:	Store(rim, ri) { $cost[0].cost = $cost[2].cost + $cost[3].cost + 1; } = { };
 
-stmt:	getelementptr { return 1; } = { };
-getelementptr:	GetElementPtr(rim, ri) { return 1; } = { };
+stmt:	getelementptr { $cost[0].cost = $cost[1].cost; } = { };
+getelementptr:	GetElementPtr(rim, ri) { $cost[0].cost = $cost[2].cost + $cost[3].cost + 1; } = { };
 
-stmt:	fence { return 1; } = { };
-fence:	Fence(rim, ri) { return 1; } = { };
+stmt:	fence { $cost[0].cost = $cost[1].cost; } = { };
+fence:	Fence(rim, ri) { $cost[0].cost = $cost[2].cost + $cost[3].cost + 1; } = { };
 
-stmt:	atomiccmpxchg { return 1; } = { };
-atomiccmpxchg:	AtomicCmpXchg(rim, ri) { return 1; } = { };
+stmt:	atomiccmpxchg { $cost[0].cost = $cost[1].cost; } = { };
+atomiccmpxchg:	AtomicCmpXchg(rim, ri) { $cost[0].cost = $cost[2].cost + $cost[3].cost + 1; } = { };
 
-stmt:	atomicrmw { return 1; } = { };
-atomicrmw:	AtomicRMW(rim, ri) { return 1; } = { };
+stmt:	atomicrmw { $cost[0].cost = $cost[1].cost; } = { };
+atomicrmw:	AtomicRMW(rim, ri) { $cost[0].cost = $cost[2].cost + $cost[3].cost + 1; } = { };
 
 %%
