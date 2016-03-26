@@ -13,6 +13,9 @@
 #include <llvm/IR/Instruction.h>
 #include <llvm/IR/Constants.h>
 
+#include "./RegisterAllocator.h"
+#include "./FunctionState.h"
+
 typedef struct VALUE {
     union {
         int8_t      i8s;
@@ -67,7 +70,7 @@ static COST COST_ZERO     = { 0 };
 
 static int _ern = 0;
 
-static int shouldTrace = 1;
+static int shouldTrace = 0;
 static int shouldCover = 1;
 
 int OP_LABEL(NODEPTR p) {

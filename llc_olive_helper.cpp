@@ -1,5 +1,16 @@
-#define DEBUG_INST  1
+#define DEBUG_INST  0
 #define THRESHOLD   5
+
+using namespace llvm;
+
+static cl::opt<std::string>
+InputFilename(cl::Positional, cl::desc("<input bitcode>"), cl::init("-"));
+
+static cl::opt<std::string>
+OutputFilename("o", cl::desc("<output filename>"), cl::value_desc("filename"));
+
+static cl::opt<int>
+NumRegs("num_regs", cl::desc("<number of registers available>"), cl::init(32));
 
 /* burm_trace - print trace message for matching p */
 static void burm_trace(NODEPTR p, int eruleno, COST cost) {
@@ -20,25 +31,15 @@ static Tree tree(int op, Tree l, Tree r, VALUE v = 0) {
 }
 
 static void gen(NODEPTR p) {
+    FunctionState FuncState(NumRegs);
 	if (burm_label(p) == 0)
 		std::cerr << "no cover\n";
 	else {
-		stmt_action(p->x.state,0);
+		stmt_action(p->x.state, &FuncState);
 		if (shouldCover != 0)
 			dumpCover(p, 1, 0);
 	}
 }
-
-using namespace llvm;
-
-static cl::opt<std::string>
-InputFilename(cl::Positional, cl::desc("<input bitcode>"), cl::init("-"));
-
-static cl::opt<std::string>
-OutputFilename("o", cl::desc("<output filename>"), cl::value_desc("filename"));
-
-static cl::opt<int>
-NumRegs("num_regs", cl::desc("<number of registers available>"), cl::init(32));
 
 /**
  * Wrapper for tree
@@ -171,6 +172,8 @@ private:
     int nchild;
 };
 
+
+
 /**
  * Generate assembly for a single function
  * */
@@ -197,18 +200,24 @@ void FunctionToAssembly(Function &func) {
                     // check if the operand is a constant
                     if (ConstantInt *cnst = dyn_cast<ConstantInt>(v)) {
                         // check if the operand is a constant int
+#if DEBUG_INST
                         errs() << "FOUND CONST INT:\t" << *cnst << "\n";
+#endif
                         // it->second->SetValue(def->getValue());
                         t->CastInt(i, cnst);
                     }
                     else if (ConstantFP *cnst = dyn_cast<ConstantFP>(v)) {
                         // check if the operand is a constant int
+#if DEBUG_INST
                         errs() << "FOUND CONST FP:\t" << *cnst << "\n";
+#endif
                         t->CastFP(i, cnst);
                     }
                     else if (ConstantExpr *cnst = dyn_cast<ConstantExpr>(v)) {
                         // check if the operand is a constant int
                         // errs() << "FOUND CONST EXPR:\t" << *cnst << "\n";
+                        errs() << "NOT IMPLEMENTED CONST EXPR\n";
+                        exit(EXIT_FAILURE);
                     }
                     // ... There are many kinds of constant, right now we do not deal with them ...
                     else {
@@ -222,7 +231,9 @@ void FunctionToAssembly(Function &func) {
                     auto it = treeMap.find(def);
                     assert(it != treeMap.end() && "operands must be previously defined");
                     t->SetChild(i, it->second->GetTreeWrapper());
+#if DEBUG_INST
                     errs() << "FOUND DEF:\t"; it->first->print(errs()); errs() << "\n";
+#endif
                 }
                 else {
                     // TODO: write code to handle these situations
@@ -258,7 +269,7 @@ void FunctionToAssembly(Function &func) {
         errs() << Instruction::getOpcodeName(t->GetOpCode()) << "\tLEVEL:\t" << t->GetLevel() << "\tRefCount:\t" << t->GetRefCount() << "\n";
         // check if this tree satisfies the condition for saving into register
         if (t->GetRefCount() == 0 || t->GetLevel() * t->GetRefCount() > THRESHOLD) {
-            t->DisplayTree();
+            // t->DisplayTree();
             gen(t->GetTree());
             virtualRegs.insert(std::pair<Tree, int>(t->GetTree(), FunctionRegCounter++));
         }

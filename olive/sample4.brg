@@ -186,7 +186,7 @@ con:	I0I
 	= {
 		int i;
 		for (i = 0; i < indent; i++)
-			std::cerr << " ";
+			std::cerr << "\t";
 		std::cerr << burm_string[_ern] << "\n";
 	};
 %%

@@ -98,107 +98,138 @@ other_ops           = sorted(map(lambda (x, y): (x, y.strip()), other_ops), key=
 def gen_enums(ops):
     return "enum { " + ', '.join(map(lambda (num, name): "%s=%d" % (name, num), ops)) + " };"
 
-def gen_terms(ops):
-    return  '%term ' + ' '.join(map(lambda (num, name): "%s=%d" % (name, num), ops))
-
-def gen_nonterms(ops):
-    return '\n'.join(map(lambda (_, name): "%%declare<void> %s<int indent>;" % name.lower(), ops))
-
-def gen_binary_rules(ops):
-    op_costs = {
-        "Add": 1, "FAdd": 5, "Sub": 1, "FSub": 5, "Mul": 2, "FMul": 10,
-        "UDiv": 4, "SDiv": 4, "FDiv": 20, "URem": 6, "SRem": 6, "FRem": 30
-    }
-    ret = []
-    for _, op in ops:
-        s1 = """stmt:\t%s { $cost[0].cost = $cost[1].cost; } = { };""" % (op.lower())
-        s2 = """%s:\t%s(rim, ri) { $cost[0].cost = $cost[2].cost + $cost[3].cost + %d; } = { };""" % (op.lower(), op, op_costs[op])
-        ret.append(s1)
-        ret.append(s2)
-        ret.append("")
-    return '\n'.join(ret)
-
-def gen_memory_rules(ops):
-    ret = []
-    for _, op in ops:
-        s1 = """stmt:\t%s { $cost[0].cost = $cost[1].cost; } = { };""" % (op.lower())
-        if op == "Load":
-            s2 = """%s:\t%s(ri) { $cost[0].cost = $cost[2].cost + 1; } = { };""" % (op.lower(), op)
-        elif op == "Alloca":
-            s2 = """%s:\t%s(ri) { $cost[0].cost = $cost[2].cost + 1; } = { };""" % (op.lower(), op)
-        else:
-            s2 = """%s:\t%s(rim, ri) { $cost[0].cost = $cost[2].cost + $cost[3].cost + 1; } = { };""" % (op.lower(), op)
-        ret.append(s1)
-        ret.append(s2)
-        ret.append("")
-    return '\n'.join(ret)
-
-def gen_term_rules(ops):
-    ret = []
-    for _, op in ops:
-        s1 = """stmt:\t%s { $cost[0].cost = $cost[1].cost; } = { };""" % (op.lower())
-        if op == "Ret":
-            s2 = """%s:\t%s(ri) { $cost[0].cost = $cost[2].cost + 1; } = { };""" % (op.lower(), op)
-        else:
-            s2 = """%s:\t%s(ri) { $cost[0].cost = $cost[2].cost + 1; } = { };""" % (op.lower(), op)
-        ret.append(s1)
-        ret.append(s2)
-        ret.append("")
-    return '\n'.join(ret)
-
-#   ____                                           
-#  / ___|_ __ __ _ _ __ ___  _ __ ___   __ _ _ __  
-# | |  _| '__/ _` | '_ ` _ \| '_ ` _ \ / _` | '__| 
-# | |_| | | | (_| | | | | | | | | | | | (_| | |    
-#  \____|_|  \__,_|_| |_| |_|_| |_| |_|\__,_|_|    
-#                                                  
-with open("./llc_olive_helper.brg", "w") as f:
-    # generate all terminals here
-    print >> f, gen_terms(term_ops)
-    print >> f, gen_terms(binary_ops)
-    print >> f, gen_terms(logical_ops)
-    print >> f, gen_terms(memory_ops)
-    print >> f, gen_terms(cast_ops)
-    print >> f, gen_terms(first_funclepad_ops)
-    print >> f, gen_terms(other_ops)
-    print >> f, "%term REG IMM MEM"
-
-    # generate all non-terminals here
-    print >> f, '''
-%declare<void> stmt<int indent>;
-%declare<void> rim<int indent>;
-%declare<void> ri<int indent>;
-%declare<void> reg<int indent>;
-%declare<void> imm<int indent>;
-%declare<void> mem<int indent>;
-    '''
-    # print every instruction needed here
-    print >> f, gen_nonterms(term_ops)
-    print >> f, gen_nonterms(binary_ops)
-    # print >> f, gen_nonterms(logical_ops)
-    print >> f, gen_nonterms(memory_ops)
-    # print >> f, gen_nonterms(cast_ops)
-    # print >> f, gen_nonterms(first_funclepad_ops)
-    # print >> f, gen_nonterms(other_ops)
-    print >> f, "%%"
-
-    # generate all rules here
-    print >> f, '''
-ri:    stmt   { $cost[0].cost = $cost[1].cost; } = { /* TODO: match reg here */ };
-rim:   stmt   { $cost[0].cost = $cost[1].cost; } = { /* TODO: match reg here */ };
-rim:   reg    { $cost[0].cost = $cost[1].cost; } = { /* TODO: match reg here */ };
-rim:   imm    { $cost[0].cost = $cost[1].cost; } = { /* TODO: match imm here */ };
-rim:   mem    { $cost[0].cost = $cost[1].cost; } = { /* TODO: match mem here */ };
-ri:    reg    { $cost[0].cost = $cost[1].cost; } = { /* TODO: match reg here */ };
-ri:    imm    { $cost[0].cost = $cost[1].cost; } = { /* TODO: match imm here */ };
-reg:   REG    { $cost[0].cost = 1;             } = { /* TODO: match reg here */ };
-imm:   IMM    { $cost[0].cost = 0;             } = { /* TODO: match imm here */ };
-mem:   MEM    { $cost[0].cost = 10;            } = { /* TODO: match mem here */ };
-    '''
-    print >> f, gen_term_rules(term_ops)
-    print >> f, gen_binary_rules(binary_ops)
-    print >> f, gen_memory_rules(memory_ops)
-    print >> f, "%%"
+# def gen_terms(ops):
+#     return  '%term ' + ' '.join(map(lambda (num, name): "%s=%d" % (name, num), ops))
+#
+# def gen_nonterms(ops):
+#     return '\n'.join(map(lambda (_, name): "%%declare<void> %s<FUNCTION_STATE FuncState>;" % name.lower(), ops))
+#
+# def gen_binary_rules(ops):
+#     op_costs = {
+#         "Add": 1, "FAdd": 5, "Sub": 1, "FSub": 5, "Mul": 2, "FMul": 10,
+#         "UDiv": 4, "SDiv": 4, "FDiv": 20, "URem": 6, "SRem": 6, "FRem": 30
+#     }
+#     ret = []
+#     for _, op in ops:
+#         s1 = """stmt:\t%s { $cost[0].cost = $cost[1].cost; } = { };""" % (op.lower())
+#         s2 = """%s:\t%s(rim, ri) { $cost[0].cost = $cost[2].cost + $cost[3].cost + %d; } = {
+#             if (OP_LABEL($2) == IMM)
+#                 std::cerr << "OPERAND IS IMM: " << $2->val.val.i32s << std::endl;
+#             if (OP_LABEL($3) == IMM)
+#                 std::cerr << "OPERAND IS IMM: " << $3->val.val.i32s << std::endl;
+#         };""" % (op.lower(), op, op_costs[op])
+#         ret.append(s1)
+#         ret.append(s2)
+#         ret.append("")
+#     return '\n'.join(ret)
+#
+# def gen_logical_rules(ops):
+#     ret = []
+#     for _, op in ops:
+#         s1 = """stmt:\t%s { $cost[0].cost = $cost[1].cost; } = { };""" % (op.lower())
+#         s2 = """%s:\t%s(rim, ri) { $cost[0].cost = $cost[2].cost + $cost[3].cost + 1; } = { };""" % (op.lower(), op)
+#         ret.append(s1)
+#         ret.append(s2)
+#         ret.append("")
+#     return '\n'.join(ret)
+#
+# def gen_memory_rules(ops):
+#     ret = []
+#     for _, op in ops:
+#         s1 = """stmt:\t%s { $cost[0].cost = $cost[1].cost; } = { 
+#             std::cerr << "Hello, Stmt -> %s" << std::endl; 
+#             $action[1](0);
+#             };""" % (op.lower(), op)
+#         if op == "Load":
+#             s2 = """%s:\t%s(ri) { $cost[0].cost = $cost[2].cost + 1; } = { 
+#                 std::cerr << "Hello Load" << std::endl;
+#                 $action[2](0);
+#             };""" % (op.lower(), op)
+#         elif op == "Alloca":
+#             s2 = """%s:\t%s(ri) { $cost[0].cost = $cost[2].cost + 1; } = {
+#                 std::cerr << "Hello Alloca" << std::endl;
+#                 $action[2](0);
+#             };""" % (op.lower(), op)
+#         elif op == "Store":
+#             s2 = """%s:\t%s(rim, ri) { $cost[0].cost = $cost[2].cost + $cost[3].cost + 1; } = {
+#                 std::cerr << "Hello Store" << std::endl;
+#                 $action[2](0);
+#                 $action[3](0);
+#             };""" % (op.lower(), op)
+#         else:
+#             s2 = """%s:\t%s(rim, ri) { $cost[0].cost = $cost[2].cost + $cost[3].cost + 1; } = { };""" % (op.lower(), op)
+#         ret.append(s1)
+#         ret.append(s2)
+#         ret.append("")
+#     return '\n'.join(ret)
+#
+# def gen_term_rules(ops):
+#     ret = []
+#     for _, op in ops:
+#         s1 = """stmt:\t%s { $cost[0].cost = $cost[1].cost; } = { };""" % (op.lower())
+#         if op == "Ret":
+#             s2 = """%s:\t%s(ri) { $cost[0].cost = $cost[2].cost + 1; } = { };""" % (op.lower(), op)
+#         else:
+#             s2 = """%s:\t%s(ri) { $cost[0].cost = $cost[2].cost + 1; } = { };""" % (op.lower(), op)
+#         ret.append(s1)
+#         ret.append(s2)
+#         ret.append("")
+#     return '\n'.join(ret)
+#
+# #   ____                                           
+# #  / ___|_ __ __ _ _ __ ___  _ __ ___   __ _ _ __  
+# # | |  _| '__/ _` | '_ ` _ \| '_ ` _ \ / _` | '__| 
+# # | |_| | | | (_| | | | | | | | | | | | (_| | |    
+# #  \____|_|  \__,_|_| |_| |_|_| |_| |_|\__,_|_|    
+# #                                                  
+# with open("./llc_olive_helper.brg", "w") as f:
+#     # generate all terminals here
+#     print >> f, gen_terms(term_ops)
+#     print >> f, gen_terms(binary_ops)
+#     print >> f, gen_terms(logical_ops)
+#     print >> f, gen_terms(memory_ops)
+#     print >> f, gen_terms(cast_ops)
+#     print >> f, gen_terms(first_funclepad_ops)
+#     print >> f, gen_terms(other_ops)
+#     print >> f, "%term REG IMM MEM"
+#
+#     # generate all non-terminals here
+#     print >> f, '''
+# %declare<void> stmt<FUNCTION_STATE FuncState>;
+# %declare<void> rim<FUNCTION_STATE  FuncState>;
+# %declare<void> ri<FUNCTION_STATE   FuncState>;
+# %declare<void> reg<FUNCTION_STATE  FuncState>;
+# %declare<void> imm<FUNCTION_STATE  FuncState>;
+# %declare<void> mem<FUNCTION_STATE  FuncState>;
+#     '''
+#     # print every instruction needed here
+#     print >> f, gen_nonterms(term_ops)
+#     print >> f, gen_nonterms(binary_ops)
+#     print >> f, gen_nonterms(logical_ops)
+#     print >> f, gen_nonterms(memory_ops)
+#     # print >> f, gen_nonterms(cast_ops)
+#     # print >> f, gen_nonterms(first_funclepad_ops)
+#     # print >> f, gen_nonterms(other_ops)
+#     print >> f, "%%"
+#
+#     # generate all rules here
+#     print >> f, '''
+# ri:    stmt   { $cost[0].cost = $cost[1].cost; } = { /* TODO: match reg here */ };
+# rim:   stmt   { $cost[0].cost = $cost[1].cost; } = { /* TODO: match reg here */ };
+# rim:   reg    { $cost[0].cost = $cost[1].cost; } = { /* TODO: match reg here */ };
+# rim:   imm    { $cost[0].cost = $cost[1].cost; } = { /* TODO: match imm here */ };
+# rim:   mem    { $cost[0].cost = $cost[1].cost; } = { /* TODO: match mem here */ };
+# ri:    reg    { $cost[0].cost = $cost[1].cost; } = { /* TODO: match reg here */ };
+# ri:    imm    { $cost[0].cost = $cost[1].cost; } = { /* TODO: match imm here */ };
+# reg:   REG    { $cost[0].cost = 1;             } = { /* TODO: match reg here */ };
+# imm:   IMM    { $cost[0].cost = 0;             } = { /* TODO: match imm here */ };
+# mem:   MEM    { $cost[0].cost = 10;            } = { /* TODO: match mem here */ };
+#     '''
+#     print >> f, gen_term_rules(term_ops)
+#     print >> f, gen_binary_rules(binary_ops)
+#     print >> f, gen_memory_rules(memory_ops)
+#     print >> f, gen_logical_rules(logical_ops)
+#     print >> f, "%%"
 
 
 #  _____                            

@@ -7,42 +7,48 @@
 %term ICmp=51 FCmp=52 PHI=53 Call=54 Select=55 UserOp1=56 UserOp2=57 VAArg=58 ExtractElement=59 InsertElement=60 ShuffleVector=61 ExtractValue=62 InsertValue=63 LandingPad=64
 %term REG IMM MEM
 
-%declare<void> stmt<int indent>;
-%declare<void> rim<int indent>;
-%declare<void> ri<int indent>;
-%declare<void> reg<int indent>;
-%declare<void> imm<int indent>;
-%declare<void> mem<int indent>;
+%declare<void> stmt<FUNCTION_STATE FuncState>;
+%declare<void> rim<FUNCTION_STATE  FuncState>;
+%declare<void> ri<FUNCTION_STATE   FuncState>;
+%declare<void> reg<FUNCTION_STATE  FuncState>;
+%declare<void> imm<FUNCTION_STATE  FuncState>;
+%declare<void> mem<FUNCTION_STATE  FuncState>;
     
-%declare<void> ret<int indent>;
-%declare<void> br<int indent>;
-%declare<void> switch<int indent>;
-%declare<void> indirectbr<int indent>;
-%declare<void> invoke<int indent>;
-%declare<void> resume<int indent>;
-%declare<void> unreachable<int indent>;
-%declare<void> cleanupret<int indent>;
-%declare<void> catchret<int indent>;
-%declare<void> catchswitch<int indent>;
-%declare<void> add<int indent>;
-%declare<void> fadd<int indent>;
-%declare<void> sub<int indent>;
-%declare<void> fsub<int indent>;
-%declare<void> mul<int indent>;
-%declare<void> fmul<int indent>;
-%declare<void> udiv<int indent>;
-%declare<void> sdiv<int indent>;
-%declare<void> fdiv<int indent>;
-%declare<void> urem<int indent>;
-%declare<void> srem<int indent>;
-%declare<void> frem<int indent>;
-%declare<void> alloca<int indent>;
-%declare<void> load<int indent>;
-%declare<void> store<int indent>;
-%declare<void> getelementptr<int indent>;
-%declare<void> fence<int indent>;
-%declare<void> atomiccmpxchg<int indent>;
-%declare<void> atomicrmw<int indent>;
+%declare<void> ret<FUNCTION_STATE FuncState>;
+%declare<void> br<FUNCTION_STATE FuncState>;
+%declare<void> switch<FUNCTION_STATE FuncState>;
+%declare<void> indirectbr<FUNCTION_STATE FuncState>;
+%declare<void> invoke<FUNCTION_STATE FuncState>;
+%declare<void> resume<FUNCTION_STATE FuncState>;
+%declare<void> unreachable<FUNCTION_STATE FuncState>;
+%declare<void> cleanupret<FUNCTION_STATE FuncState>;
+%declare<void> catchret<FUNCTION_STATE FuncState>;
+%declare<void> catchswitch<FUNCTION_STATE FuncState>;
+%declare<void> add<FUNCTION_STATE FuncState>;
+%declare<void> fadd<FUNCTION_STATE FuncState>;
+%declare<void> sub<FUNCTION_STATE FuncState>;
+%declare<void> fsub<FUNCTION_STATE FuncState>;
+%declare<void> mul<FUNCTION_STATE FuncState>;
+%declare<void> fmul<FUNCTION_STATE FuncState>;
+%declare<void> udiv<FUNCTION_STATE FuncState>;
+%declare<void> sdiv<FUNCTION_STATE FuncState>;
+%declare<void> fdiv<FUNCTION_STATE FuncState>;
+%declare<void> urem<FUNCTION_STATE FuncState>;
+%declare<void> srem<FUNCTION_STATE FuncState>;
+%declare<void> frem<FUNCTION_STATE FuncState>;
+%declare<void> shl<FUNCTION_STATE FuncState>;
+%declare<void> lshr<FUNCTION_STATE FuncState>;
+%declare<void> ashr<FUNCTION_STATE FuncState>;
+%declare<void> and<FUNCTION_STATE FuncState>;
+%declare<void> or<FUNCTION_STATE FuncState>;
+%declare<void> xor<FUNCTION_STATE FuncState>;
+%declare<void> alloca<FUNCTION_STATE FuncState>;
+%declare<void> load<FUNCTION_STATE FuncState>;
+%declare<void> store<FUNCTION_STATE FuncState>;
+%declare<void> getelementptr<FUNCTION_STATE FuncState>;
+%declare<void> fence<FUNCTION_STATE FuncState>;
+%declare<void> atomiccmpxchg<FUNCTION_STATE FuncState>;
+%declare<void> atomicrmw<FUNCTION_STATE FuncState>;
 %%
 
 ri:    stmt   { $cost[0].cost = $cost[1].cost; } = { /* TODO: match reg here */ };
@@ -87,60 +93,169 @@ stmt:	catchswitch { $cost[0].cost = $cost[1].cost; } = { };
 catchswitch:	CatchSwitch(ri) { $cost[0].cost = $cost[2].cost + 1; } = { };
 
 stmt:	add { $cost[0].cost = $cost[1].cost; } = { };
-add:	Add(rim, ri) { $cost[0].cost = $cost[2].cost + $cost[3].cost + 1; } = { };
+add:	Add(rim, ri) { $cost[0].cost = $cost[2].cost + $cost[3].cost + 1; } = {
+            if (OP_LABEL($2) == IMM)
+                std::cerr << "OPERAND IS IMM: " << $2->val.val.i32s << std::endl;
+            if (OP_LABEL($3) == IMM)
+                std::cerr << "OPERAND IS IMM: " << $3->val.val.i32s << std::endl;
+        };
 
 stmt:	fadd { $cost[0].cost = $cost[1].cost; } = { };
-fadd:	FAdd(rim, ri) { $cost[0].cost = $cost[2].cost + $cost[3].cost + 5; } = { };
+fadd:	FAdd(rim, ri) { $cost[0].cost = $cost[2].cost + $cost[3].cost + 5; } = {
+            if (OP_LABEL($2) == IMM)
+                std::cerr << "OPERAND IS IMM: " << $2->val.val.i32s << std::endl;
+            if (OP_LABEL($3) == IMM)
+                std::cerr << "OPERAND IS IMM: " << $3->val.val.i32s << std::endl;
+        };
 
 stmt:	sub { $cost[0].cost = $cost[1].cost; } = { };
-sub:	Sub(rim, ri) { $cost[0].cost = $cost[2].cost + $cost[3].cost + 1; } = { };
+sub:	Sub(rim, ri) { $cost[0].cost = $cost[2].cost + $cost[3].cost + 1; } = {
+            if (OP_LABEL($2) == IMM)
+                std::cerr << "OPERAND IS IMM: " << $2->val.val.i32s << std::endl;
+            if (OP_LABEL($3) == IMM)
+                std::cerr << "OPERAND IS IMM: " << $3->val.val.i32s << std::endl;
+        };
 
 stmt:	fsub { $cost[0].cost = $cost[1].cost; } = { };
-fsub:	FSub(rim, ri) { $cost[0].cost = $cost[2].cost + $cost[3].cost + 5; } = { };
+fsub:	FSub(rim, ri) { $cost[0].cost = $cost[2].cost + $cost[3].cost + 5; } = {
+            if (OP_LABEL($2) == IMM)
+                std::cerr << "OPERAND IS IMM: " << $2->val.val.i32s << std::endl;
+            if (OP_LABEL($3) == IMM)
+                std::cerr << "OPERAND IS IMM: " << $3->val.val.i32s << std::endl;
+        };
 
 stmt:	mul { $cost[0].cost = $cost[1].cost; } = { };
-mul:	Mul(rim, ri) { $cost[0].cost = $cost[2].cost + $cost[3].cost + 2; } = { };
+mul:	Mul(rim, ri) { $cost[0].cost = $cost[2].cost + $cost[3].cost + 2; } = {
+            if (OP_LABEL($2) == IMM)
+                std::cerr << "OPERAND IS IMM: " << $2->val.val.i32s << std::endl;
+            if (OP_LABEL($3) == IMM)
+                std::cerr << "OPERAND IS IMM: " << $3->val.val.i32s << std::endl;
+        };
 
 stmt:	fmul { $cost[0].cost = $cost[1].cost; } = { };
-fmul:	FMul(rim, ri) { $cost[0].cost = $cost[2].cost + $cost[3].cost + 10; } = { };
+fmul:	FMul(rim, ri) { $cost[0].cost = $cost[2].cost + $cost[3].cost + 10; } = {
+            if (OP_LABEL($2) == IMM)
+                std::cerr << "OPERAND IS IMM: " << $2->val.val.i32s << std::endl;
+            if (OP_LABEL($3) == IMM)
+                std::cerr << "OPERAND IS IMM: " << $3->val.val.i32s << std::endl;
+        };
 
 stmt:	udiv { $cost[0].cost = $cost[1].cost; } = { };
-udiv:	UDiv(rim, ri) { $cost[0].cost = $cost[2].cost + $cost[3].cost + 4; } = { };
+udiv:	UDiv(rim, ri) { $cost[0].cost = $cost[2].cost + $cost[3].cost + 4; } = {
+            if (OP_LABEL($2) == IMM)
+                std::cerr << "OPERAND IS IMM: " << $2->val.val.i32s << std::endl;
+            if (OP_LABEL($3) == IMM)
+                std::cerr << "OPERAND IS IMM: " << $3->val.val.i32s << std::endl;
+        };
 
 stmt:	sdiv { $cost[0].cost = $cost[1].cost; } = { };
-sdiv:	SDiv(rim, ri) { $cost[0].cost = $cost[2].cost + $cost[3].cost + 4; } = { };
+sdiv:	SDiv(rim, ri) { $cost[0].cost = $cost[2].cost + $cost[3].cost + 4; } = {
+            if (OP_LABEL($2) == IMM)
+                std::cerr << "OPERAND IS IMM: " << $2->val.val.i32s << std::endl;
+            if (OP_LABEL($3) == IMM)
+                std::cerr << "OPERAND IS IMM: " << $3->val.val.i32s << std::endl;
+        };
 
 stmt:	fdiv { $cost[0].cost = $cost[1].cost; } = { };
-fdiv:	FDiv(rim, ri) { $cost[0].cost = $cost[2].cost + $cost[3].cost + 20; } = { };
+fdiv:	FDiv(rim, ri) { $cost[0].cost = $cost[2].cost + $cost[3].cost + 20; } = {
+            if (OP_LABEL($2) == IMM)
+                std::cerr << "OPERAND IS IMM: " << $2->val.val.i32s << std::endl;
+            if (OP_LABEL($3) == IMM)
+                std::cerr << "OPERAND IS IMM: " << $3->val.val.i32s << std::endl;
+        };
 
 stmt:	urem { $cost[0].cost = $cost[1].cost; } = { };
-urem:	URem(rim, ri) { $cost[0].cost = $cost[2].cost + $cost[3].cost + 6; } = { };
+urem:	URem(rim, ri) { $cost[0].cost = $cost[2].cost + $cost[3].cost + 6; } = {
+            if (OP_LABEL($2) == IMM)
+                std::cerr << "OPERAND IS IMM: " << $2->val.val.i32s << std::endl;
+            if (OP_LABEL($3) == IMM)
+                std::cerr << "OPERAND IS IMM: " << $3->val.val.i32s << std::endl;
+        };
 
 stmt:	srem { $cost[0].cost = $cost[1].cost; } = { };
-srem:	SRem(rim, ri) { $cost[0].cost = $cost[2].cost + $cost[3].cost + 6; } = { };
+srem:	SRem(rim, ri) { $cost[0].cost = $cost[2].cost + $cost[3].cost + 6; } = {
+            if (OP_LABEL($2) == IMM)
+                std::cerr << "OPERAND IS IMM: " << $2->val.val.i32s << std::endl;
+            if (OP_LABEL($3) == IMM)
+                std::cerr << "OPERAND IS IMM: " << $3->val.val.i32s << std::endl;
+        };
 
 stmt:	frem { $cost[0].cost = $cost[1].cost; } = { };
-frem:	FRem(rim, ri) { $cost[0].cost = $cost[2].cost + $cost[3].cost + 30; } = { };
+frem:	FRem(rim, ri) { $cost[0].cost = $cost[2].cost + $cost[3].cost + 30; } = {
+            if (OP_LABEL($2) == IMM)
+                std::cerr << "OPERAND IS IMM: " << $2->val.val.i32s << std::endl;
+            if (OP_LABEL($3) == IMM)
+                std::cerr << "OPERAND IS IMM: " << $3->val.val.i32s << std::endl;
+        };
 
-stmt:	alloca { $cost[0].cost = $cost[1].cost; } = { };
-alloca:	Alloca(ri) { $cost[0].cost = $cost[2].cost + 1; } = { };
+stmt:	alloca { $cost[0].cost = $cost[1].cost; } = { 
+            std::cerr << "Hello, Stmt -> Alloca" << std::endl; 
+            $action[1](0);
+            };
+alloca:	Alloca(ri) { $cost[0].cost = $cost[2].cost + 1; } = {
+                std::cerr << "Hello Alloca" << std::endl;
+                $action[2](0);
+            };
 
-stmt:	load { $cost[0].cost = $cost[1].cost; } = { };
-load:	Load(ri) { $cost[0].cost = $cost[2].cost + 1; } = { };
+stmt:	load { $cost[0].cost = $cost[1].cost; } = { 
+            std::cerr << "Hello, Stmt -> Load" << std::endl; 
+            $action[1](0);
+            };
+load:	Load(ri) { $cost[0].cost = $cost[2].cost + 1; } = { 
+                std::cerr << "Hello Load" << std::endl;
+                $action[2](0);
+            };
 
-stmt:	store { $cost[0].cost = $cost[1].cost; } = { };
-store:	Store(rim, ri) { $cost[0].cost = $cost[2].cost + $cost[3].cost + 1; } = { };
+stmt:	store { $cost[0].cost = $cost[1].cost; } = { 
+            std::cerr << "Hello, Stmt -> Store" << std::endl; 
+            $action[1](0);
+            };
+store:	Store(rim, ri) { $cost[0].cost = $cost[2].cost + $cost[3].cost + 1; } = {
+                std::cerr << "Hello Store" << std::endl;
+                $action[2](0);
+                $action[3](0);
+            };
 
-stmt:	getelementptr { $cost[0].cost = $cost[1].cost; } = { };
+stmt:	getelementptr { $cost[0].cost = $cost[1].cost; } = { 
+            std::cerr << "Hello, Stmt -> GetElementPtr" << std::endl; 
+            $action[1](0);
+            };
 getelementptr:	GetElementPtr(rim, ri) { $cost[0].cost = $cost[2].cost + $cost[3].cost + 1; } = { };
 
-stmt:	fence { $cost[0].cost = $cost[1].cost; } = { };
+stmt:	fence { $cost[0].cost = $cost[1].cost; } = { 
+            std::cerr << "Hello, Stmt -> Fence" << std::endl; 
+            $action[1](0);
+            };
 fence:	Fence(rim, ri) { $cost[0].cost = $cost[2].cost + $cost[3].cost + 1; } = { };
 
-stmt:	atomiccmpxchg { $cost[0].cost = $cost[1].cost; } = { };
+stmt:	atomiccmpxchg { $cost[0].cost = $cost[1].cost; } = { 
+            std::cerr << "Hello, Stmt -> AtomicCmpXchg" << std::endl; 
+            $action[1](0);
+            };
 atomiccmpxchg:	AtomicCmpXchg(rim, ri) { $cost[0].cost = $cost[2].cost + $cost[3].cost + 1; } = { };
 
-stmt:	atomicrmw { $cost[0].cost = $cost[1].cost; } = { };
+stmt:	atomicrmw { $cost[0].cost = $cost[1].cost; } = { 
+            std::cerr << "Hello, Stmt -> AtomicRMW" << std::endl; 
+            $action[1](0);
+            };
 atomicrmw:	AtomicRMW(rim, ri) { $cost[0].cost = $cost[2].cost + $cost[3].cost + 1; } = { };
+
+stmt:	shl { $cost[0].cost = $cost[1].cost; } = { };
+shl:	Shl(rim, ri) { $cost[0].cost = $cost[2].cost + $cost[3].cost + 1; } = { };
+
+stmt:	lshr { $cost[0].cost = $cost[1].cost; } = { };
+lshr:	LShr(rim, ri) { $cost[0].cost = $cost[2].cost + $cost[3].cost + 1; } = { };
+
+stmt:	ashr { $cost[0].cost = $cost[1].cost; } = { };
+ashr:	AShr(rim, ri) { $cost[0].cost = $cost[2].cost + $cost[3].cost + 1; } = { };
+
+stmt:	and { $cost[0].cost = $cost[1].cost; } = { };
+and:	And(rim, ri) { $cost[0].cost = $cost[2].cost + $cost[3].cost + 1; } = { };
+
+stmt:	or { $cost[0].cost = $cost[1].cost; } = { };
+or:	Or(rim, ri) { $cost[0].cost = $cost[2].cost + $cost[3].cost + 1; } = { };
+
+stmt:	xor { $cost[0].cost = $cost[1].cost; } = { };
+xor:	Xor(rim, ri) { $cost[0].cost = $cost[2].cost + $cost[3].cost + 1; } = { };
 
 %%
