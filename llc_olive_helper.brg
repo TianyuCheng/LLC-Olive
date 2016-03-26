@@ -86,41 +86,41 @@ catchret:	CatchRet(ri) { $cost[0].cost = $cost[2].cost + 1; } = { };
 stmt:	catchswitch { $cost[0].cost = $cost[1].cost; } = { };
 catchswitch:	CatchSwitch(ri) { $cost[0].cost = $cost[2].cost + 1; } = { };
 
-stmt:	add { return 1; } = { };
-add:	Add(rim, ri) { return 1; } = { };
+stmt:	add { $cost[0].cost = $cost[1].cost; } = { };
+add:	Add(rim, ri) { $cost[0].cost = $cost[2].cost + $cost[3].cost + 1; } = { };
 
-stmt:	fadd { return 1; } = { };
-fadd:	FAdd(rim, ri) { return 1; } = { };
+stmt:	fadd { $cost[0].cost = $cost[1].cost; } = { };
+fadd:	FAdd(rim, ri) { $cost[0].cost = $cost[2].cost + $cost[3].cost + 5; } = { };
 
-stmt:	sub { return 1; } = { };
-sub:	Sub(rim, ri) { return 1; } = { };
+stmt:	sub { $cost[0].cost = $cost[1].cost; } = { };
+sub:	Sub(rim, ri) { $cost[0].cost = $cost[2].cost + $cost[3].cost + 1; } = { };
 
-stmt:	fsub { return 1; } = { };
-fsub:	FSub(rim, ri) { return 1; } = { };
+stmt:	fsub { $cost[0].cost = $cost[1].cost; } = { };
+fsub:	FSub(rim, ri) { $cost[0].cost = $cost[2].cost + $cost[3].cost + 5; } = { };
 
-stmt:	mul { return 1; } = { };
-mul:	Mul(rim, ri) { return 1; } = { };
+stmt:	mul { $cost[0].cost = $cost[1].cost; } = { };
+mul:	Mul(rim, ri) { $cost[0].cost = $cost[2].cost + $cost[3].cost + 2; } = { };
 
-stmt:	fmul { return 1; } = { };
-fmul:	FMul(rim, ri) { return 1; } = { };
+stmt:	fmul { $cost[0].cost = $cost[1].cost; } = { };
+fmul:	FMul(rim, ri) { $cost[0].cost = $cost[2].cost + $cost[3].cost + 10; } = { };
 
-stmt:	udiv { return 1; } = { };
-udiv:	UDiv(rim, ri) { return 1; } = { };
+stmt:	udiv { $cost[0].cost = $cost[1].cost; } = { };
+udiv:	UDiv(rim, ri) { $cost[0].cost = $cost[2].cost + $cost[3].cost + 4; } = { };
 
-stmt:	sdiv { return 1; } = { };
-sdiv:	SDiv(rim, ri) { return 1; } = { };
+stmt:	sdiv { $cost[0].cost = $cost[1].cost; } = { };
+sdiv:	SDiv(rim, ri) { $cost[0].cost = $cost[2].cost + $cost[3].cost + 4; } = { };
 
-stmt:	fdiv { return 1; } = { };
-fdiv:	FDiv(rim, ri) { return 1; } = { };
+stmt:	fdiv { $cost[0].cost = $cost[1].cost; } = { };
+fdiv:	FDiv(rim, ri) { $cost[0].cost = $cost[2].cost + $cost[3].cost + 20; } = { };
 
-stmt:	urem { return 1; } = { };
-urem:	URem(rim, ri) { return 1; } = { };
+stmt:	urem { $cost[0].cost = $cost[1].cost; } = { };
+urem:	URem(rim, ri) { $cost[0].cost = $cost[2].cost + $cost[3].cost + 6; } = { };
 
-stmt:	srem { return 1; } = { };
-srem:	SRem(rim, ri) { return 1; } = { };
+stmt:	srem { $cost[0].cost = $cost[1].cost; } = { };
+srem:	SRem(rim, ri) { $cost[0].cost = $cost[2].cost + $cost[3].cost + 6; } = { };
 
-stmt:	frem { return 1; } = { };
-frem:	FRem(rim, ri) { return 1; } = { };
+stmt:	frem { $cost[0].cost = $cost[1].cost; } = { };
+frem:	FRem(rim, ri) { $cost[0].cost = $cost[2].cost + $cost[3].cost + 30; } = { };
 
 stmt:	alloca { $cost[0].cost = $cost[1].cost; } = { };
 alloca:	Alloca(ri) { $cost[0].cost = $cost[2].cost + 1; } = { };

@@ -111,10 +111,8 @@ def gen_binary_rules(ops):
     }
     ret = []
     for _, op in ops:
-        # s1 = """stmt:\t%s { $cost[0].cost = $cost[1].cost; } = { };""" % (op.lower())
-        # s2 = """%s:\t%s(rim, ri) { $cost[0].cost = $cost[2].cost + $cost[3].cost + %d; } = { };""" % (op.lower(), op, op_costs[op])
-        s1 = """stmt:\t%s { return 1; } = { };""" % (op.lower())
-        s2 = """%s:\t%s(rim, ri) { return 1; } = { };""" % (op.lower(), op)
+        s1 = """stmt:\t%s { $cost[0].cost = $cost[1].cost; } = { };""" % (op.lower())
+        s2 = """%s:\t%s(rim, ri) { $cost[0].cost = $cost[2].cost + $cost[3].cost + %d; } = { };""" % (op.lower(), op, op_costs[op])
         ret.append(s1)
         ret.append(s2)
         ret.append("")
