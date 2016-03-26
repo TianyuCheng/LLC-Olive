@@ -9,23 +9,10 @@
 %term REG IMM MEM
 
 %declare<void> stmt     <FUNCTION_STATE fstate>;
-%declare<void>  ri      <FUNCTION_STATE fstate>;
-%declare<void>  mr      <FUNCTION_STATE fstate>;
-%declare<void> mri      <FUNCTION_STATE fstate>;
 %declare<void> reg      <FUNCTION_STATE fstate>;
 %declare<void> imm      <FUNCTION_STATE fstate>;
 %declare<void> mem      <FUNCTION_STATE fstate>;
 %%
-
-mri:    mem                 { $cost[0].cost = $cost[1].cost;                    } = { $action[1](fstate); };
-mri:    reg                 { $cost[0].cost = $cost[1].cost;                    } = { $action[1](fstate); };
-mri:    imm                 { $cost[0].cost = $cost[1].cost;                    } = { $action[1](fstate); };
-
-ri:     reg                 { $cost[0].cost = $cost[1].cost;                    } = { $action[1](fstate); };
-ri:     imm                 { $cost[0].cost = $cost[1].cost;                    } = { $action[1](fstate); };
-
-mr:     mem                 { $cost[0].cost = $cost[1].cost;                    } = { $action[1](fstate); };
-mr:     reg                 { $cost[0].cost = $cost[1].cost;                    } = { $action[1](fstate); };
 
 reg:    stmt                { $cost[0].cost = $cost[1].cost;                    } = { $action[1](fstate); };
 reg:    REG                 { $cost[0].cost = 1;                                } = { };
@@ -39,26 +26,35 @@ stmt:   Ret(reg)            { $cost[0].cost = $cost[2].cost + 1;                
              * IR Ret takes a register argument
              * X86 Ret takes no argument, return value is passed by %eax
              */
-            std::cerr << "leave" << std::endl
-                      << "ret"   << std::endl; 
+            std::cerr << "\tleave" << std::endl
+                      << "\tret"   << std::endl; 
         };
 stmt:   Alloca(IMM)         { $cost[0].cost = 1;                                } = { 
             /*
              * IR Alloca takes one arguments for allocation size
              * X86 does not have correspondence for Alloca, but only uses $esp - size
              */
-            std::cerr << "subl $esp, $4" << std::endl; 
+            // std::cerr << "subl $esp, $4" << "\t; perhaps we can change this!" << std::endl; 
+            std::cerr << "\t; Allocate Space!" << std::endl; 
         }; 
-stmt:   Load(mri)           { $cost[0].cost = $cost[2].cost + 1;    } = { 
+stmt:   Load(reg)           { $cost[0].cost = $cost[2].cost + 1;    } = { 
             /*
              * IR Load takes one arguments for allocation size
              * X86 uses mov instruction, which takes two arguments
              */
             // prepare both operands first
             $action[2](fstate); 
-            std::cerr << "movl " << MRI2String(REG, $2) << ", " << "<SOME MRI VALUE NOT IMPLEMENTED>" << std::endl; 
+            std::cerr << "\tmovl " << MRI2String(REG, $0) << ", " << MRI2String(REG, $2) << std::endl; 
         }; 
-stmt:   Store(ri, mr)      { $cost[0].cost = $cost[2].cost + $cost[3].cost;    } = { 
+stmt:   Load(imm)           { $cost[0].cost = $cost[2].cost + 1;    } = { 
+            $action[2](fstate); 
+            std::cerr << "\tmovl " << MRI2String(REG, $0) << ", " << MRI2String(IMM, $2) << std::endl; 
+        }; 
+stmt:   Load(mem)           { $cost[0].cost = $cost[2].cost + 1;    } = { 
+            $action[2](fstate); 
+            std::cerr << "\tmovl " << MRI2String(REG, $0) << ", " << MRI2String(MEM, $2) << std::endl; 
+        }; 
+stmt:   Store(reg, reg)      { $cost[0].cost = $cost[2].cost + $cost[3].cost;    } = { 
             /*
              * IR Store takes one arguments for allocation size
              * X86 uses mov instruction, which takes two arguments
@@ -66,9 +62,19 @@ stmt:   Store(ri, mr)      { $cost[0].cost = $cost[2].cost + $cost[3].cost;    }
             // prepare both operands first
             $action[2](fstate);
             $action[3](fstate);
-            std::cerr << "movl " << "<SOME MRI VALUE NOT IMPLEMENTED>" << ", " << MRI2String(REG, $2) << std::endl;
+            std::cerr << "\tmovl " << MRI2String(REG, $3) << ", " << MRI2String(REG, $2) << std::endl;
         }; 
-stmt:   Add(mri, reg)       { $cost[0].cost = $cost[2].cost + $cost[3].cost;    } = {
+stmt:   Store(imm, reg)      { $cost[0].cost = $cost[2].cost + $cost[3].cost;    } = { 
+            $action[2](fstate);
+            $action[3](fstate);
+            std::cerr << "\tmovl " << MRI2String(REG, $3) << ", " << MRI2String(IMM, $2) << std::endl;
+        }; 
+stmt:   Store(mem, reg)      { $cost[0].cost = $cost[2].cost + $cost[3].cost;    } = { 
+            $action[2](fstate);
+            $action[3](fstate);
+            std::cerr << "\tmovl " << MRI2String(REG, $3) << ", " << MRI2String(MEM, $2) << std::endl;
+        }; 
+stmt:   Add(reg, reg)       { $cost[0].cost = $cost[2].cost + $cost[3].cost + 2;    } = {
             /*
              * IR Add takes two arguments
              * X86 Add takes two argument, both operands cannot be from memory in the instruction
@@ -76,6 +82,29 @@ stmt:   Add(mri, reg)       { $cost[0].cost = $cost[2].cost + $cost[3].cost;    
             // prepare both operands first
             $action[2](fstate); 
             $action[3](fstate);
-            std::cerr << "addl " << MRI2String(REG, $3) << ", " << "<SOME MRI VALUE NOT IMPLEMENTED>" << std::endl; 
+            // std::cerr << "ADD: "<< $3->val.val.i32s << std::endl;
+            std::cerr << "\taddl " << MRI2String(REG, $3) << ", " << MRI2String(REG, $2)  << std::endl; 
+        };
+stmt:   Sub(reg, reg)       { $cost[0].cost = $cost[2].cost + $cost[3].cost + 2;    } = {
+            /*
+             * IR Sub takes two arguments
+             * X86 Sub takes two argument, both operands cannot be from memory in the instruction
+             */
+            // prepare both operands first
+            $action[2](fstate); 
+            $action[3](fstate);
+            // std::cerr << "SUB: "<< $3->val.val.i32s << std::endl;
+            std::cerr << "\tsubl " << MRI2String(REG, $3) << ", " << MRI2String(REG, $2)  << std::endl; 
+        };
+stmt:   Mul(reg, reg)       { $cost[0].cost = $cost[2].cost + $cost[3].cost + 4;    } = {
+            /*
+             * IR Mul takes two arguments
+             * X86 Mul takes two argument, both operands cannot be from memory in the instruction
+             */
+            // prepare both operands first
+            $action[2](fstate); 
+            $action[3](fstate);
+            // std::cerr << "MUL: "<< $3->val.val.i32s << std::endl;
+            std::cerr << "\timull " << MRI2String(REG, $3) << ", " << MRI2String(REG, $2)  << std::endl; 
         };
 %%

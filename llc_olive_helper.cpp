@@ -18,18 +18,22 @@ static void burm_trace(NODEPTR p, int eruleno, COST cost) {
         std::cerr << p << " matched " << burm_string[eruleno] << " = " << eruleno << " with cost " << cost.cost << "\n";
 }
 
-static const char* MRI2String(int type, Tree t) {
+static std::string MRI2String(int type, Tree t) {
     std::stringstream ss;
     switch (type) {
         case IMM:
             ss << "$" << t->val.val.i32s;
-            return ss.str().c_str();
+            return ss.str();
         case REG:
-            ss << "%" << t->val.val.i32s;
-            return ss.str().c_str();
+            if (t->val.val.i32s > NUM_REGS) {
+                std::cerr << "EXCEED MAXIMUM NUMBER OF REGS: " << t->val.val.i32s << std::endl;
+                exit(EXIT_FAILURE);
+            }
+            ss << "$" << registers[t->val.val.i32s];
+            return ss.str();
         case MEM:
             ss << "(" << t->val.val.i32u << ")";
-            return ss.str().c_str();
+            return ss.str();
         default:
             std::cerr << "PrintMRI(...) Error: Unexpected type " << type << std::endl;
             exit(EXIT_FAILURE);
@@ -47,12 +51,11 @@ static Tree tree(int op, Tree l, Tree r, VALUE v = 0) {
 	return t;
 }
 
-static void gen(NODEPTR p) {
-    FunctionState FuncState(NumRegs);
+static void gen(NODEPTR p, FunctionState *fstate) {
 	if (burm_label(p) == 0)
 		std::cerr << "no cover\n";
 	else {
-		stmt_action(p->x.state, &FuncState);
+		stmt_action(p->x.state, fstate);
 		if (shouldCover != 0)
 			dumpCover(p, 1, 0);
 	}
@@ -196,6 +199,12 @@ private:
  * Generate assembly for a single function
  * */
 void FunctionToAssembly(Function &func) {
+
+    // prepare a function state container
+    // to store function information, such as
+    // local variables, free registers, etc
+    FunctionState fstate(NumRegs);
+
     Function::BasicBlockListType &basic_blocks = func.getBasicBlockList();
     std::map<Instruction*, TreeWrapper*> treeMap;
     std::vector<TreeWrapper*> treeList;
@@ -293,7 +302,7 @@ void FunctionToAssembly(Function &func) {
 #if DEBUG_INST
             t->DisplayTree();
 #endif
-            gen(t->GetTree());
+            gen(t->GetTree(), &fstate);
             virtualRegs.insert(std::pair<Tree, int>(t->GetTree(), t->GetVirtualReg()));
         }
     } // end of TreeWrapper iteration
