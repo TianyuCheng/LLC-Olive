@@ -18,6 +18,23 @@ static void burm_trace(NODEPTR p, int eruleno, COST cost) {
         std::cerr << p << " matched " << burm_string[eruleno] << " = " << eruleno << " with cost " << cost.cost << "\n";
 }
 
+static const char* MRI2String(int type, Tree t) {
+    std::stringstream ss;
+    switch (type) {
+        case IMM:
+            ss << "$" << t->val.val.i32s;
+            return ss.str().c_str();
+        case REG:
+            ss << "%" << t->val.val.i32s;
+            return ss.str().c_str();
+        case MEM:
+            ss << "(" << t->val.val.i32u << ")";
+            return ss.str().c_str();
+        default:
+            std::cerr << "PrintMRI(...) Error: Unexpected type " << type << std::endl;
+            exit(EXIT_FAILURE);
+    }
+}
 
 static Tree tree(int op, Tree l, Tree r, VALUE v = 0) {
 	Tree t = (Tree) malloc(sizeof *t);
@@ -61,6 +78,7 @@ public:
     void SetValue(VALUE v) {
         t->val = v;
     }
+    int GetVirtualReg() const { return t->val.val.i32s; }
     void SetLevel(int level) { t->level = level; }
     void SetChild(int n, Tree ct) {
         if (n < 2) {
@@ -266,12 +284,17 @@ void FunctionToAssembly(Function &func) {
         }
         t->SetLevel(level);     // since we are changing the structure of the tree, levels may change
 
+#if DEBUG_INST
         errs() << Instruction::getOpcodeName(t->GetOpCode()) << "\tLEVEL:\t" << t->GetLevel() << "\tRefCount:\t" << t->GetRefCount() << "\n";
+#endif
         // check if this tree satisfies the condition for saving into register
         if (t->GetRefCount() == 0 || t->GetLevel() * t->GetRefCount() > THRESHOLD) {
-            // t->DisplayTree();
+            t->SetValue(FunctionRegCounter++);        // every root of tree is implicitly stored in a register
+#if DEBUG_INST
+            t->DisplayTree();
+#endif
             gen(t->GetTree());
-            virtualRegs.insert(std::pair<Tree, int>(t->GetTree(), FunctionRegCounter++));
+            virtualRegs.insert(std::pair<Tree, int>(t->GetTree(), t->GetVirtualReg()));
         }
     } // end of TreeWrapper iteration
 
@@ -283,15 +306,22 @@ void FunctionToAssembly(Function &func) {
 int main(int argc, char *argv[])
 {
 #if 0
-    Tree t = tree(Store, 
-                tree(IMM, nullptr, nullptr, 100),
-                tree(Alloca, 
-                    tree(IMM, nullptr, nullptr, 1),
-                    nullptr)
-            );
+    // Tree t = tree(Add, 
+    //             tree(IMM, nullptr, nullptr, 1), 
+    //             tree(IMM, nullptr, nullptr, 2), 
+    //         1);
+    // Tree t = tree(Store, 
+    //             tree(IMM, nullptr, nullptr, 2), 
+    //             tree(REG, nullptr, nullptr, 1), 
+    //         1);
+    Tree t = tree(Store,
+                tree(Load,
+                    tree(IMM, nullptr, nullptr, 10),
+                    tree(Alloca, nullptr, nullptr, 1)),
+                tree(REG, nullptr, nullptr, 2),
+            1);
     gen(t);
-    return 0;
-#endif
+#else
     // parse arguments from command line
     cl::ParseCommandLineOptions(argc, argv, "llc-olive\n");
 
@@ -305,6 +335,7 @@ int main(int argc, char *argv[])
     for (Function &func : function_list) {
         FunctionToAssembly(func);
     }
+#endif
 
     return 0;
 }

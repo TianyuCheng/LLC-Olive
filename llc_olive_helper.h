@@ -1,4 +1,5 @@
 #include <iostream>
+#include <sstream>
 #include <fstream>
 #include <cassert>
 #include <vector>
@@ -79,12 +80,14 @@ static COST COST_ZERO     = { 0 };
 static int _ern = 0;
 
 static int shouldTrace = 0;
-static int shouldCover = 1;
+static int shouldCover = 0;
 
 int OP_LABEL(NODEPTR p) {
-	switch (p->op) {
-	default:     return p->op - 1;      // -1 for offset in array
-	}
+    if (p) return p->op;
+    std::cerr << "NODEPTR is null for OP_LABEL" << std::endl;
+    exit(EXIT_FAILURE);
 }
 
 static void burm_trace(NODEPTR, int, COST);
+static const char* MRI2String(int type, Tree t);
+
