@@ -7,61 +7,61 @@
 %term ICmp=51 FCmp=52 PHI=53 Call=54 Select=55 UserOp1=56 UserOp2=57 VAArg=58 ExtractElement=59 InsertElement=60 ShuffleVector=61 ExtractValue=62 InsertValue=63 LandingPad=64
 %term REG IMM MEM
 
-%declare<void> stmt<FUNCTION_STATE FuncState>;
-%declare<void> rim<FUNCTION_STATE  FuncState>;
-%declare<void> ri<FUNCTION_STATE   FuncState>;
-%declare<void> reg<FUNCTION_STATE  FuncState>;
-%declare<void> imm<FUNCTION_STATE  FuncState>;
-%declare<void> mem<FUNCTION_STATE  FuncState>;
-    
-%declare<void> ret<FUNCTION_STATE FuncState>;
-%declare<void> br<FUNCTION_STATE FuncState>;
-%declare<void> switch<FUNCTION_STATE FuncState>;
-%declare<void> indirectbr<FUNCTION_STATE FuncState>;
-%declare<void> invoke<FUNCTION_STATE FuncState>;
-%declare<void> resume<FUNCTION_STATE FuncState>;
-%declare<void> unreachable<FUNCTION_STATE FuncState>;
-%declare<void> cleanupret<FUNCTION_STATE FuncState>;
-%declare<void> catchret<FUNCTION_STATE FuncState>;
-%declare<void> catchswitch<FUNCTION_STATE FuncState>;
-%declare<void> add<FUNCTION_STATE FuncState>;
-%declare<void> fadd<FUNCTION_STATE FuncState>;
-%declare<void> sub<FUNCTION_STATE FuncState>;
-%declare<void> fsub<FUNCTION_STATE FuncState>;
-%declare<void> mul<FUNCTION_STATE FuncState>;
-%declare<void> fmul<FUNCTION_STATE FuncState>;
-%declare<void> udiv<FUNCTION_STATE FuncState>;
-%declare<void> sdiv<FUNCTION_STATE FuncState>;
-%declare<void> fdiv<FUNCTION_STATE FuncState>;
-%declare<void> urem<FUNCTION_STATE FuncState>;
-%declare<void> srem<FUNCTION_STATE FuncState>;
-%declare<void> frem<FUNCTION_STATE FuncState>;
-%declare<void> shl<FUNCTION_STATE FuncState>;
-%declare<void> lshr<FUNCTION_STATE FuncState>;
-%declare<void> ashr<FUNCTION_STATE FuncState>;
-%declare<void> and<FUNCTION_STATE FuncState>;
-%declare<void> or<FUNCTION_STATE FuncState>;
-%declare<void> xor<FUNCTION_STATE FuncState>;
-%declare<void> alloca<FUNCTION_STATE FuncState>;
-%declare<void> load<FUNCTION_STATE FuncState>;
-%declare<void> store<FUNCTION_STATE FuncState>;
-%declare<void> getelementptr<FUNCTION_STATE FuncState>;
-%declare<void> fence<FUNCTION_STATE FuncState>;
-%declare<void> atomiccmpxchg<FUNCTION_STATE FuncState>;
-%declare<void> atomicrmw<FUNCTION_STATE FuncState>;
+%declare<void> stmt<FUNCTION_STATE fstate>;
+%declare<void> rim<FUNCTION_STATE  fstate>;
+%declare<void> ri<FUNCTION_STATE   fstate>;
+%declare<void> reg<FUNCTION_STATE  fstate>;
+%declare<void> imm<FUNCTION_STATE  fstate>;
+%declare<void> mem<FUNCTION_STATE  fstate>;
+
+%declare<void> ret<FUNCTION_STATE fstate>;
+%declare<void> br<FUNCTION_STATE fstate>;
+%declare<void> switch<FUNCTION_STATE fstate>;
+%declare<void> indirectbr<FUNCTION_STATE fstate>;
+%declare<void> invoke<FUNCTION_STATE fstate>;
+%declare<void> resume<FUNCTION_STATE fstate>;
+%declare<void> unreachable<FUNCTION_STATE fstate>;
+%declare<void> cleanupret<FUNCTION_STATE fstate>;
+%declare<void> catchret<FUNCTION_STATE fstate>;
+%declare<void> catchswitch<FUNCTION_STATE fstate>;
+%declare<void> add<FUNCTION_STATE fstate>;
+%declare<void> fadd<FUNCTION_STATE fstate>;
+%declare<void> sub<FUNCTION_STATE fstate>;
+%declare<void> fsub<FUNCTION_STATE fstate>;
+%declare<void> mul<FUNCTION_STATE fstate>;
+%declare<void> fmul<FUNCTION_STATE fstate>;
+%declare<void> udiv<FUNCTION_STATE fstate>;
+%declare<void> sdiv<FUNCTION_STATE fstate>;
+%declare<void> fdiv<FUNCTION_STATE fstate>;
+%declare<void> urem<FUNCTION_STATE fstate>;
+%declare<void> srem<FUNCTION_STATE fstate>;
+%declare<void> frem<FUNCTION_STATE fstate>;
+%declare<void> shl<FUNCTION_STATE fstate>;
+%declare<void> lshr<FUNCTION_STATE fstate>;
+%declare<void> ashr<FUNCTION_STATE fstate>;
+%declare<void> and<FUNCTION_STATE fstate>;
+%declare<void> or<FUNCTION_STATE fstate>;
+%declare<void> xor<FUNCTION_STATE fstate>;
+%declare<void> alloca<FUNCTION_STATE fstate>;
+%declare<void> load<FUNCTION_STATE fstate>;
+%declare<void> store<FUNCTION_STATE fstate>;
+%declare<void> getelementptr<FUNCTION_STATE fstate>;
+%declare<void> fence<FUNCTION_STATE fstate>;
+%declare<void> atomiccmpxchg<FUNCTION_STATE fstate>;
+%declare<void> atomicrmw<FUNCTION_STATE fstate>;
 %%
 
-ri:    stmt   { $cost[0].cost = $cost[1].cost; } = { /* TODO: match reg here */ };
-rim:   stmt   { $cost[0].cost = $cost[1].cost; } = { /* TODO: match reg here */ };
-rim:   reg    { $cost[0].cost = $cost[1].cost; } = { /* TODO: match reg here */ };
-rim:   imm    { $cost[0].cost = $cost[1].cost; } = { /* TODO: match imm here */ };
-rim:   mem    { $cost[0].cost = $cost[1].cost; } = { /* TODO: match mem here */ };
-ri:    reg    { $cost[0].cost = $cost[1].cost; } = { /* TODO: match reg here */ };
-ri:    imm    { $cost[0].cost = $cost[1].cost; } = { /* TODO: match imm here */ };
-reg:   REG    { $cost[0].cost = 1;             } = { /* TODO: match reg here */ };
-imm:   IMM    { $cost[0].cost = 0;             } = { /* TODO: match imm here */ };
-mem:   MEM    { $cost[0].cost = 10;            } = { /* TODO: match mem here */ };
-    
+ri:    stmt   { $cost[0].cost = $cost[1].cost; } = { $action[1](fstate); };
+rim:   stmt   { $cost[0].cost = $cost[1].cost; } = { $action[1](fstate); };
+rim:   reg    { $cost[0].cost = $cost[1].cost; } = { $action[1](fstate); };
+rim:   imm    { $cost[0].cost = $cost[1].cost; } = { $action[1](fstate); };
+rim:   mem    { $cost[0].cost = $cost[1].cost; } = { $action[1](fstate); };
+ri:    reg    { $cost[0].cost = $cost[1].cost; } = { $action[1](fstate); };
+ri:    imm    { $cost[0].cost = $cost[1].cost; } = { $action[1](fstate); };
+reg:   REG    { $cost[0].cost = 1;             } = { std::cerr << "Hello REG " << $0->val.val.i32s << std::endl; };
+imm:   IMM    { $cost[0].cost = 0;             } = { std::cerr << "Hello IMM " << $0->val.val.i32s << std::endl; };
+mem:   MEM    { $cost[0].cost = 10;            } = { std::cerr << "Hello MEM " << $0->val.val.i32s << std::endl; };
+
 stmt:	ret { $cost[0].cost = $cost[1].cost; } = { };
 ret:	Ret(ri) { $cost[0].cost = $cost[2].cost + 1; } = { };
 
@@ -190,53 +190,53 @@ frem:	FRem(rim, ri) { $cost[0].cost = $cost[2].cost + $cost[3].cost + 30; } = {
 
 stmt:	alloca { $cost[0].cost = $cost[1].cost; } = { 
             std::cerr << "Hello, Stmt -> Alloca" << std::endl; 
-            $action[1](0);
+            $action[1](fstate);
             };
 alloca:	Alloca(ri) { $cost[0].cost = $cost[2].cost + 1; } = {
                 std::cerr << "Hello Alloca" << std::endl;
-                $action[2](0);
+                $action[2](fstate);
             };
 
 stmt:	load { $cost[0].cost = $cost[1].cost; } = { 
             std::cerr << "Hello, Stmt -> Load" << std::endl; 
-            $action[1](0);
+            $action[1](fstate);
             };
 load:	Load(ri) { $cost[0].cost = $cost[2].cost + 1; } = { 
                 std::cerr << "Hello Load" << std::endl;
-                $action[2](0);
+                $action[2](fstate);
             };
 
 stmt:	store { $cost[0].cost = $cost[1].cost; } = { 
             std::cerr << "Hello, Stmt -> Store" << std::endl; 
-            $action[1](0);
+            $action[1](fstate);
             };
 store:	Store(rim, ri) { $cost[0].cost = $cost[2].cost + $cost[3].cost + 1; } = {
                 std::cerr << "Hello Store" << std::endl;
-                $action[2](0);
-                $action[3](0);
+                $action[2](fstate);
+                $action[3](fstate);
             };
 
 stmt:	getelementptr { $cost[0].cost = $cost[1].cost; } = { 
             std::cerr << "Hello, Stmt -> GetElementPtr" << std::endl; 
-            $action[1](0);
+            $action[1](fstate);
             };
 getelementptr:	GetElementPtr(rim, ri) { $cost[0].cost = $cost[2].cost + $cost[3].cost + 1; } = { };
 
 stmt:	fence { $cost[0].cost = $cost[1].cost; } = { 
             std::cerr << "Hello, Stmt -> Fence" << std::endl; 
-            $action[1](0);
+            $action[1](fstate);
             };
 fence:	Fence(rim, ri) { $cost[0].cost = $cost[2].cost + $cost[3].cost + 1; } = { };
 
 stmt:	atomiccmpxchg { $cost[0].cost = $cost[1].cost; } = { 
             std::cerr << "Hello, Stmt -> AtomicCmpXchg" << std::endl; 
-            $action[1](0);
+            $action[1](fstate);
             };
 atomiccmpxchg:	AtomicCmpXchg(rim, ri) { $cost[0].cost = $cost[2].cost + $cost[3].cost + 1; } = { };
 
 stmt:	atomicrmw { $cost[0].cost = $cost[1].cost; } = { 
             std::cerr << "Hello, Stmt -> AtomicRMW" << std::endl; 
-            $action[1](0);
+            $action[1](fstate);
             };
 atomicrmw:	AtomicRMW(rim, ri) { $cost[0].cost = $cost[2].cost + $cost[3].cost + 1; } = { };
 
