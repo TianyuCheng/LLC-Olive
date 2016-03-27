@@ -1,3 +1,6 @@
+#ifndef LLC_OLIVE_H
+#define LLC_OLIVE_H
+
 #include <iostream>
 #include <sstream>
 #include <fstream>
@@ -46,12 +49,9 @@ static int _ern = 0;
 static int shouldTrace = 0;
 static int shouldCover = 0;
 
-int OP_LABEL(NODEPTR p) {
-    if (p) return p->op;
-    std::cerr << "NODEPTR is null for OP_LABEL" << std::endl;
-    exit(EXIT_FAILURE);
-}
+int OP_LABEL(NODEPTR p);
 
 static void burm_trace(NODEPTR, int, COST);
-static std::string MRI2String(int type, Tree t);
 static int loop_label = 0;
+
+#endif

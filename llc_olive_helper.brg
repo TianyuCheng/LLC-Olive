@@ -9,52 +9,64 @@
 %term REG IMM MEM
 
 %declare<void> stmt     <FUNCTION_STATE fstate>;
+%declare<void> vstmt    <FUNCTION_STATE fstate>;
 %declare<void> reg      <FUNCTION_STATE fstate>;
 %declare<void> imm      <FUNCTION_STATE fstate>;
 %declare<void> mem      <FUNCTION_STATE fstate>;
 %%
 
-reg:    stmt                { $cost[0].cost = $cost[1].cost;                    } = { $action[1](fstate); };
+stmt:   vstmt               { return 1;                                         } = { $action[1](fstate); };
+
+reg:    vstmt               { $cost[0].cost = $cost[1].cost;                    } = { $action[1](fstate); };
 reg:    REG                 { $cost[0].cost = 1;                                } = { };
 reg:    IMM                 { $cost[0].cost = 1;                                } = { };
 imm:    Load(IMM)           { $cost[0].cost = 0;                                } = { };
 imm:    IMM                 { $cost[0].cost = 0;                                } = { };
 mem:    MEM                 { $cost[0].cost = 10;                               } = { };
 
-stmt:   Ret(reg)            { $cost[0].cost = $cost[2].cost + 1;                } = { 
+vstmt:  Ret(reg)            { $cost[0].cost = $cost[2].cost + 1;                } = { 
             /*
              * IR Ret takes a register argument
              * X86 Ret takes no argument, return value is passed by %eax
              */
-            std::cerr << "\tleave" << std::endl
-                      << "\tret"   << std::endl; 
+            fstate->RestoreStack();
+            fstate->AddInst(new X86Inst("leave"));
+            fstate->AddInst(new X86Inst("ret"));
         };
-stmt:   Alloca(IMM)         { $cost[0].cost = 1;                                } = { 
+vstmt:  Alloca(IMM)         { $cost[0].cost = 1;                                } = { 
             /*
              * IR Alloca takes one arguments for allocation size
              * X86 does not have correspondence for Alloca, but only uses $esp - size
              */
-            // std::cerr << "subl $esp, $4" << "\t; perhaps we can change this!" << std::endl; 
-            std::cerr << "\t; Allocate Space!" << std::endl; 
+            fstate->CreateLocal($0, 8);
         }; 
-stmt:   Load(reg)           { $cost[0].cost = $cost[2].cost + 1;    } = { 
+vstmt:  Load(reg)           { $cost[0].cost = $cost[2].cost + 1;    } = { 
             /*
              * IR Load takes one arguments for allocation size
              * X86 uses mov instruction, which takes two arguments
              */
             // prepare both operands first
             $action[2](fstate); 
-            std::cerr << "\tmovl " << MRI2String(REG, $0) << ", " << MRI2String(REG, $2) << std::endl; 
+            fstate->AddInst(new X86Inst("movq", 
+                        new X86Operand(fstate, OP_TYPE::X86Reg, $0->val),
+                        new X86Operand(fstate, OP_TYPE::X86Reg, $2->val)
+                    ));
         }; 
-stmt:   Load(imm)           { $cost[0].cost = $cost[2].cost + 1;    } = { 
+vstmt:  Load(imm)           { $cost[0].cost = $cost[2].cost + 1;    } = { 
             $action[2](fstate); 
-            std::cerr << "\tmovl " << MRI2String(REG, $0) << ", " << MRI2String(IMM, $2) << std::endl; 
+            fstate->AddInst(new X86Inst("movq", 
+                        new X86Operand(fstate, OP_TYPE::X86Reg, $0->val),
+                        new X86Operand(fstate, OP_TYPE::X86Imm, $2->val)
+                    ));
         }; 
-stmt:   Load(mem)           { $cost[0].cost = $cost[2].cost + 1;    } = { 
+vstmt:  Load(mem)           { $cost[0].cost = $cost[2].cost + 1;    } = { 
             $action[2](fstate); 
-            std::cerr << "\tmovl " << MRI2String(REG, $0) << ", " << MRI2String(MEM, $2) << std::endl; 
+            fstate->AddInst(new X86Inst("movq", 
+                        new X86Operand(fstate, OP_TYPE::X86Reg, $0->val),
+                        fstate->GetLocalMemoryAddress($2)
+                    ));
         }; 
-stmt:   Store(reg, reg)      { $cost[0].cost = $cost[2].cost + $cost[3].cost;    } = { 
+vstmt:  Store(reg, reg)      { $cost[0].cost = $cost[2].cost + $cost[3].cost;    } = { 
             /*
              * IR Store takes one arguments for allocation size
              * X86 uses mov instruction, which takes two arguments
@@ -62,19 +74,28 @@ stmt:   Store(reg, reg)      { $cost[0].cost = $cost[2].cost + $cost[3].cost;   
             // prepare both operands first
             $action[2](fstate);
             $action[3](fstate);
-            std::cerr << "\tmovl " << MRI2String(REG, $3) << ", " << MRI2String(REG, $2) << std::endl;
+            fstate->AddInst(new X86Inst("movq", 
+                        new X86Operand(fstate, OP_TYPE::X86Reg, $3->val),
+                        new X86Operand(fstate, OP_TYPE::X86Reg, $2->val)
+                    ));
         }; 
-stmt:   Store(imm, reg)      { $cost[0].cost = $cost[2].cost + $cost[3].cost;    } = { 
+vstmt:  Store(imm, reg)      { $cost[0].cost = $cost[2].cost + $cost[3].cost;    } = { 
             $action[2](fstate);
             $action[3](fstate);
-            std::cerr << "\tmovl " << MRI2String(REG, $3) << ", " << MRI2String(IMM, $2) << std::endl;
+            fstate->AddInst(new X86Inst("movq", 
+                        new X86Operand(fstate, OP_TYPE::X86Reg, $3->val),
+                        new X86Operand(fstate, OP_TYPE::X86Imm, $2->val)
+                    ));
         }; 
-stmt:   Store(mem, reg)      { $cost[0].cost = $cost[2].cost + $cost[3].cost;    } = { 
+vstmt:  Store(mem, reg)      { $cost[0].cost = $cost[2].cost + $cost[3].cost;    } = { 
             $action[2](fstate);
             $action[3](fstate);
-            std::cerr << "\tmovl " << MRI2String(REG, $3) << ", " << MRI2String(MEM, $2) << std::endl;
+            fstate->AddInst(new X86Inst("movq", 
+                        new X86Operand(fstate, OP_TYPE::X86Reg, $3->val),
+                        fstate->GetLocalMemoryAddress($2)
+                    ));
         }; 
-stmt:   Add(reg, reg)       { $cost[0].cost = $cost[2].cost + $cost[3].cost + 2;    } = {
+vstmt:  Add(reg, reg)       { $cost[0].cost = $cost[2].cost + $cost[3].cost + 2;    } = {
             /*
              * IR Add takes two arguments
              * X86 Add takes two argument, both operands cannot be from memory in the instruction
@@ -82,10 +103,12 @@ stmt:   Add(reg, reg)       { $cost[0].cost = $cost[2].cost + $cost[3].cost + 2;
             // prepare both operands first
             $action[2](fstate); 
             $action[3](fstate);
-            // std::cerr << "ADD: "<< $3->val.val.i32s << std::endl;
-            std::cerr << "\taddl " << MRI2String(REG, $3) << ", " << MRI2String(REG, $2)  << std::endl; 
+            fstate->AddInst(new X86Inst("addq", 
+                        new X86Operand(fstate, OP_TYPE::X86Reg, $3->val),
+                        new X86Operand(fstate, OP_TYPE::X86Reg, $2->val)
+                    ));
         };
-stmt:   Sub(reg, reg)       { $cost[0].cost = $cost[2].cost + $cost[3].cost + 2;    } = {
+vstmt:  Sub(reg, reg)       { $cost[0].cost = $cost[2].cost + $cost[3].cost + 2;    } = {
             /*
              * IR Sub takes two arguments
              * X86 Sub takes two argument, both operands cannot be from memory in the instruction
@@ -93,10 +116,12 @@ stmt:   Sub(reg, reg)       { $cost[0].cost = $cost[2].cost + $cost[3].cost + 2;
             // prepare both operands first
             $action[2](fstate); 
             $action[3](fstate);
-            // std::cerr << "SUB: "<< $3->val.val.i32s << std::endl;
-            std::cerr << "\tsubl " << MRI2String(REG, $3) << ", " << MRI2String(REG, $2)  << std::endl; 
+            fstate->AddInst(new X86Inst("subq", 
+                        new X86Operand(fstate, OP_TYPE::X86Reg, $3->val),
+                        new X86Operand(fstate, OP_TYPE::X86Reg, $2->val)
+                    ));
         };
-stmt:   Mul(reg, reg)       { $cost[0].cost = $cost[2].cost + $cost[3].cost + 4;    } = {
+vstmt:  Mul(reg, reg)       { $cost[0].cost = $cost[2].cost + $cost[3].cost + 4;    } = {
             /*
              * IR Mul takes two arguments
              * X86 Mul takes two argument, both operands cannot be from memory in the instruction
@@ -104,7 +129,9 @@ stmt:   Mul(reg, reg)       { $cost[0].cost = $cost[2].cost + $cost[3].cost + 4;
             // prepare both operands first
             $action[2](fstate); 
             $action[3](fstate);
-            // std::cerr << "MUL: "<< $3->val.val.i32s << std::endl;
-            std::cerr << "\timull " << MRI2String(REG, $3) << ", " << MRI2String(REG, $2)  << std::endl; 
+            fstate->AddInst(new X86Inst("imulq", 
+                        new X86Operand(fstate, OP_TYPE::X86Reg, $3->val),
+                        new X86Operand(fstate, OP_TYPE::X86Reg, $2->val)
+                    ));
         };
 %%

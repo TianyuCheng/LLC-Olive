@@ -1,6 +1,12 @@
 #define DEBUG_INST  0
 #define THRESHOLD   5
 
+int OP_LABEL(NODEPTR p) {
+    if (p) return p->op;
+    std::cerr << "NODEPTR is null for OP_LABEL" << std::endl;
+    exit(EXIT_FAILURE);
+}
+
 using namespace llvm;
 
 static cl::opt<std::string>
@@ -18,6 +24,7 @@ static void burm_trace(NODEPTR p, int eruleno, COST cost) {
         std::cerr << p << " matched " << burm_string[eruleno] << " = " << eruleno << " with cost " << cost.cost << "\n";
 }
 
+#if 0
 static std::string MRI2String(int type, Tree t) {
     /*
     std::stringstream ss;
@@ -46,6 +53,7 @@ static std::string MRI2String(int type, Tree t) {
     */
     return std::string("<deprecated>");     // deprecated: intend to move to FunctionState allocation
 }
+#endif
 
 static Tree tree(int op, Tree l, Tree r, VALUE v = 0) {
 	Tree t = (Tree) malloc(sizeof *t);
@@ -335,6 +343,9 @@ void FunctionToAssembly(Function &func) {
             virtualRegs.insert(std::pair<Tree, int>(t->GetTree(), t->GetVirtualReg()));
         }
     } // end of TreeWrapper iteration
+
+    // === Third Pass: analyze virtual register live range, allocate machine register and output assembly file
+    fstate.PrintAssembly(std::cerr);
 
     // clean up
     for (TreeWrapper *t : treeList)

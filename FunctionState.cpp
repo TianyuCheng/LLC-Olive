@@ -1,13 +1,15 @@
 #include "FunctionState.h"
 
 FunctionState::FunctionState(std::string name, int n, int l)
-    : function_name(name), loop_label(l), num_locals(0), allocator(n)
+    : function_name(name), loop_label(l), local_bytes(0), allocator(n)
 {
     // initialize function state here
 }
 
 FunctionState::~FunctionState() {
     // de-initialize function state here
+    for (X86Inst *inst : assembly)
+        delete inst;
 }
 
 std::string FunctionState::GetMachineReg(int virtual_reg) {
@@ -16,10 +18,48 @@ std::string FunctionState::GetMachineReg(int virtual_reg) {
 }
 
 void FunctionState::PrintAssembly(std::ostream &out) {
+    this->LiveRangeAnalysis();
     // print assembly to file
     // TODO: remember to print function begin and ends
+    for (X86Inst *inst : assembly)
+        out << *inst;
+    for(auto it = locals.begin(); it != locals.end(); ++it ) {
+        delete it->second;
+    }
 }
 
 void FunctionState::LiveRangeAnalysis() {
     // analyze live range of virtual registers
+}
+
+void FunctionState::CreateLocal(Tree t, int bytes) {
+    // already allocated
+    auto it = locals.find(t);
+    if (it != locals.end())
+        return;
+
+    // now allocate local variable
+    if (bytes % 4 != 0) bytes += 4 - bytes % 4;
+    local_bytes += bytes;
+    X86Operand *local = new X86Operand(this, OP_TYPE::X86Mem, 
+            new X86Operand(this, OP_TYPE::X86Reg, 1000),   // base_address, should be $ebp
+            new X86Operand(this, OP_TYPE::X86Imm, 0),      // displacement
+            0,                                             // multiplier    
+            local_bytes - bytes);
+    // save the local variable memory address for future use
+    locals.insert(std::pair<Tree, X86Operand*>(t, local));
+}
+
+X86Operand* FunctionState::GetLocalMemoryAddress(Tree t) {
+    auto it = locals.find(t);
+    assert (it != locals.end() && "GetLocalMemoryAddress cannot find associated address for input tree");
+    return it->second;
+}
+
+void FunctionState::RestoreStack() {
+    if (local_bytes > 0)
+        assembly.push_back(new X86Inst("addq", 
+                new X86Operand(this, OP_TYPE::X86Reg, 1000),   // should be $esp
+                new X86Operand(this, OP_TYPE::X86Imm, local_bytes)
+        ));
 }

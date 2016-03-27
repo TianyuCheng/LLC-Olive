@@ -13,9 +13,9 @@ RESET=`tput sgr0`
 
 run: $(EXE) $(bitcodes)
 	@echo "=================================================================="
-	$(EXE) --num_regs=32 ./testcases/simpleSum.bc -o ./testcases/simpleSum.s
+	$(EXE) --num_regs=16 ./testcases/simpleSum.bc -o ./testcases/simpleSum.s
 	@echo "------------------------------------------------------------------"
-	$(EXE) --num_regs=32 ./testcases/simpleSum.bc -o ./testcases/calculation.s
+	$(EXE) --num_regs=16 ./testcases/simpleSum.bc -o ./testcases/calculation.s
 
 $(EXE): llc_olive.cpp llc_olive.brg
 	(cd $(TOOL_ROOT); make -j6) ; rm llc_olive.brg
