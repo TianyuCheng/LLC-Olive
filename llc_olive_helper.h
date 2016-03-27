@@ -92,10 +92,9 @@ static void burm_trace(NODEPTR, int, COST);
 static std::string MRI2String(int type, Tree t);
 
 static const char* registers[] = {
-    "eax", "ebx", "ecx", "edx",
-    "edi", "esi", "ebp", "esp",
-    "r1d", "r2d", "r3d", "r4d",
-    "r5d", "r6d", "r7d", "r8d",
-    "r9d", "r10d", "r11d", "r12d"
+    "rax", "rbx", "rcx", "rdx",
+    "rdi", "rsi", "rbp", "rsp",
+    "r8", "r9", "r10", "r11", 
+    "r12d", "r13", "r14", "r15"
 };
 static int NUM_REGS = 20;

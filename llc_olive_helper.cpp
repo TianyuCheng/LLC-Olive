@@ -10,7 +10,7 @@ static cl::opt<std::string>
 OutputFilename("o", cl::desc("<output filename>"), cl::value_desc("filename"));
 
 static cl::opt<int>
-NumRegs("num_regs", cl::desc("<number of registers available>"), cl::init(32));
+NumRegs("num_regs", cl::desc("<number of registers available>"), cl::init(16));
 
 /* burm_trace - print trace message for matching p */
 static void burm_trace(NODEPTR p, int eruleno, COST cost) {
@@ -25,6 +25,9 @@ static std::string MRI2String(int type, Tree t) {
             ss << "$" << t->val.val.i32s;
             return ss.str();
         case REG:
+            if (t->val.val.i32s < 0) {
+                return std::string("<reg-not-allocated>");
+            }
             if (t->val.val.i32s > NUM_REGS) {
                 std::cerr << "EXCEED MAXIMUM NUMBER OF REGS: " << t->val.val.i32s << std::endl;
                 exit(EXIT_FAILURE);
@@ -71,6 +74,7 @@ public:
         t = tree(opcode, l, r);
         t->refcnt = 0;
         t->level = 1;
+        t->val.val.i32s = -1;           // implicitly defined as a register, -1 means not allocated
         if (l) { t->level = std::max(t->level, 1 + l->level); nchild++; }
         if (r) { t->level = std::max(t->level, 1 + r->level); nchild++; }
     }
