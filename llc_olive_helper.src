@@ -44,7 +44,7 @@ static std::string MRI2String(int type, Tree t) {
             exit(EXIT_FAILURE);
     }
     */
-    return std::string("<deprecated>");
+    return std::string("<deprecated>");     // deprecated: intend to move to FunctionState allocation
 }
 
 static Tree tree(int op, Tree l, Tree r, VALUE v = 0) {
