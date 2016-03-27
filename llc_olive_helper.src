@@ -19,21 +19,23 @@ static void burm_trace(NODEPTR p, int eruleno, COST cost) {
 }
 
 static std::string MRI2String(int type, Tree t) {
+    /*
     std::stringstream ss;
     switch (type) {
         case IMM:
             ss << "$" << t->val.val.i32s;
             return ss.str();
         case REG:
-            if (t->val.val.i32s < 0) {
-                return std::string("<reg-not-allocated>");
-            }
-            if (t->val.val.i32s > NUM_REGS) {
-                std::cerr << "EXCEED MAXIMUM NUMBER OF REGS: " << t->val.val.i32s << std::endl;
-                exit(EXIT_FAILURE);
-            }
-            ss << "$" << registers[t->val.val.i32s];
-            return ss.str();
+            // if (t->val.val.i32s < 0) {
+            //     return std::string("<reg-not-allocated>");
+            // }
+            // if (t->val.val.i32s > NUM_REGS) {
+            //     std::cerr << "EXCEED MAXIMUM NUMBER OF REGS: " << t->val.val.i32s << std::endl;
+            //     exit(EXIT_FAILURE);
+            // }
+            // ss << "$" << registers[t->val.val.i32s];
+            // return ss.str();
+            return std::string("$rax");
         case MEM:
             ss << "(" << t->val.val.i32u << ")";
             return ss.str();
@@ -41,6 +43,8 @@ static std::string MRI2String(int type, Tree t) {
             std::cerr << "PrintMRI(...) Error: Unexpected type " << type << std::endl;
             exit(EXIT_FAILURE);
     }
+    */
+    return std::string("<deprecated>");
 }
 
 static Tree tree(int op, Tree l, Tree r, VALUE v = 0) {
@@ -207,7 +211,7 @@ void FunctionToAssembly(Function &func) {
     // prepare a function state container
     // to store function information, such as
     // local variables, free registers, etc
-    FunctionState fstate(NumRegs);
+    FunctionState fstate(func.getName(), NumRegs);
 
     Function::BasicBlockListType &basic_blocks = func.getBasicBlockList();
     std::map<Instruction*, TreeWrapper*> treeMap;
@@ -280,7 +284,6 @@ void FunctionToAssembly(Function &func) {
     } // end of basic block loop
 
     // === Second Pass: generate assembly code using olive
-    int FunctionRegCounter = 0;
     // iterate through tree list for each individual instruction tree
     // replace the complicated/common tree expression with registers
     std::map<Tree, int> virtualRegs;
@@ -302,7 +305,7 @@ void FunctionToAssembly(Function &func) {
 #endif
         // check if this tree satisfies the condition for saving into register
         if (t->GetRefCount() == 0 || t->GetLevel() * t->GetRefCount() > THRESHOLD) {
-            t->SetValue(FunctionRegCounter++);        // every root of tree is implicitly stored in a register
+            t->SetValue(fstate.GetVirtualReg());        // every root of (non-branch-inst) tree is implicitly stored in a register
 #if DEBUG_INST
             t->DisplayTree();
 #endif

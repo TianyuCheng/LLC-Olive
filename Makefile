@@ -37,6 +37,7 @@ test: clean $(EXE) $(bitcodes) $(assembly)
 	@$(CC) -O0 -emit-llvm $< -S -o $@
 
 clean:
+	@rm -rf $(EXE)
 	@rm -rf $(TEST_DIR)/*.bc
 	@rm -rf $(TEST_DIR)/*.log
 	@rm -rf $(TEST_DIR)/.*.swp

@@ -254,10 +254,10 @@ with open("./llc_olive_helper.enums", "w") as f:
 #  \____|\___|_| |_|\___|_|  \__,_|\__\___/|_|    
 #                                                 
 with open("./llc_olive.brg", "w") as f:
-    include = file("./llc_olive_helper.h", "r")
+    include = file("./llc_olive_helper.hhh", "r")
     enums   = file("./llc_olive_helper.enums", "r")
     grammar = file("./llc_olive_helper.brg", "r")
-    implemt = file("./llc_olive_helper.cpp", "r")
+    implemt = file("./llc_olive_helper.src", "r")
 
     # combine and write out
     print >> f, """%%{

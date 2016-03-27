@@ -90,11 +90,4 @@ int OP_LABEL(NODEPTR p) {
 
 static void burm_trace(NODEPTR, int, COST);
 static std::string MRI2String(int type, Tree t);
-
-static const char* registers[] = {
-    "rax", "rbx", "rcx", "rdx",
-    "rdi", "rsi", "rbp", "rsp",
-    "r8", "r9", "r10", "r11", 
-    "r12d", "r13", "r14", "r15"
-};
-static int NUM_REGS = 20;
+static int loop_label = 0;

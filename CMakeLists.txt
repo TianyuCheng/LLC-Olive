@@ -20,5 +20,9 @@ set(LLVM_NO_DEAD_STRIP 1)
 add_llvm_tool(llc-olive
   llc_olive.h
   llc_olive.cpp
-  )
+  FunctionState.cpp
+  FunctionState.h
+  RegisterAllocator.cpp
+  RegisterAllocator.h
+)
 export_executable_symbols(llc-olive)
