@@ -78,12 +78,14 @@ public:
         t = tree(opcode, l, r);
         t->refcnt = 0;
         t->level = 1;
-        t->val.val.i32s = -1;           // implicitly defined as a register, -1 means not allocated
         if (l) { t->level = std::max(t->level, 1 + l->level); nchild++; }
         if (r) { t->level = std::max(t->level, 1 + r->level); nchild++; }
     }
     virtual ~TreeWrapper() {
         free(t);
+        // Stupid design in TreeReference causes me to use a freeList for cleaning
+        for (Tree ct: freeList)
+            free(ct);
     }
     int GetOpCode() const { return t->op; }
     void SetValue(VALUE v) {
@@ -118,7 +120,8 @@ public:
     int GetNumChildren() const { return nchild; }
 
     void CastInt(int n, ConstantInt *cnst) {
-        Tree ct = tree(IMM, nullptr, nullptr);
+        freeList.push_back(tree(IMM, nullptr, nullptr));
+        Tree ct = freeList.back();
         const APInt integer = cnst->getValue();
         unsigned bitWidth = cnst->getBitWidth();
         if (integer.isSignedIntN(bitWidth)) {
@@ -163,7 +166,8 @@ public:
     }
 
     void CastFP(int n, ConstantFP *cnst) {
-        Tree ct = tree(IMM, nullptr, nullptr);
+        freeList.push_back(tree(IMM, nullptr, nullptr));
+        Tree ct = freeList.back();
         // for now, assume all floating point uses 64 bit double
         ct->val.val.f64 = (double) cnst->getValueAPF().convertToDouble();
         this->SetChild(n, ct);
@@ -199,6 +203,7 @@ private:
 private:
     Tree t;
     int nchild;
+    std::vector<Tree> freeList;
 };
 
 
@@ -212,6 +217,11 @@ void FunctionToAssembly(Function &func) {
     // to store function information, such as
     // local variables, free registers, etc
     FunctionState fstate(func.getName(), NumRegs);
+
+    // Due to some stupid design, we have to use
+    // a vector container to store additional malloc'd
+    // pointers.
+    std::vector<Tree> freeList;
 
     Function::BasicBlockListType &basic_blocks = func.getBasicBlockList();
     std::map<Instruction*, TreeWrapper*> treeMap;
@@ -227,6 +237,16 @@ void FunctionToAssembly(Function &func) {
             errs() << "\tinstruction (" << instruction << " ) opcode: " << instruction.getOpcode() << "\n";
 #endif
             TreeWrapper *t = new TreeWrapper(instruction.getOpcode());
+            if (BranchInst::classof(&instruction)) {
+                // TODO: deal separately with branch instruction
+                // it does not need to treated implicitly to be
+                // stored in a register
+            } else {
+                // Every root of (non-branch-inst) tree is implicitly stored in a register,
+                // Some might not be useful, though. We will eliminate unuseful ones later
+                t->SetValue(fstate.GetVirtualReg());
+            }
+
             int num_operands = instruction.getNumOperands();
             for (int i = 0; i < num_operands; i++) {
                 Value *v = instruction.getOperand(i);
@@ -294,7 +314,8 @@ void FunctionToAssembly(Function &func) {
             auto child = t->GetChild(i);
             auto it = virtualRegs.find(child);
             if (it != virtualRegs.end()) {
-                t->SetChild(i, tree(REG, nullptr, nullptr, it->second));
+                freeList.push_back(tree(REG, nullptr, nullptr, it->second));       // save this newly created tree ptr in free list to free it later
+                t->SetChild(i, freeList.back());
                 level = std::max(child->level + 1, level);
             }
         }
@@ -305,7 +326,6 @@ void FunctionToAssembly(Function &func) {
 #endif
         // check if this tree satisfies the condition for saving into register
         if (t->GetRefCount() == 0 || t->GetLevel() * t->GetRefCount() > THRESHOLD) {
-            t->SetValue(fstate.GetVirtualReg());        // every root of (non-branch-inst) tree is implicitly stored in a register
 #if DEBUG_INST
             t->DisplayTree();
 #endif
@@ -317,6 +337,9 @@ void FunctionToAssembly(Function &func) {
     // clean up
     for (TreeWrapper *t : treeList)
         delete t;
+    // Stupid design in TreeReference causes me to use a freeList for cleaning
+    for (Tree t : freeList)
+        free(t);
 }
 
 int main(int argc, char *argv[])

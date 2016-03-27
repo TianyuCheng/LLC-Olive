@@ -28,7 +28,8 @@ public:
 
     int GetVirtualReg() {
         int v = virtual2machine.size();
-        virtual2machine.push_back(-1);      // -1 not allocated yet
+        virtual2machine.push_back(-2);      // -2 not used yet
+                                            // -1 not allocated yet
         return v;
     }
     void PrintAssembly(std::ostream &out);
