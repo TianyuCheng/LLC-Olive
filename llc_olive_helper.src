@@ -244,7 +244,9 @@ void FunctionToAssembly(Function &func) {
             } else {
                 // Every root of (non-branch-inst) tree is implicitly stored in a register,
                 // Some might not be useful, though. We will eliminate unuseful ones later
-                t->SetValue(fstate.GetVirtualReg());
+                t->SetValue(fstate.GetVirtualReg());        // virtual regs will be 0,1,2,...
+                                                            // machine regs will be allocated later
+                                                            // we will construct a mapping from virtual to machine regs in FunctionState
             }
 
             int num_operands = instruction.getNumOperands();

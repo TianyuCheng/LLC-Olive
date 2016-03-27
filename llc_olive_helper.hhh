@@ -12,46 +12,10 @@
 #include <llvm/Support/raw_ostream.h>
 #include <llvm/Support/SourceMgr.h>
 #include <llvm/IR/Instruction.h>
+#include <llvm/IR/Instructions.h>
 #include <llvm/IR/Constants.h>
 
-#include "./RegisterAllocator.h"
 #include "./FunctionState.h"
-
-typedef struct VALUE {
-    union {
-        int8_t      i8s;
-        uint8_t     i8u;
-        int16_t     i16s;
-        uint16_t    i16u;
-        int32_t     i32s;
-        uint32_t    i32u;
-        int64_t     i64s;
-        uint64_t    i64u;
-        float       f32;
-        double      f64;
-    } val;
-    int bitWidth;
-    bool isFP;
-    bool isSigned;
-
-    VALUE() {
-        val.i64u = 0;
-        bitWidth = 64;
-        isFP = false;
-        isSigned = false;
-    }
-
-    VALUE(int8_t i)   { bitWidth =  4; isSigned = true;  isFP = false; val.i8s = i;  }
-    VALUE(int16_t i)  { bitWidth = 16; isSigned = true;  isFP = false; val.i16s = i; }
-    VALUE(int32_t i)  { bitWidth = 32; isSigned = true;  isFP = false; val.i32s = i; }
-    VALUE(int64_t i)  { bitWidth = 64; isSigned = true;  isFP = false; val.i64s = i; }
-    VALUE(uint8_t i)  { bitWidth =  8; isSigned = false; isFP = false; val.i8u = i;  }
-    VALUE(uint16_t i) { bitWidth = 16; isSigned = false; isFP = false; val.i16u = i; }
-    VALUE(uint32_t i) { bitWidth = 32; isSigned = false; isFP = false; val.i32u = i; }
-    VALUE(uint64_t i) { bitWidth = 64; isSigned = false; isFP = false; val.i64u = i; }
-    VALUE(float f)    { bitWidth = 32;                   isFP = true ; val.f32 = f;  }
-    VALUE(double f)   { bitWidth = 64;                   isFP = true ; val.f32 = f;  }
-} VALUE;
 
 typedef struct tree {
 	int op;
