@@ -116,11 +116,11 @@ public:
         }
         else {
             // output memory address by x86 addressing mode
-            if (op.offset)          out << std::hex << op.offset;
+            if (op.offset)          out << op.offset;
             out << "(";
-            if (op.base_address)    out << op.base_address;
+            if (op.base_address)    out << *op.base_address;
             else                    out << "0";
-            if (op.displacement)    out << ", " << op.displacement << ", " << op.stride;
+            if (op.stride && op.displacement)    out << ", " << *op.displacement << ", " << op.stride;
             out << ")";
         }
         return out;
@@ -166,7 +166,7 @@ public:
     friend std::ostream& operator<<(std::ostream& out, X86Inst &inst) {
         out << "\t" << inst.opname;
         if (inst.dst) out << "\t" << *(inst.dst);
-        if (inst.src) out << "\t" << *(inst.src);
+        if (inst.src) out << ", " << *(inst.src);
         out << std::endl;
         return out;
     }

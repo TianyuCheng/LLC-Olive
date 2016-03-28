@@ -1,5 +1,4 @@
 #define DEBUG_INST  0
-#define THRESHOLD   5
 
 int OP_LABEL(NODEPTR p) {
     if (p) return p->op;
@@ -21,7 +20,7 @@ NumRegs("num_regs", cl::desc("<number of registers available>"), cl::init(16));
 /* burm_trace - print trace message for matching p */
 static void burm_trace(NODEPTR p, int eruleno, COST cost) {
     if (shouldTrace)
-        std::cerr << p << " matched " << burm_string[eruleno] << " = " << eruleno << " with cost " << cost.cost << "\n";
+        std::cerr << p << " matched " << burm_string[eruleno] << " = " << eruleno << " with cost " << cost.cost << std::endl;
 }
 
 static Tree tree(int op, Tree l, Tree r, VALUE v = 0) {
@@ -218,12 +217,11 @@ void FunctionToAssembly(Function &func) {
                 // TODO: deal separately with branch instruction
                 // it does not need to treated implicitly to be
                 // stored in a register
+                errs() << "YOU'VE HIT A BRANCH INSTRUCTION!!!\n";
+                exit(0);
             } else {
-                // Every root of (non-branch-inst) tree is implicitly stored in a register,
-                // Some might not be useful, though. We will eliminate unuseful ones later
-                t->SetValue(fstate.GetVirtualReg());        // virtual regs will be 0,1,2,...
-                                                            // machine regs will be allocated later
-                                                            // we will construct a mapping from virtual to machine regs in FunctionState
+                // TODO: leave it later for future process
+                t->SetValue(fstate.GetVirtualReg());        // assign a virtual register for statement
             }
 
             int num_operands = instruction.getNumOperands();
@@ -256,7 +254,7 @@ void FunctionToAssembly(Function &func) {
                     // ... There are many kinds of constant, right now we do not deal with them ...
                     else {
                         // this is bad and probably needs to terminate the execution
-                        errs() << "FAILED TO FIND DEF:\t"; instruction.print(errs()); errs() << "\n";
+                        errs() << "NOT IMPLEMENTED OTHER CONST TYPES:\t"; instruction.print(errs()); errs() << "\n";
                         exit(EXIT_FAILURE);
                     }
                 }
@@ -288,7 +286,7 @@ void FunctionToAssembly(Function &func) {
     std::map<Tree, int> virtualRegs;
     for (TreeWrapper *t : treeList) {
         // replace the already computed tree branch with virtual register
-        int level = t->GetLevel();
+        int level = 0;
         for (int i = 0; i < t->GetNumChildren(); i++) {
             auto child = t->GetChild(i);
             auto it = virtualRegs.find(child);
@@ -304,7 +302,7 @@ void FunctionToAssembly(Function &func) {
         errs() << Instruction::getOpcodeName(t->GetOpCode()) << "\tLEVEL:\t" << t->GetLevel() << "\tRefCount:\t" << t->GetRefCount() << "\n";
 #endif
         // check if this tree satisfies the condition for saving into register
-        if (t->GetRefCount() == 0 || t->GetLevel() * t->GetRefCount() > THRESHOLD) {
+        if (t->GetRefCount() == 0/* || t->GetRefCount() > 2*/) {
 #if DEBUG_INST
             t->DisplayTree();
 #endif

@@ -20,6 +20,12 @@ std::string FunctionState::GetMachineReg(int virtual_reg) {
 void FunctionState::PrintAssembly(std::ostream &out) {
     this->LiveRangeAnalysis();
     // print assembly to file
+    
+    // print function entrance
+    // TODO: make these a part of the assembly code
+    out << "." << this->function_name << ":" << std::endl;
+    out << "\tsubq $rsp, $" << local_bytes << std::endl;
+
     // TODO: remember to print function begin and ends
     for (X86Inst *inst : assembly)
         out << *inst;
