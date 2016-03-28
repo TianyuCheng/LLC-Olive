@@ -1,4 +1,4 @@
-#define DEBUG_INST  0
+#define VERBOSE  0
 
 int OP_LABEL(NODEPTR p) {
     if (p) return p->op;
@@ -186,9 +186,12 @@ private:
 
 void InstToExprTree(std::map<Instruction*, TreeWrapper*> treeMap, 
         Instruction &instruction, TreeWrapper *t) {
-#if DEBUG_INST
+#if VERBOSE
+    instruction.print(errs());
+    errs() << "\n";
+#endif
+#if VERBOSE > 1
     errs() << "OperandNum: " << instruction.getNumOperands() << "\t";
-    instruction.print(errs()); 
     errs() << "\n";
     errs() << "\tinstruction (" << instruction << " ) opcode: " << instruction.getOpcode() << "\n";
 #endif
@@ -210,17 +213,10 @@ void InstToExprTree(std::map<Instruction*, TreeWrapper*> treeMap,
             // check if the operand is a constant
             if (ConstantInt *cnst = dyn_cast<ConstantInt>(v)) {
                 // check if the operand is a constant int
-#if DEBUG_INST
-                errs() << "FOUND CONST INT:\t" << *cnst << "\n";
-#endif
-                // it->second->SetValue(def->getValue());
                 t->CastInt(i, cnst);
             }
             else if (ConstantFP *cnst = dyn_cast<ConstantFP>(v)) {
                 // check if the operand is a constant int
-#if DEBUG_INST
-                errs() << "FOUND CONST FP:\t" << *cnst << "\n";
-#endif
                 t->CastFP(i, cnst);
             }
             else if (ConstantExpr *cnst = dyn_cast<ConstantExpr>(v)) {
@@ -241,9 +237,6 @@ void InstToExprTree(std::map<Instruction*, TreeWrapper*> treeMap,
             auto it = treeMap.find(def);
             assert(it != treeMap.end() && "operands must be previously defined");
             t->SetChild(i, it->second->GetTreeWrapper());
-#if DEBUG_INST
-            errs() << "FOUND DEF:\t"; it->first->print(errs()); errs() << "\n";
-#endif
         }
         else {
             // TODO: write code to handle these situations
@@ -288,12 +281,12 @@ void FunctionToAssembly(Function &func) {
     // iterate through tree list for each individual instruction tree
     // replace the complicated/common tree expression with registers
     for (TreeWrapper *t : treeList) {
-#if DEBUG_INST
+#if VERBOSE > 1
         errs() << Instruction::getOpcodeName(t->GetOpCode()) << "\tLEVEL:\t" << t->GetLevel() << "\tRefCount:\t" << t->GetRefCount() << "\n";
 #endif
         // check if this tree satisfies the condition for saving into register
         if (t->GetRefCount() == 0/* || t->GetRefCount() > 2*/) {
-#if DEBUG_INST
+#if VERBOSE > 1
             t->DisplayTree();
 #endif
             gen(t->GetTree(), &fstate);
