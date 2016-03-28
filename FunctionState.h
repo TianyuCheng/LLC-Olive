@@ -35,10 +35,9 @@ public:
     FunctionState(std::string name, int num_regs, int loop_label = 0);
     virtual ~FunctionState();
 
-    int GetVirtualReg() {
+    int CreateVirtualReg() {
         int v = virtual2machine.size();
-        virtual2machine.push_back(-2);      // -2 not used yet
-                                            // -1 used but not allocated yet
+        virtual2machine.push_back(-1);      // -1 not allocated
         return v;
     }
     std::string GetMCRegAt(int index) const { 

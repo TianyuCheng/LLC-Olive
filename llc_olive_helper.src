@@ -71,7 +71,7 @@ public:
     int GetVirtualReg() const { return t->val.val.i32s; }
     void SetLevel(int level) { t->level = level; }
     void SetChild(int n, Tree ct) {
-        if (n < 2) {
+        if (n < 3) {
             if (!t->kids[n] && ct) nchild++;     // was nullptr, but not null now, increment the nchild counter
             if (ct) t->level = std::max(t->level, 1 + ct->level);
             t->kids[n] = ct;
@@ -81,7 +81,7 @@ public:
         }
     }
     Tree GetChild(int n) {
-        if (n < 2) {
+        if (n < 3) {
             return t->kids[n];
         } else {
             // TODO: IMPLEMENT A WAY TO FETCH MORE THAN 2 CHILDREN
@@ -222,8 +222,6 @@ void FunctionToAssembly(Function &func) {
                 exit(0);
             } else {
                 // TODO: leave it later for future process
-                // t->SetValue(fstate.GetVirtualReg());        // assign a virtual register for statement
-                                                               // insts that require a dest reg will be assigned in matching action
             }
 
             int num_operands = instruction.getNumOperands();

@@ -17,7 +17,7 @@
 stmt:   reg                 { return 1;                                         } = { $action[1](fstate); };
 stmt:   mem                 { return 1;                                         } = { $action[1](fstate); };
 
-reg:    REG                 { $cost[0].cost = 1;                                } = { $0->val = fstate->GetVirtualReg(); };
+reg:    REG                 { $cost[0].cost = 1;                                } = { $0->val = fstate->CreateVirtualReg(); };
 reg:    IMM                 { $cost[0].cost = 1;                                } = { };
 imm:    Load(IMM)           { $cost[0].cost = 0;                                } = { };
 imm:    IMM                 { $cost[0].cost = 0;                                } = { };
@@ -58,7 +58,7 @@ reg:    Load(reg)           { $cost[0].cost = $cost[2].cost + 1;    } = {
         };
 reg:    Load(imm)           { $cost[0].cost = $cost[2].cost + 1;    } = {
             $action[2](fstate); 
-            $0->val = fstate->GetVirtualReg();      // assign a virtual register to the inst
+            $0->val = fstate->CreateVirtualReg();      // assign a virtual register to the inst
             fstate->AddInst(new X86Inst("movq", 
                         new X86Operand(fstate, OP_TYPE::X86Reg, $0->val),
                         new X86Operand(fstate, OP_TYPE::X86Imm, $2->val)
@@ -66,7 +66,7 @@ reg:    Load(imm)           { $cost[0].cost = $cost[2].cost + 1;    } = {
         };
 reg:    Load(mem)           { $cost[0].cost = $cost[2].cost + 1;    } = {
             $action[2](fstate); 
-            $0->val = fstate->GetVirtualReg();      // assign a virtual register to the inst
+            $0->val = fstate->CreateVirtualReg();      // assign a virtual register to the inst
             fstate->AddInst(new X86Inst("movq", 
                         new X86Operand(fstate, OP_TYPE::X86Reg, $0->val),
                         fstate->GetLocalMemoryAddress($2)
@@ -99,7 +99,7 @@ reg:    Add(reg, reg)       { $cost[0].cost = $cost[2].cost + $cost[3].cost + 2;
                 $0->val = $3->val;                      // dst operand is not used in the future
             }
             else {
-                $0->val = fstate->GetVirtualReg();      // assign a virtual register to the inst
+                $0->val = fstate->CreateVirtualReg();      // assign a virtual register to the inst
                 fstate->AddInst(new X86Inst("movq", 
                             new X86Operand(fstate, OP_TYPE::X86Reg, $0->val),
                             new X86Operand(fstate, OP_TYPE::X86Reg, $3->val)
@@ -122,7 +122,7 @@ reg:    Sub(reg, reg)       { $cost[0].cost = $cost[2].cost + $cost[3].cost + 2;
                 $0->val = $3->val;                      // dst operand is not used in the future
             }
             else {
-                $0->val = fstate->GetVirtualReg();      // assign a virtual register to the inst
+                $0->val = fstate->CreateVirtualReg();      // assign a virtual register to the inst
                 fstate->AddInst(new X86Inst("movq", 
                             new X86Operand(fstate, OP_TYPE::X86Reg, $0->val),
                             new X86Operand(fstate, OP_TYPE::X86Reg, $3->val)
@@ -145,7 +145,7 @@ reg:    Mul(reg, reg)       { $cost[0].cost = $cost[2].cost + $cost[3].cost + 4;
                 $0->val = $3->val;                      // dst operand is not used in the future
             }
             else {
-                $0->val = fstate->GetVirtualReg();      // assign a virtual register to the inst
+                $0->val = fstate->CreateVirtualReg();      // assign a virtual register to the inst
                 fstate->AddInst(new X86Inst("movq", 
                             new X86Operand(fstate, OP_TYPE::X86Reg, $0->val),
                             new X86Operand(fstate, OP_TYPE::X86Reg, $3->val)
@@ -169,7 +169,7 @@ reg:    SDiv(reg, reg)       { $cost[0].cost = $cost[2].cost + $cost[3].cost + 4
                 $0->val = $3->val;                      // dst operand is not used in the future
             }
             else {
-                $0->val = fstate->GetVirtualReg();      // assign a virtual register to the inst
+                $0->val = fstate->CreateVirtualReg();      // assign a virtual register to the inst
                 fstate->AddInst(new X86Inst("movq", 
                             new X86Operand(fstate, OP_TYPE::X86Reg, $0->val),
                             new X86Operand(fstate, OP_TYPE::X86Reg, $3->val)
@@ -193,7 +193,7 @@ reg:    UDiv(reg, reg)       { $cost[0].cost = $cost[2].cost + $cost[3].cost + 4
                 $0->val = $3->val;                      // dst operand is not used in the future
             }
             else {
-                $0->val = fstate->GetVirtualReg();      // assign a virtual register to the inst
+                $0->val = fstate->CreateVirtualReg();      // assign a virtual register to the inst
                 fstate->AddInst(new X86Inst("movq", 
                             new X86Operand(fstate, OP_TYPE::X86Reg, $0->val),
                             new X86Operand(fstate, OP_TYPE::X86Reg, $3->val)
