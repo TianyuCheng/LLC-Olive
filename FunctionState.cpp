@@ -74,3 +74,51 @@ void FunctionState::RestoreStack() {
                 new X86Operand(this, OP_TYPE::X86Imm, local_bytes)
         ));
 }
+
+void FunctionState::CreateVirtualReg(Tree t) {
+    int v = virtual2machine.size();
+    virtual2machine.push_back(-1);      // -1 not allocated
+    t->val = v;
+    t->isReg = true;
+}
+
+void FunctionState::AssignVirtualReg(Tree lhs, Tree rhs) {
+    rhs->refcnt--;                           // discharge 1 reference
+    lhs->isReg = true;
+    if (rhs->refcnt == 0) {
+        // this register is free now, we can reuse it
+        lhs->val = rhs->val;
+    }
+    else {
+        // we will still be using rhs in the future, 
+        // so better not overwrite the rhs
+        CreateVirtualReg(lhs);      // assign a virtual register to the inst
+        CopyVirtualReg(lhs->val, rhs->val);
+    }
+}
+
+void FunctionState::CopyVirtualReg(VALUE &dst, VALUE &src) {
+    if (src.val.i32s == dst.val.i32s) return;
+    // only copy register when src and dst are different
+    GenerateMovStmt(
+        new X86Operand(this, OP_TYPE::X86Reg, dst),
+        new X86Operand(this, OP_TYPE::X86Reg, src)
+    );
+}
+
+void FunctionState::GenerateMovStmt(X86Operand *dst, X86Operand *src) {
+    // Keep this one-line function, since we might want 
+    // to migrate to different operand sizes, so we will
+    // be using movb, movw, movl, movq according to the
+    // operands
+    GenerateBinaryStmt("mov", dst, src);
+}
+
+void FunctionState::GenerateBinaryStmt(const char *op_raw, X86Operand *dst, X86Operand *src) {
+    // Keep this one-line function, since we might want 
+    // to migrate to different operand sizes, so we will
+    // be using suffixes b, w, l, q according to the
+    // operands
+    std::string op = std::string(op_raw) + "q";
+    AddInst(new X86Inst(op.c_str(), dst, src));
+}

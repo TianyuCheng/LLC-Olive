@@ -35,11 +35,12 @@ public:
     FunctionState(std::string name, int num_regs, int loop_label = 0);
     virtual ~FunctionState();
 
-    int CreateVirtualReg() {
-        int v = virtual2machine.size();
-        virtual2machine.push_back(-1);      // -1 not allocated
-        return v;
-    }
+    void CreateVirtualReg(Tree t);
+    void AssignVirtualReg(Tree lhs, Tree rhs);
+    void CopyVirtualReg(VALUE &dst, VALUE &src);
+    void GenerateMovStmt(X86Operand *dst, X86Operand *src);
+    void GenerateBinaryStmt(const char *op, X86Operand *dst, X86Operand *src);
+
     std::string GetMCRegAt(int index) const { 
 #if 0
         assert ((index >= 0 && index < virtual2machine.size()) && "virtual register index not in range");

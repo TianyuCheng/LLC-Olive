@@ -184,16 +184,14 @@ private:
 };
 
 
+void BuildExprTrees() {
+}
 
 /**
  * Generate assembly for a single function
  * */
 void FunctionToAssembly(Function &func) {
 
-    // prepare a function state container
-    // to store function information, such as
-    // local variables, free registers, etc
-    FunctionState fstate(func.getName(), NumRegs);
 
     // Due to some stupid design, we have to use
     // a vector container to store additional malloc'd
@@ -279,6 +277,11 @@ void FunctionToAssembly(Function &func) {
             treeList.push_back(t);
         } // end of instruction loop
     } // end of basic block loop
+
+    // prepare a function state container
+    // to store function information, such as
+    // local variables, free registers, etc
+    FunctionState fstate(func.getName(), NumRegs);
 
     // === Second Pass: generate assembly code using olive
     // iterate through tree list for each individual instruction tree
