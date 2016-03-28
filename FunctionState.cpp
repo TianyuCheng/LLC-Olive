@@ -23,8 +23,11 @@ void FunctionState::PrintAssembly(std::ostream &out) {
     
     // print function entrance
     // TODO: make these a part of the assembly code
-    out << "." << this->function_name << ":" << std::endl;
-    out << "\tsubq $rsp, $" << local_bytes << std::endl;
+    if (std::string(function_name) == std::string("main"))
+        out << "main:" << std::endl;
+    else
+        out << "." << this->function_name << ":" << std::endl;
+    out << "\tsubq\t$rsp, $" << local_bytes << std::endl;
 
     // TODO: remember to print function begin and ends
     for (X86Inst *inst : assembly)
@@ -48,7 +51,7 @@ void FunctionState::CreateLocal(Tree t, int bytes) {
     if (bytes % 4 != 0) bytes += 4 - bytes % 4;
     local_bytes += bytes;
     X86Operand *local = new X86Operand(this, OP_TYPE::X86Mem, 
-            new X86Operand(this, OP_TYPE::X86Reg, 1000),   // base_address, should be $ebp
+            new X86Operand(this, OP_TYPE::X86Reg, RBP),   // base_address, should be $rbp
             new X86Operand(this, OP_TYPE::X86Imm, 0),      // displacement
             0,                                             // multiplier    
             local_bytes - bytes);
@@ -64,8 +67,8 @@ X86Operand* FunctionState::GetLocalMemoryAddress(Tree t) {
 
 void FunctionState::RestoreStack() {
     if (local_bytes > 0)
-        assembly.push_back(new X86Inst("addq", 
-                new X86Operand(this, OP_TYPE::X86Reg, 1000),   // should be $esp
+        assembly.push_back(new X86Inst("addq",
+                new X86Operand(this, OP_TYPE::X86Reg, RSP),   // should be $rsp
                 new X86Operand(this, OP_TYPE::X86Imm, local_bytes)
         ));
 }

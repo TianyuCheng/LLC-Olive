@@ -91,6 +91,10 @@ class X86Operand
 public:
     enum Type { X86Reg, X86Imm, X86Mem };
 
+    X86Operand(FUNCTION_STATE fs, int r)
+        : fstate(fs), type(Type::X86Reg), val(r), explicit_reg(true), base_address(nullptr), displacement(nullptr) {
+    }
+
     X86Operand(FUNCTION_STATE fs, Type t, VALUE v) 
         : fstate(fs), type(t), val(v), base_address(nullptr), displacement(nullptr) {
         assert (t != Type::X86Mem && "X86Mem not support in X86Operand(Type t, VALUE) constructor.");
@@ -111,8 +115,15 @@ public:
             out << "$" << op.val;
         }
         else if (op.type == Type::X86Reg) {
-            // out << "$" << op.fstate->GetMCRegAt(op.val.AsVirtualReg());
-            out << "%" << op.val.AsVirtualReg();
+            if (op.explicit_reg) {
+                out << "$" << registers[op.val.AsVirtualReg()];
+            }
+            else
+#if 0
+                out << "$" << op.fstate->GetMCRegAt(op.val.AsVirtualReg());
+#else
+                out << "%" << op.val.AsVirtualReg();
+#endif
         }
         else {
             // output memory address by x86 addressing mode
@@ -133,6 +144,7 @@ private:
 
     // for imm and reg
     VALUE val;
+    bool explicit_reg;      // not specified by function
 
     // for mem
     X86Operand *base_address;

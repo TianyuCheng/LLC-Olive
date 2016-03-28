@@ -28,7 +28,10 @@ reg:    Ret(reg)            { $cost[0].cost = $cost[2].cost + 1;                
              * IR Ret takes a register argument
              * X86 Ret takes no argument, return value is passed by %eax
              */
-            // TODO: do not forget to add "moveq $rax, $reg" instruction
+            fstate->AddInst(new X86Inst("movq",
+                new X86Operand(fstate, RAX),
+                new X86Operand(fstate, OP_TYPE::X86Reg, $0->val)
+            ));
             fstate->RestoreStack();
             fstate->AddInst(new X86Inst("leave"));
             fstate->AddInst(new X86Inst("ret"));
@@ -135,6 +138,44 @@ reg:    Mul(reg, reg)       { $cost[0].cost = $cost[2].cost + $cost[3].cost + 4;
                             new X86Operand(fstate, OP_TYPE::X86Reg, $3->val)
                         ));
             fstate->AddInst(new X86Inst("imulq", 
+                        new X86Operand(fstate, OP_TYPE::X86Reg, $0->val),
+                        new X86Operand(fstate, OP_TYPE::X86Reg, $2->val)
+                    ));
+        };
+reg:    SDiv(reg, reg)       { $cost[0].cost = $cost[2].cost + $cost[3].cost + 4;    } = {
+            /*
+             * IR Mul takes two arguments
+             * X86 Mul takes two argument, both operands cannot be from memory in the instruction
+             */
+            // prepare both operands first
+            $action[2](fstate); 
+            $action[3](fstate);
+            if ($3->refcnt == 1) { $0->val = $3->val; }      // dst operand is not used in the future
+            else
+                fstate->AddInst(new X86Inst("movq", 
+                            new X86Operand(fstate, OP_TYPE::X86Reg, $0->val),
+                            new X86Operand(fstate, OP_TYPE::X86Reg, $3->val)
+                        ));
+            fstate->AddInst(new X86Inst("idivq", 
+                        new X86Operand(fstate, OP_TYPE::X86Reg, $0->val),
+                        new X86Operand(fstate, OP_TYPE::X86Reg, $2->val)
+                    ));
+        };
+reg:    UDiv(reg, reg)       { $cost[0].cost = $cost[2].cost + $cost[3].cost + 4;    } = {
+            /*
+             * IR Mul takes two arguments
+             * X86 Mul takes two argument, both operands cannot be from memory in the instruction
+             */
+            // prepare both operands first
+            $action[2](fstate); 
+            $action[3](fstate);
+            if ($3->refcnt == 1) { $0->val = $3->val; }      // dst operand is not used in the future
+            else
+                fstate->AddInst(new X86Inst("movq", 
+                            new X86Operand(fstate, OP_TYPE::X86Reg, $0->val),
+                            new X86Operand(fstate, OP_TYPE::X86Reg, $3->val)
+                        ));
+            fstate->AddInst(new X86Inst("divq", 
                         new X86Operand(fstate, OP_TYPE::X86Reg, $0->val),
                         new X86Operand(fstate, OP_TYPE::X86Reg, $2->val)
                     ));
