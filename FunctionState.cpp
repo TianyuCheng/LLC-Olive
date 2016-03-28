@@ -70,7 +70,7 @@ X86Operand* FunctionState::GetLocalMemoryAddress(Tree t) {
 void FunctionState::RestoreStack() {
     if (local_bytes > 0)
         assembly.push_back(new X86Inst("addq",
-                new X86Operand(this, OP_TYPE::X86Reg, RSP),   // should be $rsp
+                new X86Operand(this, RSP),   // should be $rsp
                 new X86Operand(this, OP_TYPE::X86Imm, local_bytes)
         ));
 }

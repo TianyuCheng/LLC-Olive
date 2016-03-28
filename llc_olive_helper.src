@@ -184,7 +184,73 @@ private:
 };
 
 
-void BuildExprTrees() {
+void InstToExprTree(std::map<Instruction*, TreeWrapper*> treeMap, 
+        Instruction &instruction, TreeWrapper *t) {
+#if DEBUG_INST
+    errs() << "OperandNum: " << instruction.getNumOperands() << "\t";
+    instruction.print(errs()); 
+    errs() << "\n";
+    errs() << "\tinstruction (" << instruction << " ) opcode: " << instruction.getOpcode() << "\n";
+#endif
+    if (BranchInst::classof(&instruction)) {
+        // TODO: deal separately with branch instruction
+        // it does not need to treated implicitly to be
+        // stored in a register
+        errs() << "YOU'VE HIT A BRANCH INSTRUCTION!!!\n";
+        exit(0);
+    } else {
+        // TODO: leave it later for future process
+    }
+
+    int num_operands = instruction.getNumOperands();
+    for (int i = 0; i < num_operands; i++) {
+        Value *v = instruction.getOperand(i);
+
+        if (Constant *def = dyn_cast<Constant>(v)) {
+            // check if the operand is a constant
+            if (ConstantInt *cnst = dyn_cast<ConstantInt>(v)) {
+                // check if the operand is a constant int
+#if DEBUG_INST
+                errs() << "FOUND CONST INT:\t" << *cnst << "\n";
+#endif
+                // it->second->SetValue(def->getValue());
+                t->CastInt(i, cnst);
+            }
+            else if (ConstantFP *cnst = dyn_cast<ConstantFP>(v)) {
+                // check if the operand is a constant int
+#if DEBUG_INST
+                errs() << "FOUND CONST FP:\t" << *cnst << "\n";
+#endif
+                t->CastFP(i, cnst);
+            }
+            else if (ConstantExpr *cnst = dyn_cast<ConstantExpr>(v)) {
+                // check if the operand is a constant int
+                // errs() << "FOUND CONST EXPR:\t" << *cnst << "\n";
+                errs() << "NOT IMPLEMENTED CONST EXPR\n";
+                exit(EXIT_FAILURE);
+            }
+            // ... There are many kinds of constant, right now we do not deal with them ...
+            else {
+                // this is bad and probably needs to terminate the execution
+                errs() << "NOT IMPLEMENTED OTHER CONST TYPES:\t"; instruction.print(errs()); errs() << "\n";
+                exit(EXIT_FAILURE);
+            }
+        }
+        else if (Instruction *def = dyn_cast<Instruction>(v)) {
+            // check if we cant find operand's definition
+            auto it = treeMap.find(def);
+            assert(it != treeMap.end() && "operands must be previously defined");
+            t->SetChild(i, it->second->GetTreeWrapper());
+#if DEBUG_INST
+            errs() << "FOUND DEF:\t"; it->first->print(errs()); errs() << "\n";
+#endif
+        }
+        else {
+            // TODO: write code to handle these situations
+            errs() << "Unhandle-able instruction operand! Quit\n";
+            exit(EXIT_FAILURE);
+        }
+    } //end of operand loop
 }
 
 /**
@@ -204,74 +270,9 @@ void FunctionToAssembly(Function &func) {
     // === First Pass: collect instruction information, build expr tree
     for (BasicBlock &bb : basic_blocks) {
         for (auto inst = bb.begin(); inst != bb.end(); inst++) {
+            TreeWrapper *t = new TreeWrapper(inst->getOpcode());
             Instruction &instruction = *inst;
-#if DEBUG_INST
-            errs() << "OperandNum: " << instruction.getNumOperands() << "\t";
-            instruction.print(errs()); 
-            errs() << "\n";
-            errs() << "\tinstruction (" << instruction << " ) opcode: " << instruction.getOpcode() << "\n";
-#endif
-            TreeWrapper *t = new TreeWrapper(instruction.getOpcode());
-            if (BranchInst::classof(&instruction)) {
-                // TODO: deal separately with branch instruction
-                // it does not need to treated implicitly to be
-                // stored in a register
-                errs() << "YOU'VE HIT A BRANCH INSTRUCTION!!!\n";
-                exit(0);
-            } else {
-                // TODO: leave it later for future process
-            }
-
-            int num_operands = instruction.getNumOperands();
-            for (int i = 0; i < num_operands; i++) {
-                Value *v = instruction.getOperand(i);
-
-                if (Constant *def = dyn_cast<Constant>(v)) {
-                    // check if the operand is a constant
-                    if (ConstantInt *cnst = dyn_cast<ConstantInt>(v)) {
-                        // check if the operand is a constant int
-#if DEBUG_INST
-                        errs() << "FOUND CONST INT:\t" << *cnst << "\n";
-#endif
-                        // it->second->SetValue(def->getValue());
-                        t->CastInt(i, cnst);
-                    }
-                    else if (ConstantFP *cnst = dyn_cast<ConstantFP>(v)) {
-                        // check if the operand is a constant int
-#if DEBUG_INST
-                        errs() << "FOUND CONST FP:\t" << *cnst << "\n";
-#endif
-                        t->CastFP(i, cnst);
-                    }
-                    else if (ConstantExpr *cnst = dyn_cast<ConstantExpr>(v)) {
-                        // check if the operand is a constant int
-                        // errs() << "FOUND CONST EXPR:\t" << *cnst << "\n";
-                        errs() << "NOT IMPLEMENTED CONST EXPR\n";
-                        exit(EXIT_FAILURE);
-                    }
-                    // ... There are many kinds of constant, right now we do not deal with them ...
-                    else {
-                        // this is bad and probably needs to terminate the execution
-                        errs() << "NOT IMPLEMENTED OTHER CONST TYPES:\t"; instruction.print(errs()); errs() << "\n";
-                        exit(EXIT_FAILURE);
-                    }
-                }
-                else if (Instruction *def = dyn_cast<Instruction>(v)) {
-                    // check if we cant find operand's definition
-                    auto it = treeMap.find(def);
-                    assert(it != treeMap.end() && "operands must be previously defined");
-                    t->SetChild(i, it->second->GetTreeWrapper());
-#if DEBUG_INST
-                    errs() << "FOUND DEF:\t"; it->first->print(errs()); errs() << "\n";
-#endif
-                }
-                else {
-                    // TODO: write code to handle these situations
-                    errs() << "Unhandle-able instruction operand! Quit\n";
-                    exit(EXIT_FAILURE);
-                }
-
-            }
+            InstToExprTree(treeMap, instruction, t);
             // store the current tree in map
             treeMap.insert(std::pair<Instruction*, TreeWrapper*>(&instruction, t));
             treeList.push_back(t);
@@ -286,23 +287,7 @@ void FunctionToAssembly(Function &func) {
     // === Second Pass: generate assembly code using olive
     // iterate through tree list for each individual instruction tree
     // replace the complicated/common tree expression with registers
-    std::map<Tree, int> virtualRegs;
     for (TreeWrapper *t : treeList) {
-        // replace the already computed tree branch with virtual register
-#if 0
-        int level = 0;
-        for (int i = 0; i < t->GetNumChildren(); i++) {
-            auto child = t->GetChild(i);
-            auto it = virtualRegs.find(child);
-            if (it != virtualRegs.end()) {
-                freeList.push_back(tree(REG, nullptr, nullptr, it->second));       // save this newly created tree ptr in free list to free it later
-                t->SetChild(i, freeList.back());
-                level = std::max(child->level + 1, level);
-            }
-        }
-        t->SetLevel(level);     // since we are changing the structure of the tree, levels may change
-#endif
-
 #if DEBUG_INST
         errs() << Instruction::getOpcodeName(t->GetOpCode()) << "\tLEVEL:\t" << t->GetLevel() << "\tRefCount:\t" << t->GetRefCount() << "\n";
 #endif
@@ -312,7 +297,6 @@ void FunctionToAssembly(Function &func) {
             t->DisplayTree();
 #endif
             gen(t->GetTree(), &fstate);
-            // virtualRegs.insert(std::pair<Tree, int>(t->GetTree(), t->GetVirtualReg()));
         }
     } // end of TreeWrapper iteration
 
@@ -322,7 +306,7 @@ void FunctionToAssembly(Function &func) {
     // clean up
     for (TreeWrapper *t : treeList)
         delete t;
-    // Stupid design in TreeReference causes me to use a freeList for cleaning
+    // Stupid design in TreeWrapper causes me to use a freeList for cleaning
     for (Tree t : freeList)
         free(t);
 }
