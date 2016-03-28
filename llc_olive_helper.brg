@@ -17,59 +17,62 @@
 stmt:   reg                 { return 1;                                         } = { $action[1](fstate); };
 stmt:   mem                 { return 1;                                         } = { $action[1](fstate); };
 
-reg:    REG                 { $cost[0].cost = 1;                                } = { };
+reg:    REG                 { $cost[0].cost = 1;                                } = { $0->val = fstate->GetVirtualReg(); };
 reg:    IMM                 { $cost[0].cost = 1;                                } = { };
 imm:    Load(IMM)           { $cost[0].cost = 0;                                } = { };
 imm:    IMM                 { $cost[0].cost = 0;                                } = { };
 mem:    MEM                 { $cost[0].cost = 10;                               } = { };
 
-reg:    Ret(reg)            { $cost[0].cost = $cost[2].cost + 1;                } = { 
+stmt:   Ret(reg)            { $cost[0].cost = $cost[2].cost + 1;                } = {
             /*
              * IR Ret takes a register argument
              * X86 Ret takes no argument, return value is passed by %eax
              */
+            $action[2](fstate); 
             fstate->AddInst(new X86Inst("movq",
-                new X86Operand(fstate, RAX),
-                new X86Operand(fstate, OP_TYPE::X86Reg, $0->val)
+                        new X86Operand(fstate, RAX),
+                        new X86Operand(fstate, OP_TYPE::X86Reg, $2->val)
             ));
             fstate->RestoreStack();
             fstate->AddInst(new X86Inst("leave"));
             fstate->AddInst(new X86Inst("ret"));
         };
-mem:    Alloca(IMM)         { $cost[0].cost = 1;                                } = { 
+mem:    Alloca(imm)         { $cost[0].cost = 1;                                } = {
             /*
              * IR Alloca takes one arguments for allocation size
              * X86 does not have correspondence for Alloca, but only uses $esp - size
              */
             fstate->CreateLocal($0, 8);
         };
-reg:    Load(reg)           { $cost[0].cost = $cost[2].cost + 1;    } = { 
+reg:    Load(reg)           { $cost[0].cost = $cost[2].cost + 1;    } = {
             /*
              * IR Load takes one arguments for allocation size
              * X86 uses mov instruction, which takes two arguments
              */
-            // prepare both operands first
             $action[2](fstate); 
+            $0->val = $2->val;      // assign a virtual register to the inst
             fstate->AddInst(new X86Inst("movq", 
                         new X86Operand(fstate, OP_TYPE::X86Reg, $0->val),
                         new X86Operand(fstate, OP_TYPE::X86Reg, $2->val)
                     ));
         };
-reg:    Load(imm)           { $cost[0].cost = $cost[2].cost + 1;    } = { 
+reg:    Load(imm)           { $cost[0].cost = $cost[2].cost + 1;    } = {
             $action[2](fstate); 
+            $0->val = fstate->GetVirtualReg();      // assign a virtual register to the inst
             fstate->AddInst(new X86Inst("movq", 
                         new X86Operand(fstate, OP_TYPE::X86Reg, $0->val),
                         new X86Operand(fstate, OP_TYPE::X86Imm, $2->val)
                     ));
         };
-reg:    Load(mem)           { $cost[0].cost = $cost[2].cost + 1;    } = { 
+reg:    Load(mem)           { $cost[0].cost = $cost[2].cost + 1;    } = {
             $action[2](fstate); 
+            $0->val = fstate->GetVirtualReg();      // assign a virtual register to the inst
             fstate->AddInst(new X86Inst("movq", 
                         new X86Operand(fstate, OP_TYPE::X86Reg, $0->val),
                         fstate->GetLocalMemoryAddress($2)
                     ));
         };
-mem:    Store(imm, mem)      { $cost[0].cost = $cost[2].cost + $cost[3].cost;    } = { 
+mem:    Store(imm, mem)      { $cost[0].cost = $cost[2].cost + $cost[3].cost;    } = {
             $action[2](fstate);
             $action[3](fstate);
             fstate->AddInst(new X86Inst("movq", 
@@ -77,7 +80,7 @@ mem:    Store(imm, mem)      { $cost[0].cost = $cost[2].cost + $cost[3].cost;   
                         new X86Operand(fstate, OP_TYPE::X86Imm, $2->val)
                     ));
         };
-mem:    Store(reg, mem)      { $cost[0].cost = $cost[2].cost + $cost[3].cost;    } = { 
+mem:    Store(reg, mem)      { $cost[0].cost = $cost[2].cost + $cost[3].cost;    } = {
             $action[2](fstate);
             $action[3](fstate);
             fstate->AddInst(new X86Inst("movq", 
@@ -90,15 +93,19 @@ reg:    Add(reg, reg)       { $cost[0].cost = $cost[2].cost + $cost[3].cost + 2;
              * IR Add takes two arguments
              * X86 Add takes two argument, both operands cannot be from memory in the instruction
              */
-            // prepare both operands first
             $action[2](fstate); 
             $action[3](fstate);
-            if ($3->refcnt == 1) { $0->val = $3->val; }      // dst operand is not used in the future
-            else
+            if ($3->refcnt == 1) { 
+                $0->val = $3->val;                      // dst operand is not used in the future
+            }
+            else {
+                $0->val = fstate->GetVirtualReg();      // assign a virtual register to the inst
                 fstate->AddInst(new X86Inst("movq", 
                             new X86Operand(fstate, OP_TYPE::X86Reg, $0->val),
                             new X86Operand(fstate, OP_TYPE::X86Reg, $3->val)
                         ));
+            }
+            $3->refcnt--;                               // discharge 1 reference
             fstate->AddInst(new X86Inst("addq", 
                         new X86Operand(fstate, OP_TYPE::X86Reg, $0->val),
                         new X86Operand(fstate, OP_TYPE::X86Reg, $2->val)
@@ -109,15 +116,19 @@ reg:    Sub(reg, reg)       { $cost[0].cost = $cost[2].cost + $cost[3].cost + 2;
              * IR Sub takes two arguments
              * X86 Sub takes two argument, both operands cannot be from memory in the instruction
              */
-            // prepare both operands first
             $action[2](fstate); 
             $action[3](fstate);
-            if ($3->refcnt == 1) { $0->val = $3->val; }      // dst operand is not used in the future
-            else
+            if ($3->refcnt == 1) { 
+                $0->val = $3->val;                      // dst operand is not used in the future
+            }
+            else {
+                $0->val = fstate->GetVirtualReg();      // assign a virtual register to the inst
                 fstate->AddInst(new X86Inst("movq", 
                             new X86Operand(fstate, OP_TYPE::X86Reg, $0->val),
                             new X86Operand(fstate, OP_TYPE::X86Reg, $3->val)
                         ));
+            }
+            $3->refcnt--;                               // discharge 1 reference
             fstate->AddInst(new X86Inst("subq", 
                         new X86Operand(fstate, OP_TYPE::X86Reg, $0->val),
                         new X86Operand(fstate, OP_TYPE::X86Reg, $2->val)
@@ -128,15 +139,19 @@ reg:    Mul(reg, reg)       { $cost[0].cost = $cost[2].cost + $cost[3].cost + 4;
              * IR Mul takes two arguments
              * X86 Mul takes two argument, both operands cannot be from memory in the instruction
              */
-            // prepare both operands first
             $action[2](fstate); 
             $action[3](fstate);
-            if ($3->refcnt == 1) { $0->val = $3->val; }      // dst operand is not used in the future
-            else
+            if ($3->refcnt == 1) { 
+                $0->val = $3->val;                      // dst operand is not used in the future
+            }
+            else {
+                $0->val = fstate->GetVirtualReg();      // assign a virtual register to the inst
                 fstate->AddInst(new X86Inst("movq", 
                             new X86Operand(fstate, OP_TYPE::X86Reg, $0->val),
                             new X86Operand(fstate, OP_TYPE::X86Reg, $3->val)
                         ));
+            }
+            $3->refcnt--;                               // discharge 1 reference
             fstate->AddInst(new X86Inst("imulq", 
                         new X86Operand(fstate, OP_TYPE::X86Reg, $0->val),
                         new X86Operand(fstate, OP_TYPE::X86Reg, $2->val)
@@ -150,12 +165,17 @@ reg:    SDiv(reg, reg)       { $cost[0].cost = $cost[2].cost + $cost[3].cost + 4
             // prepare both operands first
             $action[2](fstate); 
             $action[3](fstate);
-            if ($3->refcnt == 1) { $0->val = $3->val; }      // dst operand is not used in the future
-            else
+            if ($3->refcnt == 1) { 
+                $0->val = $3->val;                      // dst operand is not used in the future
+            }
+            else {
+                $0->val = fstate->GetVirtualReg();      // assign a virtual register to the inst
                 fstate->AddInst(new X86Inst("movq", 
                             new X86Operand(fstate, OP_TYPE::X86Reg, $0->val),
                             new X86Operand(fstate, OP_TYPE::X86Reg, $3->val)
                         ));
+            }
+            $3->refcnt--;                               // discharge 1 reference
             fstate->AddInst(new X86Inst("idivq", 
                         new X86Operand(fstate, OP_TYPE::X86Reg, $0->val),
                         new X86Operand(fstate, OP_TYPE::X86Reg, $2->val)
@@ -169,12 +189,17 @@ reg:    UDiv(reg, reg)       { $cost[0].cost = $cost[2].cost + $cost[3].cost + 4
             // prepare both operands first
             $action[2](fstate); 
             $action[3](fstate);
-            if ($3->refcnt == 1) { $0->val = $3->val; }      // dst operand is not used in the future
-            else
+            if ($3->refcnt == 1) { 
+                $0->val = $3->val;                      // dst operand is not used in the future
+            }
+            else {
+                $0->val = fstate->GetVirtualReg();      // assign a virtual register to the inst
                 fstate->AddInst(new X86Inst("movq", 
                             new X86Operand(fstate, OP_TYPE::X86Reg, $0->val),
                             new X86Operand(fstate, OP_TYPE::X86Reg, $3->val)
                         ));
+            }
+            $3->refcnt--;                               // discharge 1 reference
             fstate->AddInst(new X86Inst("divq", 
                         new X86Operand(fstate, OP_TYPE::X86Reg, $0->val),
                         new X86Operand(fstate, OP_TYPE::X86Reg, $2->val)

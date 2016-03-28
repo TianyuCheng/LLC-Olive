@@ -26,6 +26,7 @@ typedef struct tree {
 	VALUE val;
     int level;
     int refcnt;
+    bool isReg;
 	struct { struct burm_state *state; } x;
 } *NODEPTR, *Tree;
 

@@ -67,6 +67,7 @@ public:
     void SetValue(VALUE v) {
         t->val = v;
     }
+    bool IsVirtualReg() const { return t->isReg; }
     int GetVirtualReg() const { return t->val.val.i32s; }
     void SetLevel(int level) { t->level = level; }
     void SetChild(int n, Tree ct) {
@@ -221,7 +222,8 @@ void FunctionToAssembly(Function &func) {
                 exit(0);
             } else {
                 // TODO: leave it later for future process
-                t->SetValue(fstate.GetVirtualReg());        // assign a virtual register for statement
+                // t->SetValue(fstate.GetVirtualReg());        // assign a virtual register for statement
+                                                               // insts that require a dest reg will be assigned in matching action
             }
 
             int num_operands = instruction.getNumOperands();
@@ -286,6 +288,7 @@ void FunctionToAssembly(Function &func) {
     std::map<Tree, int> virtualRegs;
     for (TreeWrapper *t : treeList) {
         // replace the already computed tree branch with virtual register
+#if 0
         int level = 0;
         for (int i = 0; i < t->GetNumChildren(); i++) {
             auto child = t->GetChild(i);
@@ -297,6 +300,7 @@ void FunctionToAssembly(Function &func) {
             }
         }
         t->SetLevel(level);     // since we are changing the structure of the tree, levels may change
+#endif
 
 #if DEBUG_INST
         errs() << Instruction::getOpcodeName(t->GetOpCode()) << "\tLEVEL:\t" << t->GetLevel() << "\tRefCount:\t" << t->GetRefCount() << "\n";
@@ -307,7 +311,7 @@ void FunctionToAssembly(Function &func) {
             t->DisplayTree();
 #endif
             gen(t->GetTree(), &fstate);
-            virtualRegs.insert(std::pair<Tree, int>(t->GetTree(), t->GetVirtualReg()));
+            // virtualRegs.insert(std::pair<Tree, int>(t->GetTree(), t->GetVirtualReg()));
         }
     } // end of TreeWrapper iteration
 
