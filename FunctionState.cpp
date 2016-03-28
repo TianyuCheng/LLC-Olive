@@ -27,6 +27,8 @@ void FunctionState::PrintAssembly(std::ostream &out) {
         out << "main:" << std::endl;
     else
         out << "." << this->function_name << ":" << std::endl;
+
+    out << "\tpushq\t$rbp" << std::endl;
     out << "\tsubq\t$rsp, $" << local_bytes << std::endl;
 
     // TODO: remember to print function begin and ends

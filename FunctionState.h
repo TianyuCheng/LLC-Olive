@@ -38,12 +38,17 @@ public:
     int GetVirtualReg() {
         int v = virtual2machine.size();
         virtual2machine.push_back(-2);      // -2 not used yet
-                                            // -1 not allocated yet
+                                            // -1 used but not allocated yet
         return v;
+    }
+    void MarkVirtualReg(VALUE &v) {
+        int index = v.AsVirtualReg();
+        assert ((index >= 0 && index < virtual2machine.size()) && "mark virtual register index not in range");
+        virtual2machine[index] = -1; // used but not allocated yet
     }
     std::string GetMCRegAt(int index) const { 
 #if 0
-        assert ((index < 0 || index > virtual2machine.size()) && "virtual register index not in range");
+        assert ((index >= 0 && index < virtual2machine.size()) && "virtual register index not in range");
         return std::string(registers[virtual2machine[index]]);
 #else
         index = 0;
@@ -98,6 +103,8 @@ public:
     X86Operand(FUNCTION_STATE fs, Type t, VALUE v) 
         : fstate(fs), type(t), val(v), base_address(nullptr), displacement(nullptr) {
         assert (t != Type::X86Mem && "X86Mem not support in X86Operand(Type t, VALUE) constructor.");
+        // if operand is a register that is in some operand, then mark it as used but not allocated
+        if (type == Type::X86Reg) fstate->MarkVirtualReg(val);
     }
 
     X86Operand(FUNCTION_STATE fs, Type t, X86Operand *base, X86Operand *dis, int siz, int off) 
