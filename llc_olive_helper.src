@@ -1,4 +1,4 @@
-#define VERBOSE  0
+#define VERBOSE  2
 
 int OP_LABEL(NODEPTR p) {
     if (p) return p->op;
@@ -153,65 +153,72 @@ void TreeWrapper::DisplayTree(Tree t, int indent) const {
     DisplayTree(t->kids[1], indent + 1);
 }
 
-void InstToExprTree(FunctionState &fstate, Instruction &instruction, TreeWrapper *t) {
+void BasicBlockToExprTrees(FunctionState &fstate, 
+        std::vector<TreeWrapper*> &treeList, BasicBlock &bb) {
+
+    for (auto inst = bb.begin(); inst != bb.end(); inst++) {
+        TreeWrapper *t = new TreeWrapper(inst->getOpcode());
+        Instruction &instruction = *inst;
+
 #if VERBOSE
-    instruction.print(errs());
-    errs() << "\n";
+        instruction.print(errs());
+        errs() << "\n";
 #endif
 #if VERBOSE > 1
-    errs() << "OperandNum: " << instruction.getNumOperands() << "\t";
-    errs() << "\n";
-    errs() << "\tinstruction (" << instruction << " ) opcode: " << instruction.getOpcode() << "\n";
+        errs() << "OperandNum: " << instruction.getNumOperands() << "\t";
+        errs() << "\tinstruction (" << instruction << " ) opcode: " << instruction.getOpcode() << "\n";
 #endif
-    if (BranchInst::classof(&instruction)) {
-        // TODO: deal separately with branch instruction
-        // it does not need to treated implicitly to be
-        // stored in a register
-        errs() << "YOU'VE HIT A BRANCH INSTRUCTION!!!\n";
-        exit(0);
-    } else {
-        // TODO: leave it later for future process
-    }
 
-    int num_operands = instruction.getNumOperands();
-    for (int i = 0; i < num_operands; i++) {
-        Value *v = instruction.getOperand(i);
+        int num_operands = instruction.getNumOperands();
+        for (int i = 0; i < num_operands; i++) {
+            Value *v = instruction.getOperand(i);
 
-        if (Constant *def = dyn_cast<Constant>(v)) {
-            // check if the operand is a constant
-            if (ConstantInt *cnst = dyn_cast<ConstantInt>(v)) {
-                // check if the operand is a constant int
-                t->CastInt(i, cnst);
+            if (Constant *def = dyn_cast<Constant>(v)) {
+                // check if the operand is a constant
+                if (ConstantInt *cnst = dyn_cast<ConstantInt>(v)) {
+                    // check if the operand is a constant int
+                    t->CastInt(i, cnst);
+                }
+                else if (ConstantFP *cnst = dyn_cast<ConstantFP>(v)) {
+                    // check if the operand is a constant int
+                    t->CastFP(i, cnst);
+                }
+                else if (ConstantExpr *cnst = dyn_cast<ConstantExpr>(v)) {
+                    // check if the operand is a constant int
+                    // errs() << "FOUND CONST EXPR:\t" << *cnst << "\n";
+                    errs() << "NOT IMPLEMENTED CONST EXPR\n";
+                    exit(EXIT_FAILURE);
+                }
+                // ... There are many kinds of constant, right now we do not deal with them ...
+                else {
+                    // this is bad and probably needs to terminate the execution
+                    errs() << "NOT IMPLEMENTED OTHER CONST TYPES:\t"; instruction.print(errs()); errs() << "\n";
+                    exit(EXIT_FAILURE);
+                }
             }
-            else if (ConstantFP *cnst = dyn_cast<ConstantFP>(v)) {
-                // check if the operand is a constant int
-                t->CastFP(i, cnst);
+            else if (Instruction *def = dyn_cast<Instruction>(v)) {
+                // check if we cant find operand's definition
+                TreeWrapper *wrapper = fstate.FindFromTreeMap(def);
+                assert(wrapper && "operands must be previously defined");
+                t->SetChild(i, wrapper->GetTreeWrapper());      // automatically increase the refcnt
             }
-            else if (ConstantExpr *cnst = dyn_cast<ConstantExpr>(v)) {
-                // check if the operand is a constant int
-                // errs() << "FOUND CONST EXPR:\t" << *cnst << "\n";
-                errs() << "NOT IMPLEMENTED CONST EXPR\n";
-                exit(EXIT_FAILURE);
+            else if (BasicBlock *block = dyn_cast<BasicBlock>(v)) {
+                errs() << "Operand " << i << "  a basic block:\n";
+                block->print(errs()); errs() << "\n";
+                // // recursively process operand basic block
+                // BasicBlockToExprTrees(fstate, treeList, *block);
             }
-            // ... There are many kinds of constant, right now we do not deal with them ...
             else {
-                // this is bad and probably needs to terminate the execution
-                errs() << "NOT IMPLEMENTED OTHER CONST TYPES:\t"; instruction.print(errs()); errs() << "\n";
+                // TODO: write code to handle these situations
+                errs() << "Unhandle-able instruction operand! Quit\n";
                 exit(EXIT_FAILURE);
             }
-        }
-        else if (Instruction *def = dyn_cast<Instruction>(v)) {
-            // check if we cant find operand's definition
-            TreeWrapper *wrapper = fstate.FindFromTreeMap(def);
-            assert(wrapper && "operands must be previously defined");
-            t->SetChild(i, wrapper->GetTreeWrapper());      // automatically increase the refcnt
-        }
-        else {
-            // TODO: write code to handle these situations
-            errs() << "Unhandle-able instruction operand! Quit\n";
-            exit(EXIT_FAILURE);
-        }
-    } //end of operand loop
+        } //end of operand loop
+
+        // store the current tree in map
+        fstate.AddToTreeMap(&instruction, t);
+        treeList.push_back(t);
+    } // end of instruction loop in a basic block
 }
 
 /**
@@ -228,26 +235,19 @@ void FunctionToAssembly(Function &func) {
     std::vector<TreeWrapper*> treeList;
     // === First Pass: collect instruction information, build expr tree
     for (BasicBlock &bb : basic_blocks) {
-        for (auto inst = bb.begin(); inst != bb.end(); inst++) {
-            TreeWrapper *t = new TreeWrapper(inst->getOpcode());
-            Instruction &instruction = *inst;
-            InstToExprTree(fstate, instruction, t);
-            // store the current tree in map
-            fstate.AddToTreeMap(&instruction, t);
-            treeList.push_back(t);
-        } // end of instruction loop
+        BasicBlockToExprTrees(fstate, treeList, bb);
     } // end of basic block loop
 
     // === Second Pass: generate assembly code using olive
     // iterate through tree list for each individual instruction tree
     // replace the complicated/common tree expression with registers
     for (TreeWrapper *t : treeList) {
-#if VERBOSE > 1
+#if VERBOSE > 2
         errs() << Instruction::getOpcodeName(t->GetOpCode()) << "\tLEVEL:\t" << t->GetLevel() << "\tRefCount:\t" << t->GetRefCount() << "\n";
 #endif
         // check if this tree satisfies the condition for saving into register
         if (t->GetRefCount() == 0/* || t->GetRefCount() > 2*/) {
-#if VERBOSE > 1
+#if VERBOSE > 2
             t->DisplayTree();
 #endif
             gen(t->GetTree(), &fstate);
