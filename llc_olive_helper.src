@@ -37,7 +37,7 @@ Tree tree(int op, Tree l, Tree r, VALUE v) {
 void gen(NODEPTR p, FunctionState *fstate) {
     p->computed = true;
 	if (burm_label(p) == 0)
-		std::cerr << "no cover\n";
+		std::cerr << "=== NO COVER ===\n";
 	else {
 		stmt_action(p->x.state, fstate);
 		if (shouldCover != 0)
@@ -85,6 +85,9 @@ void TreeWrapper::CastInt(int n, ConstantInt *cnst) {
     unsigned bitWidth = cnst->getBitWidth();
     if (integer.isSignedIntN(bitWidth)) {
         switch (bitWidth) {
+            case 1:
+                ct->val.val.b = (bool) cnst->getSExtValue();
+                break;
             case 8:
                 ct->val.val.i8s = (int8_t)cnst->getSExtValue();
                 break;
@@ -104,6 +107,9 @@ void TreeWrapper::CastInt(int n, ConstantInt *cnst) {
     }
     else {
         switch (bitWidth) {
+            case 1:
+                ct->val.val.b = (bool) cnst->getSExtValue();
+                break;
             case 8:
                 ct->val.val.i8u = (uint8_t)cnst->getZExtValue();
                 break;
@@ -153,25 +159,33 @@ void TreeWrapper::DisplayTree(Tree t, int indent) const {
     DisplayTree(t->kids[1], indent + 1);
 }
 
-void BasicBlockToExprTrees(FunctionState &fstate, 
+void BasicBlockToExprTrees(FunctionState &fstate,
         std::vector<TreeWrapper*> &treeList, BasicBlock &bb) {
+
+    if (fstate.IsBlockProcessed(&bb)) return;      // not re-process a processed block
 
     for (auto inst = bb.begin(); inst != bb.end(); inst++) {
         TreeWrapper *t = new TreeWrapper(inst->getOpcode());
         Instruction &instruction = *inst;
 
 #if VERBOSE
+        errs() << "\n";
         instruction.print(errs());
         errs() << "\n";
 #endif
 #if VERBOSE > 1
         errs() << "OperandNum: " << instruction.getNumOperands() << "\t";
-        errs() << "\tinstruction (" << instruction << " ) opcode: " << instruction.getOpcode() << "\n";
+        errs() << "opcode: " << instruction.getOpcode() << "\n";
 #endif
 
         int num_operands = instruction.getNumOperands();
         for (int i = 0; i < num_operands; i++) {
             Value *v = instruction.getOperand(i);
+#if VERBOSE > 1
+            errs() << "\tOperand " << i << ":\t";
+            v->print(errs());
+            errs() << "\n";
+#endif
 
             if (Constant *def = dyn_cast<Constant>(v)) {
                 // check if the operand is a constant
@@ -203,9 +217,9 @@ void BasicBlockToExprTrees(FunctionState &fstate,
                 t->SetChild(i, wrapper->GetTreeWrapper());      // automatically increase the refcnt
             }
             else if (BasicBlock *block = dyn_cast<BasicBlock>(v)) {
-                errs() << "Operand " << i << "  a basic block:\n";
-                block->print(errs()); errs() << "\n";
-                // // recursively process operand basic block
+                // errs() << "Operand " << i << "  a basic block\n";
+                // block->print(errs()); errs() << "\n";
+                // recursively process operand basic block
                 // BasicBlockToExprTrees(fstate, treeList, *block);
             }
             else {
@@ -219,6 +233,8 @@ void BasicBlockToExprTrees(FunctionState &fstate,
         fstate.AddToTreeMap(&instruction, t);
         treeList.push_back(t);
     } // end of instruction loop in a basic block
+
+    fstate.AddProcessedBlock(&bb);
 }
 
 /**

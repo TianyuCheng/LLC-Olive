@@ -11,6 +11,9 @@ RED  =`tput setaf 1`
 GREEN=`tput setaf 2`
 RESET=`tput sgr0`
 
+assembly:=$(patsubst %.c,%.s,$(wildcard $(TEST_DIR)/*.c))
+bitcodes:=$(patsubst %.c,%.bc,$(wildcard $(TEST_DIR)/*.c))
+
 run: $(EXE) $(bitcodes)
 	@echo "=================================================================="
 	$(EXE) --num_regs=16 ./testcases/simpleSum.bc -o ./testcases/simpleSum.s
@@ -28,8 +31,6 @@ llc_olive.cpp: llc_olive.brg
 llc_olive.brg: llc_olive.py
 	./$<
 
-assembly:=$(patsubst %.c,%.s,$(wildcard $(TEST_DIR)/*.c))
-bitcodes:=$(patsubst %.c,%.bc,$(wildcard $(TEST_DIR)/*.c))
 test: clean $(EXE) $(bitcodes) $(assembly)
 
 %.s: %.bc

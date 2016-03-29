@@ -23,6 +23,20 @@ imm:    Load(IMM)           { $cost[0].cost = 0;                                
 imm:    IMM                 { $cost[0].cost = 0;                                } = { };
 mem:    MEM                 { $cost[0].cost = 10;                               } = { };
 
+stmt:   Ret(imm)            { $cost[0].cost = $cost[2].cost + 1;                } = {
+            /*
+             * IR Ret takes a register argument
+             * X86 Ret takes no argument, return value is passed by %eax
+             */
+            $action[2](fstate); 
+            fstate->AddInst(new X86Inst("movq",
+                        new X86Operand(fstate, RAX),
+                        new X86Operand(fstate, OP_TYPE::X86Imm, $2->val)
+            ));
+            fstate->RestoreStack();
+            fstate->AddInst(new X86Inst("leave"));
+            fstate->AddInst(new X86Inst("ret"));
+        };
 stmt:   Ret(reg)            { $cost[0].cost = $cost[2].cost + 1;                } = {
             /*
              * IR Ret takes a register argument

@@ -1,7 +1,7 @@
 #include "FunctionState.h"
 
 FunctionState::FunctionState(std::string name, int n, int l)
-    : function_name(name), loop_label(l), local_bytes(0), allocator(n)
+    : function_name(name), label(l), local_bytes(0), allocator(n)
 {
     // initialize function state here
 }

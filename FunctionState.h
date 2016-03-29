@@ -6,6 +6,7 @@
 #include <iostream>
 
 #include <map>
+#include <set>
 #include <vector>
 #include <cassert>
 
@@ -33,7 +34,7 @@ struct LiveRange {
 class FunctionState
 {
 public:
-    FunctionState(std::string name, int num_regs, int loop_label = 0);
+    FunctionState(std::string name, int num_regs, int label = 0);
     virtual ~FunctionState();
 
     void CreateVirtualReg(Tree t);
@@ -74,6 +75,15 @@ public:
             return it->second;
         return nullptr;
     }
+    // Processed Blocks
+    void AddProcessedBlock(llvm::BasicBlock *bb) {
+        processedBlocks.insert(bb);
+    }
+    bool IsBlockProcessed(llvm::BasicBlock *bb) {
+        auto it = processedBlocks.find(bb);
+        if (it != processedBlocks.end()) return true;
+        return false;
+    }
 
 private:
     void LiveRangeAnalysis();
@@ -82,15 +92,16 @@ private:
 private:
     // information about the function
     std::string function_name;
-    int loop_label;
+    int label;
     int local_bytes;
 
     // information about instruction and registers
+    RegisterAllocator allocator;
     std::vector<int> virtual2machine;
     std::vector<X86Inst*> assembly;
     std::map<Tree, X86Operand*> locals;
     std::map<llvm::Instruction*, TreeWrapper*> treeMap;
-    RegisterAllocator allocator;
+    std::set<llvm::BasicBlock*> processedBlocks;
 };
 
 typedef FunctionState* FUNCTION_STATE;

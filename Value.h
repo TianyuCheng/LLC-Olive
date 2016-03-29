@@ -5,6 +5,7 @@
 
 typedef struct VALUE {
     union {
+        bool        b;
         int8_t      i8s;
         uint8_t     i8u;
         int16_t     i16s;
@@ -27,6 +28,7 @@ typedef struct VALUE {
         isSigned = false;
     }
 
+    VALUE(bool i)     { bitWidth = 1;  isSigned = true;  isFP = false; val.b = i;    }
     VALUE(int8_t i)   { bitWidth =  4; isSigned = true;  isFP = false; val.i8s = i;  }
     VALUE(int16_t i)  { bitWidth = 16; isSigned = true;  isFP = false; val.i16s = i; }
     VALUE(int32_t i)  { bitWidth = 32; isSigned = true;  isFP = false; val.i32s = i; }
@@ -46,14 +48,16 @@ typedef struct VALUE {
             else                  out << v.val.f64;
         } else {
             if (v.isSigned) {
-                if (v.bitWidth ==  8) out << v.val.i8s;
-                if (v.bitWidth == 16) out << v.val.i16s;
-                if (v.bitWidth == 32) out << v.val.i32s;
+                if (v.bitWidth ==  1) out << v.val.b;
+                else if (v.bitWidth ==  8) out << v.val.i8s;
+                else if (v.bitWidth == 16) out << v.val.i16s;
+                else if (v.bitWidth == 32) out << v.val.i32s;
                 else                  out << v.val.i64s;
             } else {
-                if (v.bitWidth ==  8) out << v.val.i8u;
-                if (v.bitWidth == 16) out << v.val.i16u;
-                if (v.bitWidth == 32) out << v.val.i32u;
+                if (v.bitWidth ==  1) out << v.val.b;
+                else if (v.bitWidth ==  8) out << v.val.i8u;
+                else if (v.bitWidth == 16) out << v.val.i16u;
+                else if (v.bitWidth == 32) out << v.val.i32u;
                 else                  out << v.val.i64u;
             }
         }
