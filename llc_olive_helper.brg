@@ -1,4 +1,4 @@
-%term DUMMY=0
+%term LABEL=0
 %term Ret=1 Br=2 Switch=3 IndirectBr=4 Invoke=5 Resume=6 Unreachable=7 CleanupRet=8 CatchRet=9 CatchSwitch=10
 %term Add=11 FAdd=12 Sub=13 FSub=14 Mul=15 FMul=16 UDiv=17 SDiv=18 FDiv=19 URem=20 SRem=21 FRem=22
 %term Shl=23 LShr=24 AShr=25 And=26 Or=27 Xor=28
@@ -12,6 +12,8 @@
 %declare<void> reg      <FUNCTION_STATE fstate>;
 %declare<void> imm      <FUNCTION_STATE fstate>;
 %declare<void> mem      <FUNCTION_STATE fstate>;
+%declare<void> cond     <FUNCTION_STATE fstate>;
+%declare<void> label    <FUNCTION_STATE fstate>;
 %%
 
 stmt:   reg                 { return 1;                                         } = { $action[1](fstate); };
@@ -22,6 +24,10 @@ reg:    IMM                 { $cost[0].cost = 1;                                
 imm:    Load(IMM)           { $cost[0].cost = 0;                                } = { };
 imm:    IMM                 { $cost[0].cost = 0;                                } = { };
 mem:    MEM                 { $cost[0].cost = 10;                               } = { };
+
+label:  LABEL               { $cost[0].cost = 5;                                } = {
+            fstate->GenerateLabelStmt($1->val);
+        };
 
 stmt:   Ret(imm)            { $cost[0].cost = $cost[2].cost + 1;                } = {
             /*
@@ -153,5 +159,13 @@ reg:    Mul(reg, reg)       { $cost[0].cost = $cost[2].cost + $cost[3].cost + 4;
                     new X86Operand(fstate, OP_TYPE::X86Reg, $2->val)
                 );
             }
+        };
+
+stmt:   cond                 { $cost[0].cost = $cost[1].cost;                       } = { };
+cond:   ICmp(reg, imm)       { $cost[0].cost = $cost[2].cost + $cost[3].cost;       } = { 
+            std::cerr << "=============== CMP ==============" << std::endl;
+        };
+stmt:   Br(cond, label, label)   { $cost[0].cost = $cost[2].cost + $cost[3].cost + $cost[4].cost + 5; } = {
+            std::cerr << "=============== BRANCH ==============" << std::endl;
         };
 %%

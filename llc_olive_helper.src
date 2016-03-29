@@ -1,4 +1,4 @@
-#define VERBOSE  2
+#define VERBOSE  0
 
 int OP_LABEL(NODEPTR p) {
     if (p) return p->op;
@@ -143,6 +143,9 @@ void TreeWrapper::DisplayTree(Tree t, int indent) const {
     for (int i = 0; i < 2 * indent; i++)
         errs() << " ";
     switch (t->op) {
+    case LABEL:
+        errs() << "op: " << "label" << "\tval: " << t->val.val.i32s << "\n";
+        break;
     case REG:
         errs() << "op: " << "reg" << "\tval: " << t->val.val.i32s << "\n";
         break;
@@ -161,8 +164,6 @@ void TreeWrapper::DisplayTree(Tree t, int indent) const {
 
 void BasicBlockToExprTrees(FunctionState &fstate,
         std::vector<TreeWrapper*> &treeList, BasicBlock &bb) {
-
-    if (fstate.IsBlockProcessed(&bb)) return;      // not re-process a processed block
 
     for (auto inst = bb.begin(); inst != bb.end(); inst++) {
         TreeWrapper *t = new TreeWrapper(inst->getOpcode());
@@ -217,10 +218,15 @@ void BasicBlockToExprTrees(FunctionState &fstate,
                 t->SetChild(i, wrapper->GetTreeWrapper());      // automatically increase the refcnt
             }
             else if (BasicBlock *block = dyn_cast<BasicBlock>(v)) {
-                // errs() << "Operand " << i << "  a basic block\n";
-                // block->print(errs()); errs() << "\n";
-                // recursively process operand basic block
-                // BasicBlockToExprTrees(fstate, treeList, *block);
+                TreeWrapper *wrapper = fstate.FindOrCreateLabel(block);
+                assert(wrapper && "FindOrCreateLabel should never fail");
+                if (BranchInst::classof(&instruction)) {
+                    t->SetChild(i, wrapper->GetTreeWrapper()); // automatically increase the refcnt
+                }
+                else {
+                    errs() << "Unhandle-able basic block operand! Quit\n";
+                    exit(EXIT_FAILURE);
+                }
             }
             else {
                 // TODO: write code to handle these situations
@@ -233,8 +239,6 @@ void BasicBlockToExprTrees(FunctionState &fstate,
         fstate.AddToTreeMap(&instruction, t);
         treeList.push_back(t);
     } // end of instruction loop in a basic block
-
-    fstate.AddProcessedBlock(&bb);
 }
 
 /**

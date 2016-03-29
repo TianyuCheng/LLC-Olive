@@ -1,6 +1,7 @@
 #ifndef VALUE_H
 #define VALUE_H
 
+#include <sstream>
 #include <iostream>
 
 typedef struct VALUE {
@@ -41,6 +42,11 @@ typedef struct VALUE {
     VALUE(double f)   { bitWidth = 64;                   isFP = true ; val.f32 = f;  }
 
     int AsVirtualReg() const { return val.i32s; }       // some time a tree node to represent a register
+    const char* AsLabel() const {
+        std::stringstream ss;
+        ss << ".L" << val.i32s;
+        return ss.str().c_str();
+    }
 
     friend std::ostream& operator<<(std::ostream& out, VALUE &v) {
         if (v.isFP) {

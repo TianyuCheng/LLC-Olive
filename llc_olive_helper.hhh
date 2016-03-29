@@ -57,7 +57,6 @@ int OP_LABEL(NODEPTR p);
 static void burm_trace(NODEPTR, int, COST);
 Tree tree(int op, Tree l, Tree r, VALUE v = 0);
 void gen(NODEPTR p, FunctionState *fstate);
-static int loop_label = 0;
 
 /**
  * Wrapper for tree

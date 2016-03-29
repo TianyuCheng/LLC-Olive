@@ -37,9 +37,12 @@ public:
     FunctionState(std::string name, int num_regs, int label = 0);
     virtual ~FunctionState();
 
+    TreeWrapper* FindOrCreateLabel(llvm::BasicBlock *bb);
     void CreateVirtualReg(Tree t);
     void AssignVirtualReg(Tree lhs, Tree rhs);
     void CopyVirtualReg(VALUE &dst, VALUE &src);
+    void GenerateLabelStmt(const char *label);
+    void GenerateLabelStmt(VALUE &v);
     void GenerateMovStmt(X86Operand *dst, X86Operand *src);
     void GenerateBinaryStmt(const char *op, X86Operand *dst, X86Operand *src);
 
@@ -75,15 +78,6 @@ public:
             return it->second;
         return nullptr;
     }
-    // Processed Blocks
-    void AddProcessedBlock(llvm::BasicBlock *bb) {
-        processedBlocks.insert(bb);
-    }
-    bool IsBlockProcessed(llvm::BasicBlock *bb) {
-        auto it = processedBlocks.find(bb);
-        if (it != processedBlocks.end()) return true;
-        return false;
-    }
 
 private:
     void LiveRangeAnalysis();
@@ -100,8 +94,8 @@ private:
     std::vector<int> virtual2machine;
     std::vector<X86Inst*> assembly;
     std::map<Tree, X86Operand*> locals;
+    std::map<llvm::BasicBlock*, TreeWrapper*> labelMap;
     std::map<llvm::Instruction*, TreeWrapper*> treeMap;
-    std::set<llvm::BasicBlock*> processedBlocks;
 };
 
 typedef FunctionState* FUNCTION_STATE;
@@ -141,7 +135,7 @@ public:
         }
         else if (op.type == Type::X86Reg) {
             if (op.explicit_reg) {
-                out << "$" << registers[op.val.AsVirtualReg()];
+                out << "%" << registers[op.val.AsVirtualReg()];
             }
             else
 #if 0
@@ -212,6 +206,23 @@ private:
     X86Operand *dst;
     X86Operand *src;
 };
+
+class X86Label : public X86Inst
+{
+public:
+    X86Label(const char *label) : X86Inst(label) {
+    }
+    virtual ~X86Label() {
+    }
+
+    friend std::ostream& operator<<(std::ostream& out, X86Label &inst) {
+        out << inst.label << ":" << std::endl;
+        return out;
+    }
+private:
+    std::string label;
+};
+
 
 typedef X86Operand::Type OP_TYPE;
 

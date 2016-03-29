@@ -1,9 +1,10 @@
 #include "FunctionState.h"
 
 FunctionState::FunctionState(std::string name, int n, int l)
-    : function_name(name), label(l), local_bytes(0), allocator(n)
+    : function_name(name), label(l), local_bytes(8), allocator(n)
 {
     // initialize function state here
+    // local_bytes is initiated to 8 for saved rip
 }
 
 FunctionState::~FunctionState() {
@@ -24,12 +25,11 @@ void FunctionState::PrintAssembly(std::ostream &out) {
     // print function entrance
     // TODO: make these a part of the assembly code
     if (std::string(function_name) == std::string("main"))
-        out << "main:" << std::endl;
-    else
-        out << "." << this->function_name << ":" << std::endl;
+        out << "\t.globl" << std::endl;
 
-    out << "\tpushq\t$rbp" << std::endl;
-    out << "\tsubq\t$rsp, $" << local_bytes << std::endl;
+    out << "main:" << std::endl;
+    out << "\tpushq\t%rbp" << std::endl;
+    out << "\tsubq\t%rsp, $" << local_bytes << std::endl;
 
     // TODO: remember to print function begin and ends
     for (X86Inst *inst : assembly)
@@ -41,6 +41,22 @@ void FunctionState::PrintAssembly(std::ostream &out) {
 
 void FunctionState::LiveRangeAnalysis() {
     // analyze live range of virtual registers
+}
+
+TreeWrapper* FunctionState::FindOrCreateLabel(llvm::BasicBlock *bb) {
+    auto it = labelMap.find(bb);
+    if (it == labelMap.end()) {
+        // this basic block has never been seen,
+        // assign a new label, add it to the label map
+        TreeWrapper *treeLabel = new TreeWrapper(LABEL, nullptr, nullptr);
+        treeLabel->SetValue(label++);
+        labelMap.insert(std::pair<llvm::BasicBlock*, TreeWrapper*>(bb, treeLabel));
+        return treeLabel;
+    }
+    else {
+        // find already mapped label
+        return it->second;
+    }
 }
 
 void FunctionState::CreateLocal(Tree t, int bytes) {
@@ -103,6 +119,14 @@ void FunctionState::CopyVirtualReg(VALUE &dst, VALUE &src) {
         new X86Operand(this, OP_TYPE::X86Reg, dst),
         new X86Operand(this, OP_TYPE::X86Reg, src)
     );
+}
+
+void FunctionState::GenerateLabelStmt(const char *l) {
+    AddInst(new X86Label(l));
+}
+
+void FunctionState::GenerateLabelStmt(VALUE &v) {
+    AddInst(new X86Label(v.AsLabel()));
 }
 
 void FunctionState::GenerateMovStmt(X86Operand *dst, X86Operand *src) {
