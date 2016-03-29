@@ -23,7 +23,7 @@ static void burm_trace(NODEPTR p, int eruleno, COST cost) {
         std::cerr << p << " matched " << burm_string[eruleno] << " = " << eruleno << " with cost " << cost.cost << std::endl;
 }
 
-static Tree tree(int op, Tree l, Tree r, VALUE v = 0) {
+Tree tree(int op, Tree l, Tree r, VALUE v) {
 	Tree t = (Tree) malloc(sizeof *t);
 	t->op = op;
 	t->kids[0] = l; t->kids[1] = r;
@@ -34,7 +34,8 @@ static Tree tree(int op, Tree l, Tree r, VALUE v = 0) {
 	return t;
 }
 
-static void gen(NODEPTR p, FunctionState *fstate) {
+void gen(NODEPTR p, FunctionState *fstate) {
+    p->computed = true;
 	if (burm_label(p) == 0)
 		std::cerr << "no cover\n";
 	else {
@@ -44,148 +45,115 @@ static void gen(NODEPTR p, FunctionState *fstate) {
 	}
 }
 
-/**
- * Wrapper for tree
- * */
-class TreeWrapper
-{
-public:
-    TreeWrapper(int opcode, Tree l = nullptr, Tree r = nullptr): nchild(0) {
-        t = tree(opcode, l, r);
-        t->refcnt = 0;
-        t->level = 1;
-        if (l) { t->level = std::max(t->level, 1 + l->level); nchild++; }
-        if (r) { t->level = std::max(t->level, 1 + r->level); nchild++; }
+TreeWrapper::TreeWrapper(int opcode, Tree l, Tree r): nchild(0) {
+    t = tree(opcode, l, r);
+    t->refcnt = 0;
+    t->level = 1;
+    if (l) { t->level = std::max(t->level, 1 + l->level); nchild++; }
+    if (r) { t->level = std::max(t->level, 1 + r->level); nchild++; }
+}
+TreeWrapper::~TreeWrapper() {
+    free(t);
+    // Stupid design in TreeReference causes me to use a freeList for cleaning
+    for (Tree ct: freeList)
+        free(ct);
+}
+void TreeWrapper::SetChild(int n, Tree ct) {
+    if (n < 3) {
+        if (!t->kids[n] && ct) nchild++;     // was nullptr, but not null now, increment the nchild counter
+        if (ct) t->level = std::max(t->level, 1 + ct->level);
+        t->kids[n] = ct;
+    } else {
+        // TODO: IMPLEMENT A WAY TO STORE MORE THAN 2 CHILDREN
+        errs() << "SetChild for n=" << n << " is not implemented yet!\n";
     }
-    virtual ~TreeWrapper() {
-        free(t);
-        // Stupid design in TreeReference causes me to use a freeList for cleaning
-        for (Tree ct: freeList)
-            free(ct);
+}
+Tree TreeWrapper::GetChild(int n) {
+    if (n < 3) {
+        return t->kids[n];
+    } else {
+        // TODO: IMPLEMENT A WAY TO FETCH MORE THAN 2 CHILDREN
+        errs() << "GetChild for n=" << n << " is not implemented yet!\n";
+        return nullptr;
     }
-    int GetOpCode() const { return t->op; }
-    void SetValue(VALUE v) {
-        t->val = v;
-    }
-    bool IsVirtualReg() const { return t->isReg; }
-    int GetVirtualReg() const { return t->val.val.i32s; }
-    void SetLevel(int level) { t->level = level; }
-    void SetChild(int n, Tree ct) {
-        if (n < 3) {
-            if (!t->kids[n] && ct) nchild++;     // was nullptr, but not null now, increment the nchild counter
-            if (ct) t->level = std::max(t->level, 1 + ct->level);
-            t->kids[n] = ct;
-        } else {
-            // TODO: IMPLEMENT A WAY TO STORE MORE THAN 2 CHILDREN
-            errs() << "SetChild for n=" << n << " is not implemented yet!\n";
+}
+
+void TreeWrapper::CastInt(int n, ConstantInt *cnst) {
+    freeList.push_back(tree(IMM, nullptr, nullptr));
+    Tree ct = freeList.back();
+    const APInt integer = cnst->getValue();
+    unsigned bitWidth = cnst->getBitWidth();
+    if (integer.isSignedIntN(bitWidth)) {
+        switch (bitWidth) {
+            case 8:
+                ct->val.val.i8s = (int8_t)cnst->getSExtValue();
+                break;
+            case 16:
+                ct->val.val.i16s = (int16_t)cnst->getSExtValue();
+                break;
+            case 32:
+                ct->val.val.i32s = (int32_t)cnst->getSExtValue();
+                break;
+            case 64:
+                ct->val.val.i64s = (int64_t)cnst->getSExtValue();
+                break;
+            default:
+                errs() << "CAST CONSTANT INT FAILURE\n";
+                exit(EXIT_FAILURE);
         }
     }
-    Tree GetChild(int n) {
-        if (n < 3) {
-            return t->kids[n];
-        } else {
-            // TODO: IMPLEMENT A WAY TO FETCH MORE THAN 2 CHILDREN
-            errs() << "GetChild for n=" << n << " is not implemented yet!\n";
-            return nullptr;
+    else {
+        switch (bitWidth) {
+            case 8:
+                ct->val.val.i8u = (uint8_t)cnst->getZExtValue();
+                break;
+            case 16:
+                ct->val.val.i16u = (uint16_t)cnst->getZExtValue();
+                break;
+            case 32:
+                ct->val.val.i32u = (uint32_t)cnst->getZExtValue();
+                break;
+            case 64:
+                ct->val.val.i64u = (uint64_t)cnst->getZExtValue();
+                break;
+            default:
+                errs() << "CAST CONSTANT INT FAILURE\n";
+                exit(EXIT_FAILURE);
         }
     }
-    Tree GetTree() { return t; }
-    Tree GetTreeWrapper() { t->refcnt++; return t; }
+    this->SetChild(n, ct);
+}
 
-    int GetLevel() const { return t->level; }
-    int GetRefCount() const { return t->refcnt; }
-    int GetNumChildren() const { return nchild; }
+void TreeWrapper::CastFP(int n, ConstantFP *cnst) {
+    freeList.push_back(tree(IMM, nullptr, nullptr));
+    Tree ct = freeList.back();
+    // for now, assume all floating point uses 64 bit double
+    ct->val.val.f64 = (double) cnst->getValueAPF().convertToDouble();
+    this->SetChild(n, ct);
+}
 
-    void CastInt(int n, ConstantInt *cnst) {
-        freeList.push_back(tree(IMM, nullptr, nullptr));
-        Tree ct = freeList.back();
-        const APInt integer = cnst->getValue();
-        unsigned bitWidth = cnst->getBitWidth();
-        if (integer.isSignedIntN(bitWidth)) {
-            switch (bitWidth) {
-                case 8:
-                    ct->val.val.i8s = (int8_t)cnst->getSExtValue();
-                    break;
-                case 16:
-                    ct->val.val.i16s = (int16_t)cnst->getSExtValue();
-                    break;
-                case 32:
-                    ct->val.val.i32s = (int32_t)cnst->getSExtValue();
-                    break;
-                case 64:
-                    ct->val.val.i64s = (int64_t)cnst->getSExtValue();
-                    break;
-                default:
-                    errs() << "CAST CONSTANT INT FAILURE\n";
-                    exit(EXIT_FAILURE);
-            }
-        }
-        else {
-            switch (bitWidth) {
-                case 8:
-                    ct->val.val.i8u = (uint8_t)cnst->getZExtValue();
-                    break;
-                case 16:
-                    ct->val.val.i16u = (uint16_t)cnst->getZExtValue();
-                    break;
-                case 32:
-                    ct->val.val.i32u = (uint32_t)cnst->getZExtValue();
-                    break;
-                case 64:
-                    ct->val.val.i64u = (uint64_t)cnst->getZExtValue();
-                    break;
-                default:
-                    errs() << "CAST CONSTANT INT FAILURE\n";
-                    exit(EXIT_FAILURE);
-            }
-        }
-        this->SetChild(n, ct);
+void TreeWrapper::DisplayTree(Tree t, int indent) const {
+    if (t == nullptr) return;
+    for (int i = 0; i < 2 * indent; i++)
+        errs() << " ";
+    switch (t->op) {
+    case REG:
+        errs() << "op: " << "reg" << "\tval: " << t->val.val.i32s << "\n";
+        break;
+    case IMM:
+        errs() << "op: " << "imm" << "\tval: " << t->val.val.i32s << "\n";
+        break;
+    case MEM:
+        errs() << "op: " << "mem" << "\tval: " << t->val.val.i32s << "\n";
+        break;
+    default:
+        errs() << "op: " << Instruction::getOpcodeName(t->op) << "\tval: " << t->val.val.i32s << "\n";
     }
+    DisplayTree(t->kids[0], indent + 1);
+    DisplayTree(t->kids[1], indent + 1);
+}
 
-    void CastFP(int n, ConstantFP *cnst) {
-        freeList.push_back(tree(IMM, nullptr, nullptr));
-        Tree ct = freeList.back();
-        // for now, assume all floating point uses 64 bit double
-        ct->val.val.f64 = (double) cnst->getValueAPF().convertToDouble();
-        this->SetChild(n, ct);
-    }
-
-
-    void DisplayTree() const {
-        DisplayTree(t, 0);
-    }
-
-private:
-    void DisplayTree(Tree t, int indent = 0) const {
-        if (t == nullptr) return;
-        for (int i = 0; i < 2 * indent; i++)
-            errs() << " ";
-        switch (t->op) {
-        case REG:
-            errs() << "op: " << "reg" << "\tval: " << t->val.val.i32s << "\n";
-            break;
-        case IMM:
-            errs() << "op: " << "imm" << "\tval: " << t->val.val.i32s << "\n";
-            break;
-        case MEM:
-            errs() << "op: " << "mem" << "\tval: " << t->val.val.i32s << "\n";
-            break;
-        default:
-            errs() << "op: " << Instruction::getOpcodeName(t->op) << "\tval: " << t->val.val.i32s << "\n";
-        }
-        DisplayTree(t->kids[0], indent + 1);
-        DisplayTree(t->kids[1], indent + 1);
-    }
-
-private:
-    Tree t;
-    int nchild;
-    std::vector<Tree> freeList;
-};
-
-
-void InstToExprTree(std::map<Instruction*, TreeWrapper*> treeMap, 
-        Instruction &instruction, TreeWrapper *t) {
+void InstToExprTree(FunctionState &fstate, Instruction &instruction, TreeWrapper *t) {
 #if VERBOSE
     instruction.print(errs());
     errs() << "\n";
@@ -234,9 +202,9 @@ void InstToExprTree(std::map<Instruction*, TreeWrapper*> treeMap,
         }
         else if (Instruction *def = dyn_cast<Instruction>(v)) {
             // check if we cant find operand's definition
-            auto it = treeMap.find(def);
-            assert(it != treeMap.end() && "operands must be previously defined");
-            t->SetChild(i, it->second->GetTreeWrapper());
+            TreeWrapper *wrapper = fstate.FindFromTreeMap(def);
+            assert(wrapper && "operands must be previously defined");
+            t->SetChild(i, wrapper->GetTreeWrapper());      // automatically increase the refcnt
         }
         else {
             // TODO: write code to handle these situations
@@ -251,31 +219,24 @@ void InstToExprTree(std::map<Instruction*, TreeWrapper*> treeMap,
  * */
 void FunctionToAssembly(Function &func) {
 
-
-    // Due to some stupid design, we have to use
-    // a vector container to store additional malloc'd
-    // pointers.
-    std::vector<Tree> freeList;
+    // prepare a function state container
+    // to store function information, such as
+    // local variables, free registers, etc
+    FunctionState fstate(func.getName(), NumRegs);
 
     Function::BasicBlockListType &basic_blocks = func.getBasicBlockList();
-    std::map<Instruction*, TreeWrapper*> treeMap;
     std::vector<TreeWrapper*> treeList;
     // === First Pass: collect instruction information, build expr tree
     for (BasicBlock &bb : basic_blocks) {
         for (auto inst = bb.begin(); inst != bb.end(); inst++) {
             TreeWrapper *t = new TreeWrapper(inst->getOpcode());
             Instruction &instruction = *inst;
-            InstToExprTree(treeMap, instruction, t);
+            InstToExprTree(fstate, instruction, t);
             // store the current tree in map
-            treeMap.insert(std::pair<Instruction*, TreeWrapper*>(&instruction, t));
+            fstate.AddToTreeMap(&instruction, t);
             treeList.push_back(t);
         } // end of instruction loop
     } // end of basic block loop
-
-    // prepare a function state container
-    // to store function information, such as
-    // local variables, free registers, etc
-    FunctionState fstate(func.getName(), NumRegs);
 
     // === Second Pass: generate assembly code using olive
     // iterate through tree list for each individual instruction tree
@@ -297,11 +258,7 @@ void FunctionToAssembly(Function &func) {
     fstate.PrintAssembly(std::cerr);
 
     // clean up
-    for (TreeWrapper *t : treeList)
-        delete t;
-    // Stupid design in TreeWrapper causes me to use a freeList for cleaning
-    for (Tree t : freeList)
-        free(t);
+    for (TreeWrapper *t : treeList) delete t;
 }
 
 int main(int argc, char *argv[])

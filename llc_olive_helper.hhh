@@ -19,6 +19,7 @@
 #include <llvm/IR/Constants.h>
 
 #include "./FunctionState.h"
+class FunctionState;
 
 typedef struct tree {
 	int op;
@@ -27,6 +28,7 @@ typedef struct tree {
     int level;
     int refcnt;
     bool isReg;
+    bool computed;
 	struct { struct burm_state *state; } x;
 } *NODEPTR, *Tree;
 
@@ -53,6 +55,44 @@ static int shouldCover = 0;
 int OP_LABEL(NODEPTR p);
 
 static void burm_trace(NODEPTR, int, COST);
+Tree tree(int op, Tree l, Tree r, VALUE v = 0);
+void gen(NODEPTR p, FunctionState *fstate);
 static int loop_label = 0;
+
+/**
+ * Wrapper for tree
+ * */
+class TreeWrapper
+{
+public:
+    TreeWrapper(int opcode, Tree l = nullptr, Tree r = nullptr);
+    virtual ~TreeWrapper();
+    int GetOpCode() const { return t->op; }
+    void SetValue(VALUE v) { t->val = v; }
+    bool IsVirtualReg() const { return t->isReg; }
+    int GetVirtualReg() const { return t->val.val.i32s; }
+    void SetLevel(int level) { t->level = level; }
+    void SetChild(int n, Tree ct);
+    Tree GetChild(int n);
+    Tree GetTree() { return t; }
+    Tree GetTreeWrapper() { t->refcnt++; return t; }
+
+    int GetLevel() const { return t->level; }
+    int GetRefCount() const { return t->refcnt; }
+    int GetNumChildren() const { return nchild; }
+
+    void CastInt(int n, llvm::ConstantInt *cnst);
+    void CastFP(int n, llvm::ConstantFP *cnst);
+
+    void DisplayTree() const { DisplayTree(t, 0); }
+
+private:
+    void DisplayTree(Tree t, int indent = 0) const;
+
+private:
+    Tree t;
+    int nchild;
+    std::vector<Tree> freeList;
+};
 
 #endif

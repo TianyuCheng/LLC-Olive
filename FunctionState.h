@@ -15,6 +15,7 @@
 
 class X86Inst;          // forward declaration
 class X86Operand;
+class TreeWrapper;
 typedef struct tree* Tree;
 
 struct LiveRange {
@@ -63,6 +64,17 @@ public:
     void AddInst(X86Inst *inst) { assembly.push_back(inst); }
     void RestoreStack();
 
+    // TreeMap management
+    void AddToTreeMap(llvm::Instruction *instruction, TreeWrapper *t) {
+        treeMap.insert(std::pair<llvm::Instruction*, TreeWrapper*>(instruction, t));
+    }
+    TreeWrapper* FindFromTreeMap(llvm::Instruction *instruction) const {
+        auto it = treeMap.find(instruction);
+        if (it != treeMap.end())
+            return it->second;
+        return nullptr;
+    }
+
 private:
     void LiveRangeAnalysis();
     std::string GetMachineReg(int virtual_reg);
@@ -77,6 +89,7 @@ private:
     std::vector<int> virtual2machine;
     std::vector<X86Inst*> assembly;
     std::map<Tree, X86Operand*> locals;
+    std::map<llvm::Instruction*, TreeWrapper*> treeMap;
     RegisterAllocator allocator;
 };
 

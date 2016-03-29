@@ -83,7 +83,6 @@ void FunctionState::CreateVirtualReg(Tree t) {
 }
 
 void FunctionState::AssignVirtualReg(Tree lhs, Tree rhs) {
-    rhs->refcnt--;                           // discharge 1 reference
     lhs->isReg = true;
     if (rhs->refcnt == 0) {
         // this register is free now, we can reuse it
