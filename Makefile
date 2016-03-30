@@ -21,6 +21,10 @@ run: $(EXE) $(bitcodes)
 	$(EXE) --num_regs=16 ./testcases/calculation.bc -o ./testcases/calculation.s
 	@echo "------------------------------------------------------------------"
 	$(EXE) --num_regs=16 ./testcases/condition.bc -o ./testcases/condition.s
+	@echo "------------------------------------------------------------------"
+	$(EXE) --num_regs=16 ./testcases/forloop.bc -o ./testcases/forloop.s
+	@echo "------------------------------------------------------------------"
+	$(EXE) --num_regs=16 ./testcases/while.bc -o ./testcases/while.s
 
 $(EXE): llc_olive.cpp llc_olive.brg
 	(cd $(TOOL_ROOT); make -j6)
