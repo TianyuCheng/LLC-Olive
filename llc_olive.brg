@@ -1,0 +1,206 @@
+%{
+#include "llc_olive_helper.h"
+%}
+
+%term DUMMY=0
+%term Ret=1 Br=2 Switch=3 IndirectBr=4 Invoke=5 Resume=6 Unreachable=7 CleanupRet=8 CatchRet=9 CatchSwitch=10
+%term Add=11 FAdd=12 Sub=13 FSub=14 Mul=15 FMul=16 UDiv=17 SDiv=18 FDiv=19 URem=20 SRem=21 FRem=22
+%term Shl=23 LShr=24 AShr=25 And=26 Or=27 Xor=28
+%term Alloca=29 Load=30 Store=31 GetElementPtr=32 Fence=33 AtomicCmpXchg=34 AtomicRMW=35
+%term Trunc=36 ZExt=37 SExt=38 FPToUI=39 FPToSI=40 UIToFP=41 SIToFP=42 FPTrunc=43 FPExt=44 PtrToInt=45 IntToPtr=46 BitCast=47 AddrSpaceCast=48
+%term CleanupPad=49 CatchPad=50
+%term ICmp=51 FCmp=52 PHI=53 Call=54 Select=55 UserOp1=56 UserOp2=57 VAArg=58 ExtractElement=59 InsertElement=60 ShuffleVector=61 ExtractValue=62 InsertValue=63 LandingPad=64
+%term REG IMM MEM LABEL
+
+%declare<void> stmt     <FUNCTION_STATE fstate>;
+%declare<void> reg      <FUNCTION_STATE fstate>;
+%declare<void> imm      <FUNCTION_STATE fstate>;
+%declare<void> mem      <FUNCTION_STATE fstate>;
+%declare<void> cond     <FUNCTION_STATE fstate>;
+%declare<void> label    <FUNCTION_STATE fstate>;
+%%
+
+stmt:   reg                 { return 1;                                         } = { $action[1](fstate); };
+stmt:   mem                 { return 1;                                         } = { $action[1](fstate); };
+
+reg:    REG                 { $cost[0].cost = 1;                                } = { };
+imm:    Load(IMM)           { $cost[0].cost = 0;                                } = { };
+imm:    IMM                 { $cost[0].cost = 0;                                } = { };
+mem:    MEM                 { $cost[0].cost = 10;                               } = { };
+label:  LABEL               { $cost[0].cost = 1;                                } = { };
+
+stmt:   Ret(imm)            { $cost[0].cost = $cost[2].cost + 1;                } = {
+            /*
+             * IR Ret takes a register argument
+             * X86 Ret takes no argument, return value is passed by %eax
+             */
+            $action[2](fstate); 
+            fstate->AddInst(new X86Inst("movq",
+                        new X86Operand(fstate, RAX),
+                        new X86Operand(fstate, OP_TYPE::X86Imm, $2->val)
+            ));
+            fstate->RestoreStack();
+            fstate->AddInst(new X86Inst("leave"));
+            fstate->AddInst(new X86Inst("ret"));
+        };
+stmt:   Ret(reg)            { $cost[0].cost = $cost[2].cost + 1;                } = {
+            /*
+             * IR Ret takes a register argument
+             * X86 Ret takes no argument, return value is passed by %eax
+             */
+            $action[2](fstate); 
+            fstate->AddInst(new X86Inst("movq",
+                        new X86Operand(fstate, RAX),
+                        new X86Operand(fstate, OP_TYPE::X86Reg, $2->val)
+            ));
+            fstate->RestoreStack();
+            fstate->AddInst(new X86Inst("leave"));
+            fstate->AddInst(new X86Inst("ret"));
+        };
+mem:    Alloca(imm)         { $cost[0].cost = 1;                                } = {
+            /*
+             * IR Alloca takes one arguments for allocation size
+             * X86 does not have correspondence for Alloca, but only uses $esp - size
+             */
+            fstate->CreateLocal($0, 8);
+        };
+reg:    Load(reg)           { $cost[0].cost = $cost[2].cost + 1;    } = {
+            /*
+             * IR Load takes one arguments for allocation size
+             * X86 uses mov instruction, which takes two arguments
+             */
+            $action[2](fstate); 
+            fstate->AssignVirtualReg($0, $2);    // assign a virtual register to the inst
+            fstate->CopyVirtualReg($0->val, $2->val);
+        };
+reg:    Load(imm)           { $cost[0].cost = $cost[2].cost + 1;    } = {
+            $action[2](fstate); 
+            fstate->CreateVirtualReg($0);      // assign a virtual register to the inst
+            fstate->GenerateMovStmt(
+                new X86Operand(fstate, OP_TYPE::X86Reg, $0->val),
+                new X86Operand(fstate, OP_TYPE::X86Imm, $2->val)
+            );
+        };
+reg:    Load(mem)           { $cost[0].cost = $cost[2].cost + 1;    } = {
+            $action[2](fstate); 
+            fstate->CreateVirtualReg($0);      // assign a virtual register to the inst
+            fstate->GenerateMovStmt(
+                new X86Operand(fstate, OP_TYPE::X86Reg, $0->val),
+                fstate->GetLocalMemoryAddress($2)
+            );
+        };
+mem:    Store(imm, mem)      { $cost[0].cost = $cost[2].cost + $cost[3].cost;    } = {
+            $action[2](fstate);
+            $action[3](fstate);
+            fstate->GenerateMovStmt(
+                fstate->GetLocalMemoryAddress($3),
+                new X86Operand(fstate, OP_TYPE::X86Imm, $2->val)
+            );
+        };
+mem:    Store(reg, mem)      { $cost[0].cost = $cost[2].cost + $cost[3].cost;    } = {
+            $action[2](fstate);
+            $action[3](fstate);
+            fstate->GenerateMovStmt(
+                fstate->GetLocalMemoryAddress($3),
+                new X86Operand(fstate, OP_TYPE::X86Reg, $2->val)
+            );
+        };
+reg:    Add(reg, reg)       { $cost[0].cost = $cost[2].cost + $cost[3].cost + 2;    } = {
+            /*
+             * IR Add takes two arguments
+             * X86 Add takes two argument, both operands cannot be from memory in the instruction
+             */
+            $2->refcnt--; $action[2](fstate); 
+            $3->refcnt--; $action[3](fstate);
+            // std::cerr << "refcnt: " << $2->refcnt << std::endl;
+            // std::cerr << "refcnt: " << $3->refcnt << std::endl;
+            if ($2->refcnt < $3->refcnt) {
+                fstate->AssignVirtualReg($0, $2);    // assign a virtual register to the inst
+                fstate->GenerateBinaryStmt("add", 
+                    new X86Operand(fstate, OP_TYPE::X86Reg, $0->val),
+                    new X86Operand(fstate, OP_TYPE::X86Reg, $3->val)
+                );
+            } else {
+                fstate->AssignVirtualReg($0, $3);    // assign a virtual register to the inst
+                fstate->GenerateBinaryStmt("add", 
+                    new X86Operand(fstate, OP_TYPE::X86Reg, $0->val),
+                    new X86Operand(fstate, OP_TYPE::X86Reg, $2->val)
+                );
+            }
+        };
+reg:    Add(reg, imm)       { $cost[0].cost = $cost[2].cost + $cost[3].cost + 2;    } = {
+            /*
+             * IR Add takes two arguments
+             * X86 Add takes two argument, both operands cannot be from memory in the instruction
+             */
+            $2->refcnt--; $action[2](fstate); 
+            $3->refcnt--; $action[3](fstate);
+            // std::cerr << "refcnt: " << $2->refcnt << std::endl;
+            // std::cerr << "refcnt: " << $3->refcnt << std::endl;
+            fstate->AssignVirtualReg($0, $2);    // assign a virtual register to the inst
+            fstate->GenerateBinaryStmt("add", 
+                new X86Operand(fstate, OP_TYPE::X86Reg, $0->val),
+                new X86Operand(fstate, OP_TYPE::X86Imm, $3->val)
+            );
+        };
+reg:    Sub(reg, reg)       { $cost[0].cost = $cost[2].cost + $cost[3].cost + 2;    } = {
+            /*
+             * IR Sub takes two arguments
+             * X86 Sub takes two argument, both operands cannot be from memory in the instruction
+             */
+            $2->refcnt--; $action[2](fstate); 
+            $3->refcnt--; $action[3](fstate);
+            fstate->AssignVirtualReg($0, $2);    // assign a virtual register to the inst
+            fstate->GenerateBinaryStmt("sub", 
+                new X86Operand(fstate, OP_TYPE::X86Reg, $0->val),
+                new X86Operand(fstate, OP_TYPE::X86Reg, $3->val)
+            );
+        };
+reg:    Mul(reg, reg)       { $cost[0].cost = $cost[2].cost + $cost[3].cost + 4;    } = {
+            /*
+             * IR Mul takes two arguments
+             * X86 Mul takes two argument, both operands cannot be from memory in the instruction
+             */
+            $2->refcnt--; $action[2](fstate); 
+            $3->refcnt--; $action[3](fstate);
+            if ($2->refcnt < $3->refcnt) {
+                fstate->AssignVirtualReg($0, $2);    // assign a virtual register to the inst
+                fstate->GenerateBinaryStmt("imul", 
+                    new X86Operand(fstate, OP_TYPE::X86Reg, $0->val),
+                    new X86Operand(fstate, OP_TYPE::X86Reg, $3->val)
+                );
+            } else {
+                fstate->AssignVirtualReg($0, $3);    // assign a virtual register to the inst
+                fstate->GenerateBinaryStmt("imul", 
+                    new X86Operand(fstate, OP_TYPE::X86Reg, $0->val),
+                    new X86Operand(fstate, OP_TYPE::X86Reg, $2->val)
+                );
+            }
+        };
+
+stmt:   cond                 { $cost[0].cost = $cost[1].cost;                       } = { };
+cond:   ICmp(reg, imm)       { $cost[0].cost = $cost[2].cost + $cost[3].cost;       } = { 
+            $2->refcnt--; $action[2](fstate); 
+            $3->refcnt--; $action[3](fstate);
+            fstate->AssignVirtualReg($0, $2);    // assign a virtual register to the inst
+            fstate->GenerateBinaryStmt("sub", 
+                new X86Operand(fstate, OP_TYPE::X86Reg, $0->val),
+                new X86Operand(fstate, OP_TYPE::X86Imm, $3->val)
+            );
+        };
+stmt:   Br(label, DUMMY, DUMMY)   { $cost[0].cost = $cost[2].cost + 5; } = {
+            fstate->AddInst(new X86Inst("jmp",
+                    new X86Operand(fstate, OP_TYPE::X86Label, $2->val)
+            ));
+            $action[2](fstate);
+        };
+stmt:   Br(cond, label, label)   { $cost[0].cost = $cost[2].cost + $cost[3].cost + $cost[4].cost + 5; } = {
+            $action[2](fstate); 
+            fstate->AddInst(new X86Inst("je",
+                    new X86Operand(fstate, OP_TYPE::X86Label, $3->val)
+            ));
+            $action[4](fstate); 
+            $action[3](fstate); 
+        };
+%%
+#include "llc_olive_helper.cxx"
