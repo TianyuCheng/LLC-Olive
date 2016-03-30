@@ -25,7 +25,7 @@ run: $(EXE) $(bitcodes)
 $(EXE): llc_olive.cpp llc_olive.brg
 	(cd $(TOOL_ROOT); make -j6)
 
-llc_olive.cpp: llc_olive.brg
+llc_olive.cpp: llc_olive.brg llc_olive_helper.cxx llc_olive_helper.h
 	$(OLIVE) $<
 
 test: clean $(EXE) $(bitcodes) $(assembly)
