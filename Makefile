@@ -23,13 +23,10 @@ run: $(EXE) $(bitcodes)
 	$(EXE) --num_regs=16 ./testcases/condition.bc -o ./testcases/condition.s
 
 $(EXE): llc_olive.cpp llc_olive.brg
-	(cd $(TOOL_ROOT); make -j6) ; rm llc_olive.brg
+	(cd $(TOOL_ROOT); make -j6)
 
 llc_olive.cpp: llc_olive.brg
 	$(OLIVE) $<
-
-llc_olive.brg: llc_olive.py
-	./$<
 
 test: clean $(EXE) $(bitcodes) $(assembly)
 
@@ -44,6 +41,6 @@ clean:
 	@rm -rf $(TEST_DIR)/*.bc
 	@rm -rf $(TEST_DIR)/*.log
 	@rm -rf $(TEST_DIR)/.*.swp
-	@rm -rf ./llc_olive.h ./llc_olive.cpp ./llc_olive.brg
+	@rm -rf ./llc_olive.h ./llc_olive.cpp
 
 .PHONY: compile tar test run push clean
