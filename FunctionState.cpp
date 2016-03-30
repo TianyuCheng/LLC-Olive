@@ -45,20 +45,25 @@ void FunctionState::LiveRangeAnalysis() {
     // analyze live range of virtual registers
 }
 
-TreeWrapper* FunctionState::FindOrCreateLabel(llvm::BasicBlock *bb) {
+TreeWrapper* FunctionState::FindLabel(llvm::BasicBlock *bb) {
     auto it = labelMap.find(bb);
-    if (it == labelMap.end()) {
-        // this basic block has never been seen,
-        // assign a new label, add it to the label map
-        TreeWrapper *treeLabel = new TreeWrapper(LABEL, nullptr, nullptr);
-        treeLabel->SetValue(label++);
-        labelMap.insert(std::pair<llvm::BasicBlock*, TreeWrapper*>(bb, treeLabel));
-        return treeLabel;
-    }
-    else {
+    if (it != labelMap.end())
         // find already mapped label
         return it->second;
-    }
+    return nullptr;
+}
+
+TreeWrapper* FunctionState::CreateLabel(llvm::BasicBlock *bb) {
+    auto it = labelMap.find(bb);
+    if (it != labelMap.end())
+        return it->second;
+
+    // this basic block has never been seen,
+    // assign a new label, add it to the label map
+    TreeWrapper *treeLabel = new TreeWrapper(LABEL, nullptr, nullptr);
+    treeLabel->SetValue(label++);
+    labelMap.insert(std::pair<llvm::BasicBlock*, TreeWrapper*>(bb, treeLabel));
+    return treeLabel;
 }
 
 void FunctionState::CreateLocal(Tree t, int bytes) {

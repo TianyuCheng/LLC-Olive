@@ -24,12 +24,7 @@ reg:    IMM                 { $cost[0].cost = 1;                                
 imm:    Load(IMM)           { $cost[0].cost = 0;                                } = { };
 imm:    IMM                 { $cost[0].cost = 0;                                } = { };
 mem:    MEM                 { $cost[0].cost = 10;                               } = { };
-label:  LABEL               { $cost[0].cost = 1;                                } = {
-            if (!$0->computed) {
-                fstate->GenerateLabelStmt($0->val);
-                $0->computed = true;
-            }
-        };
+label:  LABEL               { $cost[0].cost = 1;                                } = { };
 
 stmt:   Ret(imm)            { $cost[0].cost = $cost[2].cost + 1;                } = {
             /*
@@ -165,7 +160,6 @@ reg:    Mul(reg, reg)       { $cost[0].cost = $cost[2].cost + $cost[3].cost + 4;
 
 stmt:   cond                 { $cost[0].cost = $cost[1].cost;                       } = { };
 cond:   ICmp(reg, imm)       { $cost[0].cost = $cost[2].cost + $cost[3].cost;       } = { 
-            std::cerr << "=============== ICMP ==============" << std::endl;
             $action[2](fstate); 
             $action[3](fstate);
             fstate->AssignVirtualReg($0, $2);    // assign a virtual register to the inst
@@ -182,10 +176,10 @@ stmt:   Br(label, DUMMY, DUMMY)   { $cost[0].cost = $cost[2].cost + 5; } = {
         };
 stmt:   Br(cond, label, label)   { $cost[0].cost = $cost[2].cost + $cost[3].cost + $cost[4].cost + 5; } = {
             $action[2](fstate); 
-            $action[3](fstate); 
-            $action[4](fstate); 
             fstate->AddInst(new X86Inst("je",
-                    new X86Operand(fstate, OP_TYPE::X86Label, $2->val)
+                    new X86Operand(fstate, OP_TYPE::X86Label, $3->val)
             ));
+            $action[4](fstate); 
+            $action[3](fstate); 
         };
 %%

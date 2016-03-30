@@ -244,8 +244,8 @@ void BasicBlockToExprTrees(FunctionState &fstate,
             }
             else if (BasicBlock *block = dyn_cast<BasicBlock>(v)) {
                 if (instruction.getOpcode() == Br) {
-                    TreeWrapper *wrapper = fstate.FindOrCreateLabel(block);
-                    assert(wrapper && "FindOrCreateLabel should never fail");
+                    TreeWrapper *wrapper = fstate.FindLabel(block);
+                    assert(wrapper && "FindLabel should never fail");
                     t->SetChild(i, wrapper->GetTreeWrapper()); // automatically increase the refcnt
                 }
                 else {
@@ -279,27 +279,46 @@ void FunctionToAssembly(Function &func) {
     FunctionState fstate(func.getName(), NumRegs);
 
     Function::BasicBlockListType &basic_blocks = func.getBasicBlockList();
-    std::vector<TreeWrapper*> treeList;
-    // === First Pass: collect instruction information, build expr tree
+    // === First pass: Collect basic block info, which basic block will need label
     for (BasicBlock &bb : basic_blocks) {
-        BasicBlockToExprTrees(fstate, treeList, bb);
-    } // end of basic block loop
+        for (auto inst = bb.begin(); inst != bb.end(); inst++) {
+            int num_operands = inst->getNumOperands();
+            for (int i = 0; i < num_operands; i++) {
+                Value *v = inst->getOperand(i);
+                if (!dyn_cast<Instruction>(v))
+                    if (BasicBlock *block = dyn_cast<BasicBlock>(v))
+                        fstate.CreateLabel(block);
+            } // end of operand loop
+        } // end of inst loop
+    } // end of BB loop
+    // ------------------------------------------------------------------------
 
-    // === Second Pass: generate assembly code using olive
-    // iterate through tree list for each individual instruction tree
-    // replace the complicated/common tree expression with registers
-    for (TreeWrapper *t : treeList) {
-#if VERBOSE > 2
-        errs() << Instruction::getOpcodeName(t->GetOpCode()) << "\tLEVEL:\t" << t->GetLevel() << "\tRefCount:\t" << t->GetRefCount() << "\n";
-#endif
-        // check if this tree satisfies the condition for saving into register
-        if (t->GetRefCount() == 0/* || t->GetRefCount() > 2*/) {
-#if VERBOSE > 2
-            t->DisplayTree();
-#endif
-            gen(t->GetTree(), &fstate);
+    // === Second Pass: collect instruction information, build expr tree, generate assembly
+    std::vector<TreeWrapper*> treeList;
+    for (BasicBlock &bb : basic_blocks) {
+        int size = treeList.size();
+        if (TreeWrapper * wrapper = fstate.FindLabel(&bb)) {
+            fstate.GenerateLabelStmt(wrapper->GetValue());
         }
-    } // end of TreeWrapper iteration
+        BasicBlockToExprTrees(fstate, treeList, bb);
+
+        // iterate through tree list for each individual instruction tree
+        // replace the complicated/common tree expression with registers
+        for (int i = size; i < treeList.size(); i++) {
+            TreeWrapper *t = treeList[i];
+#if VERBOSE > 2
+            errs() << Instruction::getOpcodeName(t->GetOpCode()) << "\tLEVEL:\t" << t->GetLevel() << "\tRefCount:\t" << t->GetRefCount() << "\n";
+#endif
+            // check if this tree satisfies the condition for saving into register
+            if (t->GetRefCount() == 0/* || t->GetRefCount() > 2*/) {
+#if VERBOSE > 2
+                t->DisplayTree();
+#endif
+                gen(t->GetTree(), &fstate);
+            }
+        } // end of TreeWrapper iteration
+    } // end of basic block loop
+    // ------------------------------------------------------------------------
 
     // === Third Pass: analyze virtual register live range, allocate machine register and output assembly file
     fstate.PrintAssembly(std::cerr);

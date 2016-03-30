@@ -70,6 +70,7 @@ public:
     virtual ~TreeWrapper();
     int GetOpCode() const { return t->op; }
     void SetValue(VALUE v) { t->val = v; }
+    VALUE& GetValue() const { return t->val; }
     bool IsVirtualReg() const { return t->isReg; }
     int GetVirtualReg() const { return t->val.val.i32s; }
     void SetInst(llvm::Instruction *inst) { t->inst = inst; }

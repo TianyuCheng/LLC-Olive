@@ -37,7 +37,8 @@ public:
     FunctionState(std::string name, int num_regs, int label = 0);
     virtual ~FunctionState();
 
-    TreeWrapper* FindOrCreateLabel(llvm::BasicBlock *bb);
+    TreeWrapper* FindLabel(llvm::BasicBlock *bb);
+    TreeWrapper* CreateLabel(llvm::BasicBlock *bb);
     void CreateVirtualReg(Tree t);
     void AssignVirtualReg(Tree lhs, Tree rhs);
     void CopyVirtualReg(VALUE &dst, VALUE &src);
