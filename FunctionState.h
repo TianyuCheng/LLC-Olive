@@ -107,21 +107,20 @@ class X86Operand
 {
     friend class X86Inst;
 public:
-    enum Type { X86Reg, X86Imm, X86Mem };
 
     X86Operand(FUNCTION_STATE fs, int r)
-        : fstate(fs), type(Type::X86Reg), val(r), explicit_reg(true), base_address(nullptr), displacement(nullptr) {
+        : fstate(fs), type(OP_TYPE::X86Reg), val(r), base_address(nullptr), displacement(nullptr) {
     }
 
-    X86Operand(FUNCTION_STATE fs, Type t, VALUE v) 
+    X86Operand(FUNCTION_STATE fs, OP_TYPE t, VALUE v) 
         : fstate(fs), type(t), val(v), base_address(nullptr), displacement(nullptr) {
-        assert (t != Type::X86Mem && "X86Mem not support in X86Operand(Type t, VALUE) constructor.");
+        assert (t == OP_TYPE::X86Reg || t == OP_TYPE::X86Imm || t == OP_TYPE::X86Label);
         // if operand is a register that is in some operand, then mark it as used but not allocated
     }
 
-    X86Operand(FUNCTION_STATE fs, Type t, X86Operand *base, X86Operand *dis, int siz, int off) 
+    X86Operand(FUNCTION_STATE fs, OP_TYPE t, X86Operand *base, X86Operand *dis, int siz, int off) 
         : fstate(fs), type(t), val(0), base_address(base), displacement(dis), stride(siz), offset(off) {
-        assert (t == Type::X86Mem && "X86Mem must be constructed using X86Operand(FUNCTION_STATE fs, Type t, X86Operand *base, X86Operand *dis, int siz, int off) constructor.");
+        assert (t == OP_TYPE::X86Mem && "X86Mem must be constructed using X86Operand(FUNCTION_STATE fs, Type t, X86Operand *base, X86Operand *dis, int siz, int off) constructor.");
     }
 
     virtual ~X86Operand() {
@@ -130,10 +129,10 @@ public:
     }
 
     friend std::ostream& operator<<(std::ostream& out, X86Operand &op) {
-        if (op.type == Type::X86Imm) {
+        if (op.type == OP_TYPE::X86Imm) {
             out << "$" << op.val;
         }
-        else if (op.type == Type::X86Reg) {
+        else if (op.type == OP_TYPE::X86Reg) {
             if (op.explicit_reg) {
                 out << "%" << registers[op.val.AsVirtualReg()];
             }
@@ -144,7 +143,7 @@ public:
                 out << "%" << op.val.AsVirtualReg();
 #endif
         }
-        else {
+        else if (op.type == OP_TYPE::X86Mem) {
             // output memory address by x86 addressing mode
             if (op.offset)          out << op.offset;
             out << "(";
@@ -153,13 +152,22 @@ public:
             if (op.stride && op.displacement)    out << ", " << *op.displacement << ", " << op.stride;
             out << ")";
         }
+        else if (op.type == OP_TYPE::X86Label) {
+            out << op.val.AsLabel();
+        }
+        else if (op.type == OP_TYPE::X86Function) {
+            out << op.func_name;
+        } else {
+            assert(false && "OP_TYPE is invalid!");
+        }
         return out;
     }
 
 private:
     FUNCTION_STATE fstate;
     // operand type differentor
-    Type type;
+    OP_TYPE type;
+    std::string func_name;
 
     // for imm and reg
     VALUE val;
@@ -175,56 +183,44 @@ private:
 class X86Inst
 {
 public:
-    X86Inst(const char *op)
-        : opname(op), dst(nullptr), src(nullptr) {
+    X86Inst(const char *op, bool isL = false)
+        : opname(op), dst(nullptr), src(nullptr), isLabel(isL) {
         // single operand instruction
     }
     X86Inst(const char *op, X86Operand *op1) 
         : opname(op), dst(op1), src(nullptr) {
         // single operand instruction
+        isLabel = false;
     }
     X86Inst(const char *op, X86Operand *op1, X86Operand *op2)
         : opname(op), dst(op1), src(op2) {
         // double operand instruction
+        isLabel = false;
     }
     virtual ~X86Inst() {
 #if 1   // DO NOT FREE X86Mem HERE, IT WILL CAUSE DOUBLE FREE for function locals
-        if (dst && dst->type != X86Operand::Type::X86Mem) { delete dst; dst = nullptr; }
-        if (src && src->type != X86Operand::Type::X86Mem) { delete src; src = nullptr; }
+        if (dst && dst->type != OP_TYPE::X86Mem) { delete dst; dst = nullptr; }
+        if (src && src->type != OP_TYPE::X86Mem) { delete src; src = nullptr; }
 #endif
     }
 
     friend std::ostream& operator<<(std::ostream& out, X86Inst &inst) {
-        out << "\t" << inst.opname;
-        if (inst.dst) out << "\t" << *(inst.dst);
-        if (inst.src) out << ", " << *(inst.src);
-        out << std::endl;
+        if (!inst.isLabel) {
+            out << "\t" << inst.opname;
+            if (inst.dst) out << "\t" << *(inst.dst);
+            if (inst.src) out << ", " << *(inst.src);
+            out << std::endl;
+        } else {
+            out << inst.opname << ":" << std::endl;
+        }
         return out;
     }
 private:
     std::string opname;
     X86Operand *dst;
     X86Operand *src;
+    bool isLabel;
 };
-
-class X86Label : public X86Inst
-{
-public:
-    X86Label(const char *label) : X86Inst(label) {
-    }
-    virtual ~X86Label() {
-    }
-
-    friend std::ostream& operator<<(std::ostream& out, X86Label &inst) {
-        out << inst.label << ":" << std::endl;
-        return out;
-    }
-private:
-    std::string label;
-};
-
-
-typedef X86Operand::Type OP_TYPE;
 
 // =======================================================================
 

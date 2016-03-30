@@ -11,6 +11,8 @@ FunctionState::~FunctionState() {
     // de-initialize function state here
     for (X86Inst *inst : assembly)
         delete inst;
+    for (auto it = labelMap.begin(); it != labelMap.end(); ++it)
+        delete it->second;
 }
 
 std::string FunctionState::GetMachineReg(int virtual_reg) {
@@ -122,11 +124,11 @@ void FunctionState::CopyVirtualReg(VALUE &dst, VALUE &src) {
 }
 
 void FunctionState::GenerateLabelStmt(const char *l) {
-    AddInst(new X86Label(l));
+    AddInst(new X86Inst(l, true));
 }
 
 void FunctionState::GenerateLabelStmt(VALUE &v) {
-    AddInst(new X86Label(v.AsLabel()));
+    AddInst(new X86Inst(v.AsLabel(), true));
 }
 
 void FunctionState::GenerateMovStmt(X86Operand *dst, X86Operand *src) {

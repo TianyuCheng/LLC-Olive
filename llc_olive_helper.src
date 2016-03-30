@@ -1,7 +1,14 @@
 #define VERBOSE  0
 
 int OP_LABEL(NODEPTR p) {
-    if (p) return p->op;
+    if (p) {
+        // there is a hidden bug somewhere that returns strange value for p->op
+        // not sure where it is, but expression tree building seems fine to me
+        // therefore this is a hack to change anything bad to DUMMY, since the
+        // only possible bad thing in this system is DUMMY
+        if (p->op > LABEL) return DUMMY;
+        return p->op;
+    }
     std::cerr << "NODEPTR is null for OP_LABEL" << std::endl;
     exit(EXIT_FAILURE);
 }
@@ -26,7 +33,7 @@ static void burm_trace(NODEPTR p, int eruleno, COST cost) {
 Tree tree(int op, Tree l, Tree r, VALUE v) {
 	Tree t = (Tree) malloc(sizeof *t);
 	t->op = op;
-	t->kids[0] = l; t->kids[1] = r;
+	t->kids[0] = l; t->kids[1] = r; t->kids[2] = nullptr;
 	t->val = v;
 	t->x.state = 0;
     t->level = 0;
@@ -143,6 +150,9 @@ void TreeWrapper::DisplayTree(Tree t, int indent) const {
     for (int i = 0; i < 2 * indent; i++)
         errs() << " ";
     switch (t->op) {
+    case DUMMY:
+        errs() << "op: " << "dummy" << "\tval: " << t->val.val.i32s << "\n";
+        break;
     case LABEL:
         errs() << "op: " << "label" << "\tval: " << t->val.val.i32s << "\n";
         break;
@@ -156,15 +166,20 @@ void TreeWrapper::DisplayTree(Tree t, int indent) const {
         errs() << "op: " << "mem" << "\tval: " << t->val.val.i32s << "\n";
         break;
     default:
-        errs() << "op: " << Instruction::getOpcodeName(t->op) << "\tval: " << t->val.val.i32s << "\n";
+        errs() << "op: " << Instruction::getOpcodeName(t->op) << "(" << t->op << ")" << "\tval: " << t->val.val.i32s << "\n";
     }
-    DisplayTree(t->kids[0], indent + 1);
-    DisplayTree(t->kids[1], indent + 1);
+    for (int i = 0; i < 3; i++) {
+        if (t->kids[i]) {
+            DisplayTree(t->kids[i], indent + 1);
+        }
+    }
 }
 
 void BasicBlockToExprTrees(FunctionState &fstate,
         std::vector<TreeWrapper*> &treeList, BasicBlock &bb) {
 
+    TreeWrapper dummy(DUMMY, nullptr, nullptr);
+    
     for (auto inst = bb.begin(); inst != bb.end(); inst++) {
         TreeWrapper *t = new TreeWrapper(inst->getOpcode());
         Instruction &instruction = *inst;
@@ -178,6 +193,15 @@ void BasicBlockToExprTrees(FunctionState &fstate,
         errs() << "OperandNum: " << instruction.getNumOperands() << "\t";
         errs() << "opcode: " << instruction.getOpcode() << "\n";
 #endif
+
+        // HACK for making BranchInst all 3 address code
+        // ---------------------------------------------
+        if (instruction.getOpcode() == Br) {
+            // first fill the branch inst with dummy integer
+            t->SetChild(1, dummy.GetTree());
+            t->SetChild(2, dummy.GetTree());
+        }
+        // ---------------------------------------------
 
         int num_operands = instruction.getNumOperands();
         for (int i = 0; i < num_operands; i++) {
@@ -218,9 +242,9 @@ void BasicBlockToExprTrees(FunctionState &fstate,
                 t->SetChild(i, wrapper->GetTreeWrapper());      // automatically increase the refcnt
             }
             else if (BasicBlock *block = dyn_cast<BasicBlock>(v)) {
-                TreeWrapper *wrapper = fstate.FindOrCreateLabel(block);
-                assert(wrapper && "FindOrCreateLabel should never fail");
-                if (BranchInst::classof(&instruction)) {
+                if (instruction.getOpcode() == Br) {
+                    TreeWrapper *wrapper = fstate.FindOrCreateLabel(block);
+                    assert(wrapper && "FindOrCreateLabel should never fail");
                     t->SetChild(i, wrapper->GetTreeWrapper()); // automatically increase the refcnt
                 }
                 else {
@@ -233,6 +257,8 @@ void BasicBlockToExprTrees(FunctionState &fstate,
                 errs() << "Unhandle-able instruction operand! Quit\n";
                 exit(EXIT_FAILURE);
             }
+            // errs() << "num operands:\t" << num_operands << "\n"; 
+            // t->DisplayTree();
         } //end of operand loop
 
         // store the current tree in map

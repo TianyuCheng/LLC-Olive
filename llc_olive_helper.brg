@@ -1,4 +1,4 @@
-%term LABEL=0
+%term DUMMY=0
 %term Ret=1 Br=2 Switch=3 IndirectBr=4 Invoke=5 Resume=6 Unreachable=7 CleanupRet=8 CatchRet=9 CatchSwitch=10
 %term Add=11 FAdd=12 Sub=13 FSub=14 Mul=15 FMul=16 UDiv=17 SDiv=18 FDiv=19 URem=20 SRem=21 FRem=22
 %term Shl=23 LShr=24 AShr=25 And=26 Or=27 Xor=28
@@ -6,7 +6,7 @@
 %term Trunc=36 ZExt=37 SExt=38 FPToUI=39 FPToSI=40 UIToFP=41 SIToFP=42 FPTrunc=43 FPExt=44 PtrToInt=45 IntToPtr=46 BitCast=47 AddrSpaceCast=48
 %term CleanupPad=49 CatchPad=50
 %term ICmp=51 FCmp=52 PHI=53 Call=54 Select=55 UserOp1=56 UserOp2=57 VAArg=58 ExtractElement=59 InsertElement=60 ShuffleVector=61 ExtractValue=62 InsertValue=63 LandingPad=64
-%term REG IMM MEM
+%term REG IMM MEM LABEL
 
 %declare<void> stmt     <FUNCTION_STATE fstate>;
 %declare<void> reg      <FUNCTION_STATE fstate>;
@@ -24,9 +24,11 @@ reg:    IMM                 { $cost[0].cost = 1;                                
 imm:    Load(IMM)           { $cost[0].cost = 0;                                } = { };
 imm:    IMM                 { $cost[0].cost = 0;                                } = { };
 mem:    MEM                 { $cost[0].cost = 10;                               } = { };
-
-label:  LABEL               { $cost[0].cost = 5;                                } = {
-            fstate->GenerateLabelStmt($1->val);
+label:  LABEL               { $cost[0].cost = 1;                                } = {
+            if (!$0->computed) {
+                fstate->GenerateLabelStmt($0->val);
+                $0->computed = true;
+            }
         };
 
 stmt:   Ret(imm)            { $cost[0].cost = $cost[2].cost + 1;                } = {
@@ -163,9 +165,27 @@ reg:    Mul(reg, reg)       { $cost[0].cost = $cost[2].cost + $cost[3].cost + 4;
 
 stmt:   cond                 { $cost[0].cost = $cost[1].cost;                       } = { };
 cond:   ICmp(reg, imm)       { $cost[0].cost = $cost[2].cost + $cost[3].cost;       } = { 
-            std::cerr << "=============== CMP ==============" << std::endl;
+            std::cerr << "=============== ICMP ==============" << std::endl;
+            $action[2](fstate); 
+            $action[3](fstate);
+            fstate->AssignVirtualReg($0, $2);    // assign a virtual register to the inst
+            fstate->GenerateBinaryStmt("sub", 
+                new X86Operand(fstate, OP_TYPE::X86Reg, $0->val),
+                new X86Operand(fstate, OP_TYPE::X86Imm, $3->val)
+            );
+        };
+stmt:   Br(label, DUMMY, DUMMY)   { $cost[0].cost = $cost[2].cost + 5; } = {
+            fstate->AddInst(new X86Inst("jmp",
+                    new X86Operand(fstate, OP_TYPE::X86Label, $2->val)
+            ));
+            $action[2](fstate);
         };
 stmt:   Br(cond, label, label)   { $cost[0].cost = $cost[2].cost + $cost[3].cost + $cost[4].cost + 5; } = {
-            std::cerr << "=============== BRANCH ==============" << std::endl;
+            $action[2](fstate); 
+            $action[3](fstate); 
+            $action[4](fstate); 
+            fstate->AddInst(new X86Inst("je",
+                    new X86Operand(fstate, OP_TYPE::X86Label, $2->val)
+            ));
         };
 %%

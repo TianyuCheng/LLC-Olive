@@ -29,6 +29,7 @@ typedef struct tree {
     int refcnt;
     bool isReg;
     bool computed;
+    X86OperandType operandType;
 	struct { struct burm_state *state; } x;
 } *NODEPTR, *Tree;
 
@@ -83,7 +84,7 @@ public:
     void CastInt(int n, llvm::ConstantInt *cnst);
     void CastFP(int n, llvm::ConstantFP *cnst);
 
-    void DisplayTree() const { DisplayTree(t, 0); }
+    void DisplayTree() const { DisplayTree(t, 0); std::cerr << "\n"; }
 
 private:
     void DisplayTree(Tree t, int indent = 0) const;

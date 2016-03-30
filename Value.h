@@ -4,6 +4,9 @@
 #include <sstream>
 #include <iostream>
 
+enum X86OperandType { X86Reg, X86Imm, X86Mem, X86Label, X86Function };
+typedef X86OperandType OP_TYPE;
+
 typedef struct VALUE {
     union {
         bool        b;
@@ -45,7 +48,8 @@ typedef struct VALUE {
     const char* AsLabel() const {
         std::stringstream ss;
         ss << ".L" << val.i32s;
-        return ss.str().c_str();
+        std::string s = ss.str();
+        return s.c_str();
     }
 
     friend std::ostream& operator<<(std::ostream& out, VALUE &v) {
