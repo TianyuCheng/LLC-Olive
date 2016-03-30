@@ -110,18 +110,18 @@ class X86Operand
 public:
 
     X86Operand(FUNCTION_STATE fs, int r)
-        : fstate(fs), type(OP_TYPE::X86Reg), val(r), base_address(nullptr), displacement(nullptr) {
+        : fstate(fs), type(OP_TYPE::X86Reg), val(r), explicit_reg(true), base_address(nullptr), displacement(nullptr) {
     }
 
     X86Operand(FUNCTION_STATE fs, OP_TYPE t, VALUE v) 
-        : fstate(fs), type(t), val(v), base_address(nullptr), displacement(nullptr) {
-        assert (t == OP_TYPE::X86Reg || t == OP_TYPE::X86Imm || t == OP_TYPE::X86Label);
+        : fstate(fs), type(t), val(v), explicit_reg(false), base_address(nullptr), displacement(nullptr) {
+        assert (t == OP_TYPE::X86Reg || t == OP_TYPE::X86Imm || t == OP_TYPE::X86Label );
         // if operand is a register that is in some operand, then mark it as used but not allocated
     }
 
     X86Operand(FUNCTION_STATE fs, OP_TYPE t, X86Operand *base, X86Operand *dis, int siz, int off) 
-        : fstate(fs), type(t), val(0), base_address(base), displacement(dis), stride(siz), offset(off) {
-        assert (t == OP_TYPE::X86Mem && "X86Mem must be constructed using X86Operand(FUNCTION_STATE fs, Type t, X86Operand *base, X86Operand *dis, int siz, int off) constructor.");
+        : fstate(fs), type(t), val(0), explicit_reg(false), base_address(base), displacement(dis), stride(siz), offset(off) {
+        assert (t == OP_TYPE::X86Mem && "X86Mem must be constructed using X86Operand(FUNCTION_STATE fs, OP_TYPE t, X86Operand *base, X86Operand *dis, int siz, int off) constructor.");
     }
 
     virtual ~X86Operand() {

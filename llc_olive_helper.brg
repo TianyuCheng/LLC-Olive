@@ -20,7 +20,6 @@ stmt:   reg                 { return 1;                                         
 stmt:   mem                 { return 1;                                         } = { $action[1](fstate); };
 
 reg:    REG                 { $cost[0].cost = 1;                                } = { };
-reg:    IMM                 { $cost[0].cost = 1;                                } = { };
 imm:    Load(IMM)           { $cost[0].cost = 0;                                } = { };
 imm:    IMM                 { $cost[0].cost = 0;                                } = { };
 mem:    MEM                 { $cost[0].cost = 10;                               } = { };
@@ -107,8 +106,10 @@ reg:    Add(reg, reg)       { $cost[0].cost = $cost[2].cost + $cost[3].cost + 2;
              * IR Add takes two arguments
              * X86 Add takes two argument, both operands cannot be from memory in the instruction
              */
-            $action[2](fstate); 
-            $action[3](fstate);
+            $2->refcnt--; $action[2](fstate); 
+            $3->refcnt--; $action[3](fstate);
+            // std::cerr << "refcnt: " << $2->refcnt << std::endl;
+            // std::cerr << "refcnt: " << $3->refcnt << std::endl;
             if ($2->refcnt < $3->refcnt) {
                 fstate->AssignVirtualReg($0, $2);    // assign a virtual register to the inst
                 fstate->GenerateBinaryStmt("add", 
@@ -128,8 +129,8 @@ reg:    Sub(reg, reg)       { $cost[0].cost = $cost[2].cost + $cost[3].cost + 2;
              * IR Sub takes two arguments
              * X86 Sub takes two argument, both operands cannot be from memory in the instruction
              */
-            $action[2](fstate); 
-            $action[3](fstate);
+            $2->refcnt--; $action[2](fstate); 
+            $3->refcnt--; $action[3](fstate);
             fstate->AssignVirtualReg($0, $2);    // assign a virtual register to the inst
             fstate->GenerateBinaryStmt("sub", 
                 new X86Operand(fstate, OP_TYPE::X86Reg, $0->val),
@@ -141,8 +142,8 @@ reg:    Mul(reg, reg)       { $cost[0].cost = $cost[2].cost + $cost[3].cost + 4;
              * IR Mul takes two arguments
              * X86 Mul takes two argument, both operands cannot be from memory in the instruction
              */
-            $action[2](fstate); 
-            $action[3](fstate);
+            $2->refcnt--; $action[2](fstate); 
+            $3->refcnt--; $action[3](fstate);
             if ($2->refcnt < $3->refcnt) {
                 fstate->AssignVirtualReg($0, $2);    // assign a virtual register to the inst
                 fstate->GenerateBinaryStmt("imul", 
@@ -160,8 +161,8 @@ reg:    Mul(reg, reg)       { $cost[0].cost = $cost[2].cost + $cost[3].cost + 4;
 
 stmt:   cond                 { $cost[0].cost = $cost[1].cost;                       } = { };
 cond:   ICmp(reg, imm)       { $cost[0].cost = $cost[2].cost + $cost[3].cost;       } = { 
-            $action[2](fstate); 
-            $action[3](fstate);
+            $2->refcnt--; $action[2](fstate); 
+            $3->refcnt--; $action[3](fstate);
             fstate->AssignVirtualReg($0, $2);    // assign a virtual register to the inst
             fstate->GenerateBinaryStmt("sub", 
                 new X86Operand(fstate, OP_TYPE::X86Reg, $0->val),

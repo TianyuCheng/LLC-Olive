@@ -76,7 +76,7 @@ void FunctionState::CreateLocal(Tree t, int bytes) {
     if (bytes % 4 != 0) bytes += 4 - bytes % 4;
     local_bytes += bytes;
     X86Operand *local = new X86Operand(this, OP_TYPE::X86Mem, 
-            new X86Operand(this, OP_TYPE::X86Reg, RBP),   // base_address, should be $rbp
+            new X86Operand(this, RBP),                     // base_address, should be $rbp
             new X86Operand(this, OP_TYPE::X86Imm, 0),      // displacement
             0,                                             // multiplier    
             local_bytes - bytes);
