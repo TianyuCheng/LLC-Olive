@@ -1,14 +1,7 @@
 #define VERBOSE  0
 
 int OP_LABEL(NODEPTR p) {
-    if (p) {
-        // there is a hidden bug somewhere that returns strange value for p->op
-        // not sure where it is, but expression tree building seems fine to me
-        // therefore this is a hack to change anything bad to DUMMY, since the
-        // only possible bad thing in this system is DUMMY
-        if (p->op > LABEL) return DUMMY;
-        return p->op;
-    }
+    if (p) return p->op;
     std::cerr << "NODEPTR is null for OP_LABEL" << std::endl;
     exit(EXIT_FAILURE);
 }
@@ -33,7 +26,9 @@ static void burm_trace(NODEPTR p, int eruleno, COST cost) {
 Tree tree(int op, Tree l, Tree r, VALUE v) {
 	Tree t = (Tree) malloc(sizeof *t);
 	t->op = op;
-	t->kids[0] = l; t->kids[1] = r; t->kids[2] = nullptr;
+    for (int i = 0; i < 10; i++)
+        t->kids[i] = nullptr;
+	t->kids[0] = l; t->kids[1] = r; 
 	t->val = v;
 	t->x.state = 0;
     t->level = 0;
@@ -60,13 +55,16 @@ TreeWrapper::TreeWrapper(int opcode, Tree l, Tree r): nchild(0) {
     if (r) { t->level = std::max(t->level, 1 + r->level); nchild++; }
 }
 TreeWrapper::~TreeWrapper() {
-    free(t);
+#if 0
+    free(t);        // this seems to cause double free
+    t = nullptr;
+#endif
     // Stupid design in TreeReference causes me to use a freeList for cleaning
     for (Tree ct: freeList)
         free(ct);
 }
 void TreeWrapper::SetChild(int n, Tree ct) {
-    if (n < 3) {
+    if (n < 10) {
         if (!t->kids[n] && ct) nchild++;     // was nullptr, but not null now, increment the nchild counter
         if (ct) t->level = std::max(t->level, 1 + ct->level);
         t->kids[n] = ct;
@@ -76,7 +74,7 @@ void TreeWrapper::SetChild(int n, Tree ct) {
     }
 }
 Tree TreeWrapper::GetChild(int n) {
-    if (n < 3) {
+    if (n < 10) {
         return t->kids[n];
     } else {
         // TODO: IMPLEMENT A WAY TO FETCH MORE THAN 2 CHILDREN
@@ -191,6 +189,7 @@ void BasicBlockToExprTrees(FunctionState &fstate,
         errs() << "\n";
 #endif
 #if VERBOSE > 1
+        errs() << "---------------------------------------------------------------\n";
         errs() << "OperandNum: " << instruction.getNumOperands() << "\t";
         errs() << "opcode: " << instruction.getOpcode() << "\n";
 #endif

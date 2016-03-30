@@ -23,7 +23,7 @@ class FunctionState;
 
 typedef struct tree {
 	int op;
-	struct tree *kids[3];
+	struct tree *kids[10];
 	VALUE val;
     int level;
     int refcnt;
