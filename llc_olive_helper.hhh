@@ -30,6 +30,7 @@ typedef struct tree {
     bool isReg;
     bool computed;
     X86OperandType operandType;
+    llvm::Instruction *inst;
 	struct { struct burm_state *state; } x;
 } *NODEPTR, *Tree;
 
@@ -71,6 +72,7 @@ public:
     void SetValue(VALUE v) { t->val = v; }
     bool IsVirtualReg() const { return t->isReg; }
     int GetVirtualReg() const { return t->val.val.i32s; }
+    void SetInst(llvm::Instruction *inst) { t->inst = inst; }
     void SetLevel(int level) { t->level = level; }
     void SetChild(int n, Tree ct);
     Tree GetChild(int n);
