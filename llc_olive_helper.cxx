@@ -76,6 +76,12 @@ void BasicBlockToExprTrees(FunctionState &fstate,
                 else {
                     // this is bad and probably needs to terminate the execution
                     errs() << "NOT IMPLEMENTED OTHER CONST TYPES:\t"; instruction.print(errs()); errs() << "\n";
+                    errs() << "OPERAND << "; v->print(errs()); errs() << "\n";
+#if 0               // we might need to handle undef value some time later
+                    if (UndefValue *undef = dyn_cast<UndefValue>(v)) {
+                        errs() << "OPERAND IS AN UNDEF VALUE\n";
+                    }
+#endif
                     exit(EXIT_FAILURE);
                 }
             }
@@ -83,6 +89,7 @@ void BasicBlockToExprTrees(FunctionState &fstate,
                 // check if we cant find operand's definition
                 Tree *wrapper = fstate.FindFromTreeMap(def);
                 assert(wrapper && "operands must be previously defined");
+                assert (wrapper != t);
                 t->AddChild(wrapper->GetTreeRef());      // automatically increase the refcnt
             }
             else if (BasicBlock *block = dyn_cast<BasicBlock>(v)) {

@@ -60,7 +60,7 @@ Tree* FunctionState::CreateLabel(llvm::BasicBlock *bb) {
 
     // this basic block has never been seen,
     // assign a new label, add it to the label map
-    Tree *treeLabel = new Tree(LABEL, nullptr, nullptr);
+    Tree *treeLabel = new Tree(LABEL);
     treeLabel->SetValue(label++);
     labelMap.insert(std::pair<llvm::BasicBlock*, Tree*>(bb, treeLabel));
     return treeLabel;

@@ -6,6 +6,7 @@ Tree::~Tree() {
 
 void Tree::AddChild(Tree *ct) {
     kids.push_back(ct);
+    level = std::max(level, ct->GetLevel() + 1);
 }
 
 Tree* Tree::GetChild(int n) {
@@ -73,10 +74,10 @@ void Tree::CastFP(llvm::ConstantFP *cnst) {
     this->AddChild(ct);
 }
 
-void Tree::DisplayTree(Tree *t, int indent) {
+void Tree::DisplayTree(int indent) {
     for (int i = 0; i < 2 * indent; i++)
         std::cerr << " ";
-    switch (t->op) {
+    switch (op) {
         case DUMMY:
             std::cerr << "op: " << "dummy" << std::endl;
             break;
@@ -93,10 +94,10 @@ void Tree::DisplayTree(Tree *t, int indent) {
             std::cerr << "op: " << "mem" << std::endl;
             break;
         default:
-            std::cerr << "op: " << llvm::Instruction::getOpcodeName(t->op) << "(" << t->op << ")" << "\tval: " << t->val.val.i32s << std::endl;
+            std::cerr << "op: " << llvm::Instruction::getOpcodeName(op) << "(" << op << ")" << "\tval: " << val.val.i32s << std::endl;
     }
-    std::cerr << "child num: " << kids.size() << std::endl;
-    // for (int i = 0; i < kids.size(); i++)
-    //     DisplayTree(kids[i], indent + 1);
+    for (int i = 0; i < kids.size(); i++) {
+        kids[i]->DisplayTree(indent + 1);
+    }
 }
 

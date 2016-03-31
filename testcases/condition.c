@@ -1,6 +1,6 @@
 int main()
 {
-    int r;
+    int r = 1;
     int ret;
 
     if (r > 1)
