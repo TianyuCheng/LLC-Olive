@@ -1,7 +1,7 @@
 #include "RegisterAllocator.h"
 
 void RegisterAllocator::linearScanAllocate () {
-    this.active_set.clear();
+    this->active_set.clear();
     for (int i = 0; i < all_intervals.size(); i ++) {
         expireOldIntervals(i);
         if (active_set.size() == NUM_REGS) {
@@ -9,9 +9,9 @@ void RegisterAllocator::linearScanAllocate () {
         } else {
             // assign a free register to the interval
             for (auto it=register_map.begin(); it!=register_map.end(); ++it) {
-                if (it.second == NULL) {
-                    it.second = all_intervals[i];
-                    all_intervals[i]->register_id = it.first;
+                if (it->second == NULL) {
+                    it->second = all_intervals[i];
+                    all_intervals[i]->register_id = it->first;
                     break;
                 }
             }
@@ -34,7 +34,7 @@ void RegisterAllocator::expireOldIntervals (int i) {
     // add their register to free register pool
     for (int j = 0; j < remove_point; j ++) {
         int old_reg_id = active_set[j]->register_id;
-        if (old_reg_id < 0) cerr << "old_reg_id must >= 0" << endl;
+        if (old_reg_id < 0) std::cerr << "old_reg_id must >= 0" << std::endl;
         register_map[old_reg_id] = NULL;
         active_set[j]->register_id = -1;
     }
@@ -44,15 +44,16 @@ void RegisterAllocator::expireOldIntervals (int i) {
 
 void RegisterAllocator::spillAtInterval (int i) {
     LiveRange* spill = active_set[active_set.size()-1];
-    if (spill.endpoint > all_intervals[i]->endpoint) {
+    if (spill->endpoint > all_intervals[i]->endpoint) {
         // spill the last interval of active_set set
-        if (spill->register_id < 0) cerr << "spill reg id must >= 0" << endl;
+        if (spill->register_id < 0) std::cerr << "spill reg id must >= 0" << std::endl;
         all_intervals[i]->register_id = spill->register_id;
-        spill.locations = ; // TODO; 
-        active_set.erase(spill);
+        spill->location = "-1"; // TODO: TEMPORARILY PUT -1 for compilation
+        // active_set.erase(spill);
+        active_set.erase(active_set.end() - 1);     // this should be equivalent to the previous line
         insert_active_set (active_set, all_intervals[i]);
     } else {
         // spill i directly
-        locations[i] = ;   // TODO:
+        // locations[i] = -1;   // TODO: TEMPORARILY PUT -1 for compilation
     }
 }

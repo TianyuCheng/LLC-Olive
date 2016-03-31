@@ -2,7 +2,10 @@
 #define REGISTERALLOCATOR_H
 
 #include <iostream>
+#include <map>
 #include <queue>
+
+#include "LiveRange.h"
 
 enum Register {
     RAX, RBX, RCX, RDX,
@@ -20,7 +23,7 @@ static const char* registers[] = {
 static int NUM_REGS = 16;
 
 // use naive linear search to insert elem 
-void insert_active_set (std::vector<LiveRange*>& vec, LiveRange* elem) {
+static void insert_active_set (std::vector<LiveRange*>& vec, LiveRange* elem) {
     vec.push_back(elem);
     for (int i = vec.size()-1; i >= 0 ; i --) {
         if (vec[i]->endpoint <= elem->endpoint) break;
@@ -33,14 +36,14 @@ void insert_active_set (std::vector<LiveRange*>& vec, LiveRange* elem) {
 }
 
 // use naive linear search to insert elem 
-void insert_intervals (std::vector<LiveRange*>& vec, LiveRange* elem) {
+static void insert_intervals (std::vector<LiveRange*>& vec, LiveRange* elem) {
     vec.push_back(elem);
-    for (int i = active_set.size()-1; i >= 0 ; i --) {
-        if (active_set[i]->startpoint <= elem->startpoint) break;
+    for (int i = vec.size()-1; i >= 0 ; i --) {
+        if (vec[i]->startpoint <= elem->startpoint) break;
         else {
-            LiveRange* tmp = active_set[i];
-            active_set[i] = active_set[i+1];
-            active_set[i+1] = tmp;
+            LiveRange* tmp = vec[i];
+            vec[i] = vec[i+1];
+            vec[i+1] = tmp;
         }
     }
 }
@@ -74,7 +77,7 @@ private:
     // restore live all_intervals of all variables
     std::vector<LiveRange*> all_intervals;
     // restore the free registers
-    HashMap<int, LiveRange*> register_map;
+    std::map<int, LiveRange*> register_map;
 };
 
 #endif /* end of include guard: REGISTERALLOCATOR_H */

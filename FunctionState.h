@@ -11,30 +11,15 @@
 #include <cassert>
 
 #include "Value.h"
-#include "RegisterAllocator.h"
 #include "llc_olive.h"
+#include "LiveRange.h"
+#include "RegisterAllocator.h"
 
 class X86Inst;          // forward declaration
 class X86Operand;
 class TreeWrapper;
+class RegisterAllocator;
 typedef struct tree* Tree;
-
-struct LiveRange {
-    int begin;
-    int end;
-
-    int register_id;
-    string location;
-
-    LiveRange(int start) {
-        begin = start;
-        end = -1;
-    }
-    LiveRange(int start, int stop) {
-        begin = start;
-        end = stop;
-    }
-};
 
 /**
  * Function State Keeper

@@ -21,6 +21,7 @@ add_llvm_tool(llc-olive
   llc_olive.h
   llc_olive.cpp
   Value.h
+  LiveRange.h
   FunctionState.cpp
   FunctionState.h
   RegisterAllocator.cpp

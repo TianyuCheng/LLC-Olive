@@ -163,7 +163,7 @@ void FunctionState::RecordLiveness(Tree t) {
 
         LiveRange *range = it->second;
         int endLine = assembly.size() - 1;    // ending at current size
-        range->end = endLine;
+        range->endpoint = endLine;
         liveness.insert(std::pair<int, LiveRange*>(reg, range));
     }
     // else this register is still live now, do not do anything
@@ -173,8 +173,8 @@ void FunctionState::PrintLiveness(std::ostream &out) {
     for (auto it = liveness.begin(); it != liveness.end(); ++it) {
         LiveRange *range = it->second;
         out << "Virtual Register " << it->first << ":\t" 
-            << "start:\t" << range->begin << "\t"
-            << "end:\t"   << range->end << std::endl;
+            << "start:\t" << range->startpoint << "\t"
+            << "end:\t"   << range->endpoint << std::endl;
     }
 }
 
