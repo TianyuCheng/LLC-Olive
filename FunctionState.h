@@ -22,6 +22,8 @@ typedef struct tree* Tree;
 struct LiveRange {
     int begin;
     int end;
+    int register_id;
+    string location;
     LiveRange(int start, int stop) {
         begin = start;
         end = stop;
