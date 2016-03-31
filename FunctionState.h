@@ -22,6 +22,10 @@ typedef struct tree* Tree;
 struct LiveRange {
     int begin;
     int end;
+    LiveRange(int start) {
+        begin = start;
+        end = -1;
+    }
     LiveRange(int start, int stop) {
         begin = start;
         end = stop;
@@ -80,9 +84,14 @@ public:
         return nullptr;
     }
 
+    void RecordLiveness(Tree t);
+    void PrintLiveness(std::ostream &out);
+    const std::map<int, LiveRange*> &GetLivenessAnalysis() const {
+        return liveness;
+    }
+
 private:
-    void LiveRangeAnalysis();
-    std::string GetMachineReg(int virtual_reg);
+    void RecordLiveStart(Tree t);
 
 private:
     // information about the function
@@ -94,6 +103,7 @@ private:
     RegisterAllocator allocator;
     std::vector<int> virtual2machine;
     std::vector<X86Inst*> assembly;
+    std::map<int, LiveRange*> liveness;
     std::map<Tree, X86Operand*> locals;
     std::map<llvm::BasicBlock*, TreeWrapper*> labelMap;
     std::map<llvm::Instruction*, TreeWrapper*> treeMap;

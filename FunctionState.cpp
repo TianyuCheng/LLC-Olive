@@ -13,15 +13,14 @@ FunctionState::~FunctionState() {
         delete inst;
     for (auto it = labelMap.begin(); it != labelMap.end(); ++it)
         delete it->second;
-}
-
-std::string FunctionState::GetMachineReg(int virtual_reg) {
-    // allocate a free register
-    return allocator.Allocate();
+    for (auto it = liveness.begin(); it != liveness.end(); ++it)
+        delete it->second;
 }
 
 void FunctionState::PrintAssembly(std::ostream &out) {
-    this->LiveRangeAnalysis();
+    out << "#####################################################" << std::endl;
+    this->PrintLiveness(out);
+    out << "#####################################################" << std::endl;
     // print assembly to file
     
     // print function entrance
@@ -39,10 +38,6 @@ void FunctionState::PrintAssembly(std::ostream &out) {
     for(auto it = locals.begin(); it != locals.end(); ++it ) {
         delete it->second;
     }
-}
-
-void FunctionState::LiveRangeAnalysis() {
-    // analyze live range of virtual registers
 }
 
 TreeWrapper* FunctionState::FindLabel(llvm::BasicBlock *bb) {
@@ -103,12 +98,13 @@ void FunctionState::CreateVirtualReg(Tree t) {
     virtual2machine.push_back(-1);      // -1 not allocated
     t->val = v;
     t->isReg = true;
+    RecordLiveStart(t);                 // newly allocated virtual register must be added to liveness
 }
 
 void FunctionState::AssignVirtualReg(Tree lhs, Tree rhs) {
     lhs->isReg = true;
-    if (rhs->refcnt == 0) {
-        // this register is free now, we can reuse it
+    if (rhs->refcnt == 1) {
+        // this register is about to be free, we can reuse it
         lhs->val = rhs->val;
     }
     else {
@@ -151,4 +147,50 @@ void FunctionState::GenerateBinaryStmt(const char *op_raw, X86Operand *dst, X86O
     // operands
     std::string op = std::string(op_raw) + "q";
     AddInst(new X86Inst(op.c_str(), dst, src));
+}
+
+
+void FunctionState::RecordLiveness(Tree t) {
+    t->refcnt--;                // decrease the reference counter
+
+    if (!t->isReg) return;      // we only care about registers' references
+
+    int reg = t->val.AsVirtualReg();
+    if (t->refcnt == 0) {
+        // this register is dead now, we should set the endLine
+        auto it = liveness.find(reg);
+        assert(it != liveness.end() && "a dead register should have already in the liveness analysis");
+
+        LiveRange *range = it->second;
+        int endLine = assembly.size() - 1;    // ending at current size
+        range->end = endLine;
+        liveness.insert(std::pair<int, LiveRange*>(reg, range));
+    }
+    // else this register is still live now, do not do anything
+}
+
+void FunctionState::PrintLiveness(std::ostream &out) {
+    for (auto it = liveness.begin(); it != liveness.end(); ++it) {
+        LiveRange *range = it->second;
+        out << "Virtual Register " << it->first << ":\t" 
+            << "start:\t" << range->begin << "\t"
+            << "end:\t"   << range->end << std::endl;
+    }
+}
+
+void FunctionState::RecordLiveStart(Tree t) {
+    if (t->isReg && t->refcnt > 0) {
+        int reg = t->val.AsVirtualReg();
+        auto it = liveness.find(reg);
+        if (it == liveness.end()) {
+            // not found in liveness analysis, insert it
+            // this register's life starts from now
+            // we do not know when it ends yet
+            int startLine = assembly.size();
+            liveness.insert(std::pair<int, LiveRange*>(reg, new LiveRange(startLine)));
+        }
+        // if found, then it means this virtual register may be assigned from an about-to-die register
+        // in this case, we do not need to do anything in particular
+    }
+    // this register is dead if refcnt == 0
 }
