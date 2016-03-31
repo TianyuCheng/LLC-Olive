@@ -30,4 +30,4 @@
 llc_olive.cpp
 llc_olive.h
 
-*.bc
+# *.bc

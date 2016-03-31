@@ -15,16 +15,19 @@ RESET=`tput sgr0`
 assembly:=$(patsubst %.c,%.s,$(wildcard $(TEST_DIR)/*.c))
 bitcodes:=$(patsubst %.c,%.bc,$(wildcard $(TEST_DIR)/*.c))
 
-run: $(EXE) $(bitcodes)
-	@echo "=================================================================="
+simpleSum: $(EXE) $(bitcodes)
 	$(EXE) --num_regs=$(NUM_REGS) ./testcases/simpleSum.bc -o ./testcases/simpleSum.s
-	@echo "------------------------------------------------------------------"
+
+calculation:
 	$(EXE) --num_regs=$(NUM_REGS) ./testcases/calculation.bc -o ./testcases/calculation.s
-	@echo "------------------------------------------------------------------"
+
+condition: $(EXE) $(bitcodes)
 	$(EXE) --num_regs=$(NUM_REGS) ./testcases/condition.bc -o ./testcases/condition.s
-	@echo "------------------------------------------------------------------"
+
+for: $(EXE) $(bitcodes)
 	$(EXE) --num_regs=$(NUM_REGS) ./testcases/forloop.bc -o ./testcases/forloop.s
-	@echo "------------------------------------------------------------------"
+
+while: $(EXE) $(bitcodes)
 	$(EXE) --num_regs=$(NUM_REGS) ./testcases/while.bc -o ./testcases/while.s
 
 $(EXE): llc_olive.cpp llc_olive.brg
@@ -43,9 +46,8 @@ test: clean $(EXE) $(bitcodes) $(assembly)
 
 clean:
 	@rm -rf $(EXE)
-	@rm -rf $(TEST_DIR)/*.bc
 	@rm -rf $(TEST_DIR)/*.log
 	@rm -rf $(TEST_DIR)/.*.swp
 	@rm -rf ./llc_olive.h ./llc_olive.cpp
 
-.PHONY: compile tar test run push clean
+.PHONY: opt compile tar test run push clean
