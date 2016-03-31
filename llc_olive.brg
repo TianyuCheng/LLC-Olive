@@ -82,7 +82,7 @@ reg:    Load(reg)           { $cost[0].cost = $cost[2].cost + 1;    } = {
              */
             $action[2](fstate);
             fstate->AssignVirtualReg($0, $2);    // assign a virtual register to the inst
-            fstate->CopyVirtualReg($0->GetValue(), $2->GetValue());
+            fstate->LoadFromReg($0->GetValue(), $2->GetValue());
             // this will record the ending in liveness range for a register
             // if the input is a register, and the register dies
             fstate->RecordLiveness($2);
@@ -219,6 +219,23 @@ reg:    Mul(reg, reg)       { $cost[0].cost = $cost[2].cost + $cost[3].cost + 4;
         };
 
 stmt:   cond                 { $cost[0].cost = $cost[1].cost;                       } = { };
+cond:   ICmp(imm, imm)       { $cost[0].cost = $cost[2].cost + $cost[3].cost;       } = { 
+            $action[2](fstate);
+            $action[3](fstate);
+            fstate->CreateVirtualReg($0);
+            fstate->GenerateMovStmt(
+                new X86Operand(fstate, OP_TYPE::X86Reg, $0->GetValue()),
+                new X86Operand(fstate, OP_TYPE::X86Imm, $2->GetValue())
+            );
+            fstate->GenerateBinaryStmt("sub", 
+                new X86Operand(fstate, OP_TYPE::X86Reg, $0->GetValue()),
+                new X86Operand(fstate, OP_TYPE::X86Imm, $3->GetValue())
+            );
+            // this will record the ending in liveness range for a register
+            // if the input is a register, and the register dies
+            fstate->RecordLiveness($2);
+            fstate->RecordLiveness($3);
+        };
 cond:   ICmp(reg, imm)       { $cost[0].cost = $cost[2].cost + $cost[3].cost;       } = { 
             $action[2](fstate);
             $action[3](fstate);

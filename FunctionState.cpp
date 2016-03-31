@@ -116,16 +116,23 @@ void FunctionState::AssignVirtualReg(Tree *lhs, Tree *rhs) {
         // we will still be using rhs in the future, 
         // so better not overwrite the rhs
         CreateVirtualReg(lhs);      // assign a virtual register to the inst
-        CopyVirtualReg(lhs->val, rhs->val);
+        LoadFromReg(lhs->val, rhs->val);
     }
 }
 
-void FunctionState::CopyVirtualReg(VALUE &dst, VALUE &src) {
+void FunctionState::LoadFromReg(VALUE &dst, VALUE &src) {
     if (src.val.i32s == dst.val.i32s) return;
     // only copy register when src and dst are different
     GenerateMovStmt(
         new X86Operand(this, OP_TYPE::X86Reg, dst),
         new X86Operand(this, OP_TYPE::X86Reg, src)
+    );
+}
+
+void FunctionState::LoadFromImm(VALUE &dst, VALUE &src) {
+    GenerateMovStmt(
+        new X86Operand(this, OP_TYPE::X86Reg, dst),
+        new X86Operand(this, OP_TYPE::X86Imm, src)
     );
 }
 

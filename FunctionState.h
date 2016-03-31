@@ -33,7 +33,8 @@ public:
     Tree* CreateLabel(llvm::BasicBlock *bb);
     void CreateVirtualReg(Tree *t);
     void AssignVirtualReg(Tree *lhs, Tree *rhs);
-    void CopyVirtualReg(VALUE &dst, VALUE &src);
+    void LoadFromReg(VALUE &dst, VALUE &src);
+    void LoadFromImm(VALUE &dst, VALUE &src);
     void GenerateLabelStmt(const char *label);
     void GenerateLabelStmt(VALUE &v);
     void GenerateMovStmt(X86Operand *dst, X86Operand *src);
