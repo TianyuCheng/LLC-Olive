@@ -1,11 +1,5 @@
 #define VERBOSE  0
 
-int OP_LABEL(NODEPTR p) {
-    if (p) return p->op;
-    std::cerr << "NODEPTR is null for OP_LABEL" << std::endl;
-    exit(EXIT_FAILURE);
-}
-
 using namespace llvm;
 
 static cl::opt<std::string>
@@ -23,21 +17,8 @@ static void burm_trace(NODEPTR p, int eruleno, COST cost) {
         std::cerr << p << " matched " << burm_string[eruleno] << " = " << eruleno << " with cost " << cost.cost << std::endl;
 }
 
-Tree tree(int op, Tree l, Tree r, VALUE v) {
-	Tree t = (Tree) malloc(sizeof *t);
-	t->op = op;
-    for (int i = 0; i < 10; i++)
-        t->kids[i] = nullptr;
-	t->kids[0] = l; t->kids[1] = r; 
-	t->val = v;
-	t->x.state = 0;
-    t->level = 0;
-    t->refcnt = 0;
-	return t;
-}
-
 void gen(NODEPTR p, FunctionState *fstate) {
-    p->computed = true;
+    p->SetComputed(true);
 	if (burm_label(p) == 0)
 		std::cerr << "=== NO COVER ===\n";
 	else {
@@ -47,139 +28,11 @@ void gen(NODEPTR p, FunctionState *fstate) {
 	}
 }
 
-TreeWrapper::TreeWrapper(int opcode, Tree l, Tree r): nchild(0) {
-    t = tree(opcode, l, r);
-    t->refcnt = 0;
-    t->level = 1;
-    if (l) { t->level = std::max(t->level, 1 + l->level); nchild++; }
-    if (r) { t->level = std::max(t->level, 1 + r->level); nchild++; }
-}
-TreeWrapper::~TreeWrapper() {
-#if 0
-    free(t);        // this seems to cause double free
-    t = nullptr;
-#endif
-    // Stupid design in TreeReference causes me to use a freeList for cleaning
-    for (Tree ct: freeList)
-        free(ct);
-}
-void TreeWrapper::SetChild(int n, Tree ct) {
-    if (n < 10) {
-        if (!t->kids[n] && ct) nchild++;     // was nullptr, but not null now, increment the nchild counter
-        if (ct) t->level = std::max(t->level, 1 + ct->level);
-        t->kids[n] = ct;
-    } else {
-        // TODO: IMPLEMENT A WAY TO STORE MORE THAN 2 CHILDREN
-        errs() << "SetChild for n=" << n << " is not implemented yet!\n";
-    }
-}
-Tree TreeWrapper::GetChild(int n) {
-    if (n < 10) {
-        return t->kids[n];
-    } else {
-        // TODO: IMPLEMENT A WAY TO FETCH MORE THAN 2 CHILDREN
-        errs() << "GetChild for n=" << n << " is not implemented yet!\n";
-        return nullptr;
-    }
-}
-
-void TreeWrapper::CastInt(int n, ConstantInt *cnst) {
-    freeList.push_back(tree(IMM, nullptr, nullptr));
-    Tree ct = freeList.back();
-    const APInt integer = cnst->getValue();
-    unsigned bitWidth = cnst->getBitWidth();
-    if (integer.isSignedIntN(bitWidth)) {
-        switch (bitWidth) {
-            case 1:
-                ct->val.val.b = (bool) cnst->getSExtValue();
-                break;
-            case 8:
-                ct->val.val.i8s = (int8_t)cnst->getSExtValue();
-                break;
-            case 16:
-                ct->val.val.i16s = (int16_t)cnst->getSExtValue();
-                break;
-            case 32:
-                ct->val.val.i32s = (int32_t)cnst->getSExtValue();
-                break;
-            case 64:
-                ct->val.val.i64s = (int64_t)cnst->getSExtValue();
-                break;
-            default:
-                errs() << "CAST CONSTANT INT FAILURE\n";
-                exit(EXIT_FAILURE);
-        }
-    }
-    else {
-        switch (bitWidth) {
-            case 1:
-                ct->val.val.b = (bool) cnst->getSExtValue();
-                break;
-            case 8:
-                ct->val.val.i8u = (uint8_t)cnst->getZExtValue();
-                break;
-            case 16:
-                ct->val.val.i16u = (uint16_t)cnst->getZExtValue();
-                break;
-            case 32:
-                ct->val.val.i32u = (uint32_t)cnst->getZExtValue();
-                break;
-            case 64:
-                ct->val.val.i64u = (uint64_t)cnst->getZExtValue();
-                break;
-            default:
-                errs() << "CAST CONSTANT INT FAILURE\n";
-                exit(EXIT_FAILURE);
-        }
-    }
-    this->SetChild(n, ct);
-}
-
-void TreeWrapper::CastFP(int n, ConstantFP *cnst) {
-    freeList.push_back(tree(IMM, nullptr, nullptr));
-    Tree ct = freeList.back();
-    // for now, assume all floating point uses 64 bit double
-    ct->val.val.f64 = (double) cnst->getValueAPF().convertToDouble();
-    this->SetChild(n, ct);
-}
-
-void TreeWrapper::DisplayTree(Tree t, int indent) const {
-    if (t == nullptr) return;
-    for (int i = 0; i < 2 * indent; i++)
-        errs() << " ";
-    switch (t->op) {
-    case DUMMY:
-        errs() << "op: " << "dummy" << "\tval: " << t->val.val.i32s << "\n";
-        break;
-    case LABEL:
-        errs() << "op: " << "label" << "\tval: " << t->val.val.i32s << "\n";
-        break;
-    case REG:
-        errs() << "op: " << "reg" << "\tval: " << t->val.val.i32s << "\n";
-        break;
-    case IMM:
-        errs() << "op: " << "imm" << "\tval: " << t->val.val.i32s << "\n";
-        break;
-    case MEM:
-        errs() << "op: " << "mem" << "\tval: " << t->val.val.i32s << "\n";
-        break;
-    default:
-        errs() << "op: " << Instruction::getOpcodeName(t->op) << "(" << t->op << ")" << "\tval: " << t->val.val.i32s << "\n";
-    }
-    for (int i = 0; i < 3; i++) {
-        if (t->kids[i]) {
-            DisplayTree(t->kids[i], indent + 1);
-        }
-    }
-}
-
 void BasicBlockToExprTrees(FunctionState &fstate,
-        std::vector<TreeWrapper*> &treeList, BasicBlock &bb) {
+        std::vector<Tree*> &treeList, BasicBlock &bb) {
 
-    TreeWrapper dummy(DUMMY, nullptr, nullptr);
-    
     for (auto inst = bb.begin(); inst != bb.end(); inst++) {
-        TreeWrapper *t = new TreeWrapper(inst->getOpcode());
+        Tree *t = new Tree(inst->getOpcode());
         Instruction &instruction = *inst;
         t->SetInst(&instruction);
 
@@ -194,15 +47,6 @@ void BasicBlockToExprTrees(FunctionState &fstate,
         errs() << "opcode: " << instruction.getOpcode() << "\n";
 #endif
 
-        // HACK for making BranchInst all 3 address code
-        // ---------------------------------------------
-        if (instruction.getOpcode() == Br) {
-            // first fill the branch inst with dummy integer
-            t->SetChild(1, dummy.GetTree());
-            t->SetChild(2, dummy.GetTree());
-        }
-        // ---------------------------------------------
-
         int num_operands = instruction.getNumOperands();
         for (int i = 0; i < num_operands; i++) {
             Value *v = instruction.getOperand(i);
@@ -216,11 +60,11 @@ void BasicBlockToExprTrees(FunctionState &fstate,
                 // check if the operand is a constant
                 if (ConstantInt *cnst = dyn_cast<ConstantInt>(v)) {
                     // check if the operand is a constant int
-                    t->CastInt(i, cnst);
+                    t->CastInt(cnst);
                 }
                 else if (ConstantFP *cnst = dyn_cast<ConstantFP>(v)) {
                     // check if the operand is a constant int
-                    t->CastFP(i, cnst);
+                    t->CastFP(cnst);
                 }
                 else if (ConstantExpr *cnst = dyn_cast<ConstantExpr>(v)) {
                     // check if the operand is a constant int
@@ -237,15 +81,15 @@ void BasicBlockToExprTrees(FunctionState &fstate,
             }
             else if (Instruction *def = dyn_cast<Instruction>(v)) {
                 // check if we cant find operand's definition
-                TreeWrapper *wrapper = fstate.FindFromTreeMap(def);
+                Tree *wrapper = fstate.FindFromTreeMap(def);
                 assert(wrapper && "operands must be previously defined");
-                t->SetChild(i, wrapper->GetTreeWrapper());      // automatically increase the refcnt
+                t->AddChild(wrapper->GetTreeRef());      // automatically increase the refcnt
             }
             else if (BasicBlock *block = dyn_cast<BasicBlock>(v)) {
                 if (instruction.getOpcode() == Br) {
-                    TreeWrapper *wrapper = fstate.FindLabel(block);
+                    Tree *wrapper = fstate.FindLabel(block);
                     assert(wrapper && "FindLabel should never fail");
-                    t->SetChild(i, wrapper->GetTreeWrapper()); // automatically increase the refcnt
+                    t->AddChild(wrapper->GetTreeRef()); // automatically increase the refcnt
                 }
                 else {
                     errs() << "Unhandle-able basic block operand! Quit\n";
@@ -257,9 +101,18 @@ void BasicBlockToExprTrees(FunctionState &fstate,
                 errs() << "Unhandle-able instruction operand! Quit\n";
                 exit(EXIT_FAILURE);
             }
-            // errs() << "num operands:\t" << num_operands << "\n"; 
-            // t->DisplayTree();
         } //end of operand loop
+
+        // HACK for making BranchInst all 3 address code
+        // ---------------------------------------------
+        if (instruction.getOpcode() == Br) {
+            if (t->GetNumKids() == 1) {
+                // first fill the branch inst with dummy node
+                t->AddChild(new Tree(DUMMY));
+                t->AddChild(new Tree(DUMMY));
+            }
+        }
+        // ---------------------------------------------
 
         // store the current tree in map
         fstate.AddToTreeMap(&instruction, t);
@@ -293,10 +146,10 @@ void FunctionToAssembly(Function &func) {
     // ------------------------------------------------------------------------
 
     // === Second Pass: collect instruction information, build expr tree, generate assembly
-    std::vector<TreeWrapper*> treeList;
+    std::vector<Tree*> treeList;
     for (BasicBlock &bb : basic_blocks) {
         int size = treeList.size();
-        if (TreeWrapper * wrapper = fstate.FindLabel(&bb)) {
+        if (Tree * wrapper = fstate.FindLabel(&bb)) {
             fstate.GenerateLabelStmt(wrapper->GetValue());
         }
         BasicBlockToExprTrees(fstate, treeList, bb);
@@ -304,7 +157,7 @@ void FunctionToAssembly(Function &func) {
         // iterate through tree list for each individual instruction tree
         // replace the complicated/common tree expression with registers
         for (int i = size; i < treeList.size(); i++) {
-            TreeWrapper *t = treeList[i];
+            Tree *t = treeList[i];
 #if VERBOSE > 2
             errs() << Instruction::getOpcodeName(t->GetOpCode()) << "\tLEVEL:\t" << t->GetLevel() << "\tRefCount:\t" << t->GetRefCount() << "\n";
 #endif
@@ -313,9 +166,9 @@ void FunctionToAssembly(Function &func) {
 #if VERBOSE > 2
                 t->DisplayTree();
 #endif
-                gen(t->GetTree(), &fstate);
+                gen(t, &fstate);
             }
-        } // end of TreeWrapper iteration
+        } // end of Tree iteration
     } // end of basic block loop
     // ------------------------------------------------------------------------
 
@@ -323,28 +176,11 @@ void FunctionToAssembly(Function &func) {
     fstate.PrintAssembly(std::cerr);
 
     // clean up
-    for (TreeWrapper *t : treeList) delete t;
+    for (Tree *t : treeList) delete t;
 }
 
 int main(int argc, char *argv[])
 {
-#if 0
-    // Tree t = tree(Add, 
-    //             tree(IMM, nullptr, nullptr, 1), 
-    //             tree(IMM, nullptr, nullptr, 2), 
-    //         1);
-    // Tree t = tree(Store, 
-    //             tree(IMM, nullptr, nullptr, 2), 
-    //             tree(REG, nullptr, nullptr, 1), 
-    //         1);
-    Tree t = tree(Store,
-                tree(Load,
-                    tree(IMM, nullptr, nullptr, 10),
-                    tree(Alloca, nullptr, nullptr, 1)),
-                tree(REG, nullptr, nullptr, 2),
-            1);
-    gen(t);
-#else
     // parse arguments from command line
     cl::ParseCommandLineOptions(argc, argv, "llc-olive\n");
 
@@ -358,7 +194,6 @@ int main(int argc, char *argv[])
     for (Function &func : function_list) {
         FunctionToAssembly(func);
     }
-#endif
 
     return 0;
 }

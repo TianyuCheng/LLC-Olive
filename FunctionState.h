@@ -17,9 +17,8 @@
 
 class X86Inst;          // forward declaration
 class X86Operand;
-class TreeWrapper;
+class Tree;
 class RegisterAllocator;
-typedef struct tree* Tree;
 
 /**
  * Function State Keeper
@@ -30,10 +29,10 @@ public:
     FunctionState(std::string name, int num_regs, int label = 0);
     virtual ~FunctionState();
 
-    TreeWrapper* FindLabel(llvm::BasicBlock *bb);
-    TreeWrapper* CreateLabel(llvm::BasicBlock *bb);
-    void CreateVirtualReg(Tree t);
-    void AssignVirtualReg(Tree lhs, Tree rhs);
+    Tree* FindLabel(llvm::BasicBlock *bb);
+    Tree* CreateLabel(llvm::BasicBlock *bb);
+    void CreateVirtualReg(Tree *t);
+    void AssignVirtualReg(Tree *lhs, Tree *rhs);
     void CopyVirtualReg(VALUE &dst, VALUE &src);
     void GenerateLabelStmt(const char *label);
     void GenerateLabelStmt(VALUE &v);
@@ -56,31 +55,31 @@ public:
         return std::vector<LiveRange>();        // NOT IMPLEMENTED
     }
 
-    void CreateLocal(Tree t, int bytes = 8);
-    X86Operand* GetLocalMemoryAddress(Tree t);
+    void CreateLocal(Tree *t, int bytes = 8);
+    X86Operand* GetLocalMemoryAddress(Tree *t);
 
     void AddInst(X86Inst *inst) { assembly.push_back(inst); }
     void RestoreStack();
 
     // TreeMap management
-    void AddToTreeMap(llvm::Instruction *instruction, TreeWrapper *t) {
-        treeMap.insert(std::pair<llvm::Instruction*, TreeWrapper*>(instruction, t));
+    void AddToTreeMap(llvm::Instruction *instruction, Tree *t) {
+        treeMap.insert(std::pair<llvm::Instruction*, Tree*>(instruction, t));
     }
-    TreeWrapper* FindFromTreeMap(llvm::Instruction *instruction) const {
+    Tree* FindFromTreeMap(llvm::Instruction *instruction) const {
         auto it = treeMap.find(instruction);
         if (it != treeMap.end())
             return it->second;
         return nullptr;
     }
 
-    void RecordLiveness(Tree t);
+    void RecordLiveness(Tree *t);
     void PrintLiveness(std::ostream &out);
     const std::map<int, LiveRange*> &GetLivenessAnalysis() const {
         return liveness;
     }
 
 private:
-    void RecordLiveStart(Tree t);
+    void RecordLiveStart(Tree *t);
 
 private:
     // information about the function
@@ -93,9 +92,9 @@ private:
     std::vector<int> virtual2machine;
     std::vector<X86Inst*> assembly;
     std::map<int, LiveRange*> liveness;
-    std::map<Tree, X86Operand*> locals;
-    std::map<llvm::BasicBlock*, TreeWrapper*> labelMap;
-    std::map<llvm::Instruction*, TreeWrapper*> treeMap;
+    std::map<Tree*, X86Operand*> locals;
+    std::map<llvm::BasicBlock*, Tree*> labelMap;
+    std::map<llvm::Instruction*, Tree*> treeMap;
 };
 
 typedef FunctionState* FUNCTION_STATE;

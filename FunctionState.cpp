@@ -40,7 +40,7 @@ void FunctionState::PrintAssembly(std::ostream &out) {
     }
 }
 
-TreeWrapper* FunctionState::FindLabel(llvm::BasicBlock *bb) {
+Tree* FunctionState::FindLabel(llvm::BasicBlock *bb) {
     auto it = labelMap.find(bb);
     if (it != labelMap.end())
         // find already mapped label
@@ -48,20 +48,20 @@ TreeWrapper* FunctionState::FindLabel(llvm::BasicBlock *bb) {
     return nullptr;
 }
 
-TreeWrapper* FunctionState::CreateLabel(llvm::BasicBlock *bb) {
+Tree* FunctionState::CreateLabel(llvm::BasicBlock *bb) {
     auto it = labelMap.find(bb);
     if (it != labelMap.end())
         return it->second;
 
     // this basic block has never been seen,
     // assign a new label, add it to the label map
-    TreeWrapper *treeLabel = new TreeWrapper(LABEL, nullptr, nullptr);
+    Tree *treeLabel = new Tree(LABEL, nullptr, nullptr);
     treeLabel->SetValue(label++);
-    labelMap.insert(std::pair<llvm::BasicBlock*, TreeWrapper*>(bb, treeLabel));
+    labelMap.insert(std::pair<llvm::BasicBlock*, Tree*>(bb, treeLabel));
     return treeLabel;
 }
 
-void FunctionState::CreateLocal(Tree t, int bytes) {
+void FunctionState::CreateLocal(Tree *t, int bytes) {
     // already allocated
     auto it = locals.find(t);
     if (it != locals.end())
@@ -76,10 +76,10 @@ void FunctionState::CreateLocal(Tree t, int bytes) {
             0,                                             // multiplier    
             local_bytes - bytes);
     // save the local variable memory address for future use
-    locals.insert(std::pair<Tree, X86Operand*>(t, local));
+    locals.insert(std::pair<Tree*, X86Operand*>(t, local));
 }
 
-X86Operand* FunctionState::GetLocalMemoryAddress(Tree t) {
+X86Operand* FunctionState::GetLocalMemoryAddress(Tree *t) {
     auto it = locals.find(t);
     assert (it != locals.end() && "GetLocalMemoryAddress cannot find associated address for input tree");
     return it->second;
@@ -93,17 +93,17 @@ void FunctionState::RestoreStack() {
         ));
 }
 
-void FunctionState::CreateVirtualReg(Tree t) {
+void FunctionState::CreateVirtualReg(Tree *t) {
     int v = virtual2machine.size();
     virtual2machine.push_back(-1);      // -1 not allocated
     t->val = v;
-    t->isReg = true;
+    t->UseAsRegister();
     RecordLiveStart(t);                 // newly allocated virtual register must be added to liveness
 }
 
-void FunctionState::AssignVirtualReg(Tree lhs, Tree rhs) {
-    lhs->isReg = true;
-    if (rhs->refcnt == 1) {
+void FunctionState::AssignVirtualReg(Tree *lhs, Tree *rhs) {
+    lhs->UseAsRegister();
+    if (rhs->GetRefCount() == 1) {
         // this register is about to be free, we can reuse it
         lhs->val = rhs->val;
     }
@@ -150,13 +150,13 @@ void FunctionState::GenerateBinaryStmt(const char *op_raw, X86Operand *dst, X86O
 }
 
 
-void FunctionState::RecordLiveness(Tree t) {
-    t->refcnt--;                // decrease the reference counter
+void FunctionState::RecordLiveness(Tree *t) {
+    t->RemoveRef();                // decrease the reference counter
 
-    if (!t->isReg) return;      // we only care about registers' references
+    if (!t->IsVirtualReg()) return;      // we only care about registers' references
 
     int reg = t->val.AsVirtualReg();
-    if (t->refcnt == 0) {
+    if (t->GetRefCount() == 0) {
         // this register is dead now, we should set the endLine
         auto it = liveness.find(reg);
         assert(it != liveness.end() && "a dead register should have already in the liveness analysis");
@@ -178,8 +178,8 @@ void FunctionState::PrintLiveness(std::ostream &out) {
     }
 }
 
-void FunctionState::RecordLiveStart(Tree t) {
-    if (t->isReg && t->refcnt > 0) {
+void FunctionState::RecordLiveStart(Tree *t) {
+    if (t->IsVirtualReg() && t->GetRefCount() > 0) {
         int reg = t->val.AsVirtualReg();
         auto it = liveness.find(reg);
         if (it == liveness.end()) {
