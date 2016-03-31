@@ -61,8 +61,9 @@ public:
     }
     void set_intervals (std::map<int, LiveRange*> liveness) {
          for (auto it : liveness) {
-            all_intervals.push_back(it->second);
+            all_intervals.push_back(it.second);
          }
+         virtual2machine.resize(all_intervals.size());
     }
 
     virtual ~RegisterAllocator() { }
@@ -73,6 +74,10 @@ public:
     void linearScanAllocate ();
     void expireOldIntervals (int i);
     void spillAtInterval (int i);
+
+    std::vector<int> get_virtual2machine() const {
+        return virtual2machine;
+    }
 
 private:
     int num_regs;

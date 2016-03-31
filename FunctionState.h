@@ -41,12 +41,11 @@ public:
 
     std::string GetMCRegAt(int index) const { 
 #if 0
+        std::cerr << "index: " << index << std::endl;
+        std::cerr << "v2m size: " << virtual2machine.size() << std::endl;
+#endif
         assert ((index >= 0 && index < virtual2machine.size()) && "virtual register index not in range");
         return std::string(registers[virtual2machine[index]]);
-#else
-        index = 0;
-        return std::string(registers[virtual2machine[index]]);
-#endif
     }
     void PrintAssembly(std::ostream &out);
 
@@ -136,8 +135,8 @@ public:
                 out << "%" << registers[op.val.AsVirtualReg()];
             }
             else
-#if 0
-                out << "$" << op.fstate->GetMCRegAt(op.val.AsVirtualReg());
+#if 1
+                out << "%" << op.fstate->GetMCRegAt(op.val.AsVirtualReg());
 #else
                 out << "%" << op.val.AsVirtualReg();
 #endif

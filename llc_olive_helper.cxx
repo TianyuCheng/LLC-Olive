@@ -189,6 +189,8 @@ int main(int argc, char *argv[])
     SMDiagnostic error;
     std::unique_ptr<Module> module = parseIRFile(StringRef(InputFilename.c_str()), error, context);
 
+    errs() << "Num-Regs: " << NumRegs << "\n";
+
     // obtain a function list in module, and iterate over function
     Module::FunctionListType &function_list = module->getFunctionList();
     for (Function &func : function_list) {

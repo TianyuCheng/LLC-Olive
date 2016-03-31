@@ -12,7 +12,7 @@ void RegisterAllocator::linearScanAllocate () {
                 if (it->second == NULL) {
                     it->second = all_intervals[i];
                     all_intervals[i]->register_id = it->first;
-                    virtual2machine[i] = register_id;
+                    virtual2machine[i] = it->first;
                     break;
                 }
             }

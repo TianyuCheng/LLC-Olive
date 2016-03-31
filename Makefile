@@ -6,6 +6,7 @@ CC			:=$(BIN_ROOT)/clang
 OLIVE		:=./olive/olive
 EXE			:=$(BIN_ROOT)/llc-olive
 
+NUM_REGS  	:= 2
 # colorful terminal output
 RED  =`tput setaf 1`
 GREEN=`tput setaf 2`
@@ -16,15 +17,15 @@ bitcodes:=$(patsubst %.c,%.bc,$(wildcard $(TEST_DIR)/*.c))
 
 run: $(EXE) $(bitcodes)
 	@echo "=================================================================="
-	$(EXE) --num_regs=16 ./testcases/simpleSum.bc -o ./testcases/simpleSum.s
+	$(EXE) --num_regs=$(NUM_REGS) ./testcases/simpleSum.bc -o ./testcases/simpleSum.s
 	@echo "------------------------------------------------------------------"
-	$(EXE) --num_regs=16 ./testcases/calculation.bc -o ./testcases/calculation.s
+	$(EXE) --num_regs=$(NUM_REGS) ./testcases/calculation.bc -o ./testcases/calculation.s
 	@echo "------------------------------------------------------------------"
-	$(EXE) --num_regs=16 ./testcases/condition.bc -o ./testcases/condition.s
+	$(EXE) --num_regs=$(NUM_REGS) ./testcases/condition.bc -o ./testcases/condition.s
 	@echo "------------------------------------------------------------------"
-	$(EXE) --num_regs=16 ./testcases/forloop.bc -o ./testcases/forloop.s
+	$(EXE) --num_regs=$(NUM_REGS) ./testcases/forloop.bc -o ./testcases/forloop.s
 	@echo "------------------------------------------------------------------"
-	$(EXE) --num_regs=16 ./testcases/while.bc -o ./testcases/while.s
+	$(EXE) --num_regs=$(NUM_REGS) ./testcases/while.bc -o ./testcases/while.s
 
 $(EXE): llc_olive.cpp llc_olive.brg
 	(cd $(TOOL_ROOT); make -j6)
@@ -35,7 +36,7 @@ llc_olive.cpp: llc_olive.brg llc_olive_helper.cxx llc_olive_helper.h
 test: clean $(EXE) $(bitcodes) $(assembly)
 
 %.s: %.bc
-	$(EXE) --num_regs=32 $< -o $@
+	$(EXE) --num_regs=$(NUM_REGS) $< -o $@
 
 %.bc: %.c
 	@$(CC) -O0 -emit-llvm $< -S -o $@
