@@ -34,18 +34,19 @@ void RegisterAllocator::expireOldIntervals (int i) {
     // add their register to free register pool
     for (int j = 0; j < remove_point; j ++) {
         int old_reg_id = active_set[j]->register_id;
+        if (old_reg_id < 0) cerr << "old_reg_id must >= 0" << endl;
         register_map[old_reg_id] = NULL;
         active_set[j]->register_id = -1;
     }
     // remove expired active_set interval
-    if (remove_point > 0) 
-        active_set.erase(active_set.begin(), active_set.begin()+remove_point);
+    active_set.erase(active_set.begin(), active_set.begin()+remove_point);
 }
 
 void RegisterAllocator::spillAtInterval (int i) {
     LiveRange* spill = active_set[active_set.size()-1];
     if (spill.endpoint > all_intervals[i]->endpoint) {
         // spill the last interval of active_set set
+        if (spill->register_id < 0) cerr << "spill reg id must >= 0" << endl;
         all_intervals[i]->register_id = spill->register_id;
         spill.locations = ; // TODO; 
         active_set.erase(spill);

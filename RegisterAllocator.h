@@ -45,7 +45,6 @@ void insert_intervals (std::vector<LiveRange*>& vec, LiveRange* elem) {
     }
 }
 
-
 /**
  * Register Allocator
  * */
