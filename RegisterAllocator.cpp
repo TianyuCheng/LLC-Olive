@@ -12,6 +12,7 @@ void RegisterAllocator::linearScanAllocate () {
                 if (it->second == NULL) {
                     it->second = all_intervals[i];
                     all_intervals[i]->register_id = it->first;
+                    virtual2machine[i] = register_id;
                     break;
                 }
             }
@@ -48,6 +49,7 @@ void RegisterAllocator::spillAtInterval (int i) {
         // spill the last interval of active_set set
         if (spill->register_id < 0) std::cerr << "spill reg id must >= 0" << std::endl;
         all_intervals[i]->register_id = spill->register_id;
+        virtual2machine[i] = spill->register_id;
         spill->location = "-1"; // TODO: TEMPORARILY PUT -1 for compilation
         // active_set.erase(spill);
         active_set.erase(active_set.end() - 1);     // this should be equivalent to the previous line

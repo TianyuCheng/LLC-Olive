@@ -58,9 +58,13 @@ public:
         // initialize register map
         for (int i = 0; i < NUM_REGS; i++) 
             register_map[i] = NULL;
-        // TODO: initialize all_intervals using insert_intervals
-
     }
+    void set_intervals (std::map<int, LiveRange*> liveness) {
+         for (auto it : liveness) {
+            all_intervals.push_back(it->second);
+         }
+    }
+
     virtual ~RegisterAllocator() { }
 
     std::string Allocate() {
@@ -78,6 +82,8 @@ private:
     std::vector<LiveRange*> all_intervals;
     // restore the free registers
     std::map<int, LiveRange*> register_map;
+    // gloally restore ssa form mapping
+    std::vector<int> virtual2machine;
 };
 
 #endif /* end of include guard: REGISTERALLOCATOR_H */
