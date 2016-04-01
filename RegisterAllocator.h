@@ -75,6 +75,10 @@ public:
     void expireOldIntervals (int i);
     void spillAtInterval (int i);
 
+    void buildIntervals();
+    void allocateFreeReg();
+    void allocateBlockedReg();
+
     std::vector<int> get_virtual2machine() const {
         return virtual2machine;
     }
