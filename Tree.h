@@ -60,6 +60,7 @@ public:
     Tree** GetKids() { return &kids[0]; }
     void AddChild(Tree *ct);
     Tree* GetChild(int n);
+    void KidsAsArguments();
 
     Tree* GetTreeRef() { refcnt++; return this; }
     void RemoveRef() { refcnt--; }

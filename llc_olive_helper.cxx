@@ -122,12 +122,17 @@ void BasicBlockToExprTrees(FunctionState &fstate,
 
         // HACK for making BranchInst all 3 address code
         // ---------------------------------------------
-        if (instruction.getOpcode() == Br) {
-            if (t->GetNumKids() == 1) {
-                // first fill the branch inst with dummy node
-                t->AddChild(new Tree(DUMMY));
-                t->AddChild(new Tree(DUMMY));
-            }
+        switch (instruction.getOpcode()) {
+            case Br:
+                if (t->GetNumKids() == 1) {
+                    // first fill the branch inst with dummy node
+                    t->AddChild(new Tree(DUMMY));
+                    t->AddChild(new Tree(DUMMY));
+                }
+                break;
+            case Call:
+                t->KidsAsArguments();
+                break;
         }
         // ---------------------------------------------
 
