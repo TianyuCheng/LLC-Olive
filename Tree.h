@@ -39,7 +39,6 @@ public:
 
     int GetOpCode() const { 
         // std::cerr << "GET OPCODE: " << op << std::endl;
-        // if (op < 0 || op > LABEL) return DUMMY;     // HACK: somehow DUMMY data is corrupted
         return op; 
     }
     

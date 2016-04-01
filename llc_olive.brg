@@ -133,6 +133,11 @@ mem:    Store(reg, mem)      { $cost[0].cost = $cost[2].cost + $cost[3].cost;   
             fstate->RecordLiveness($2);
             fstate->RecordLiveness($3);
         };
+mem:    Store(mem, mem)      { $cost[0].cost = $cost[2].cost + $cost[3].cost;    } = {
+            $action[2](fstate);
+            $action[3](fstate);
+            std::cerr << "leave the implementation to later\n";
+        };
 reg:    Add(reg, reg)       { $cost[0].cost = $cost[2].cost + $cost[3].cost + 2;    } = {
             /*
              * IR Add takes two arguments
@@ -262,6 +267,9 @@ stmt:   Br(cond, label, label)   { $cost[0].cost = $cost[2].cost + $cost[3].cost
             ));
             $action[4](fstate);
             $action[3](fstate);
+        };
+stmt:   Call                     { } = {
+            std::cerr << "=== CALL FUNCTION ===" << std::endl;
         };
 %%
 #include "llc_olive_helper.cxx"

@@ -76,23 +76,25 @@ void BasicBlockToExprTrees(FunctionState &fstate,
                 else {
                     // this is bad and probably needs to terminate the execution
                     errs() << "NOT IMPLEMENTED OTHER CONST TYPES:\t"; instruction.print(errs()); errs() << "\n";
-                    errs() << "OPERAND << "; v->print(errs()); errs() << "\n";
+                    // errs() << "OPERAND: "; v->print(errs()); errs() << "\n";
 #if 0               // we might need to handle undef value some time later
                     if (UndefValue *undef = dyn_cast<UndefValue>(v)) {
                         errs() << "OPERAND IS AN UNDEF VALUE\n";
                     }
 #endif
-                    exit(EXIT_FAILURE);
+                    // exit(EXIT_FAILURE);
                 }
             }
             else if (Instruction *def = dyn_cast<Instruction>(v)) {
-                // check if we cant find operand's definition
+                // for regular operands
+                // check if we can find operand's definition
                 Tree *wrapper = fstate.FindFromTreeMap(def);
                 assert(wrapper && "operands must be previously defined");
                 assert (wrapper != t);
                 t->AddChild(wrapper->GetTreeRef());      // automatically increase the refcnt
             }
             else if (BasicBlock *block = dyn_cast<BasicBlock>(v)) {
+                // for branches
                 if (instruction.getOpcode() == Br) {
                     Tree *wrapper = fstate.FindLabel(block);
                     assert(wrapper && "FindLabel should never fail");
@@ -103,9 +105,17 @@ void BasicBlockToExprTrees(FunctionState &fstate,
                     exit(EXIT_FAILURE);
                 }
             }
+            else if (Argument *arg = dyn_cast<Argument>(v)) {
+                // for argument operands
+                Tree *wrapper = fstate.FindFromTreeMap(arg);
+                assert(wrapper && "arguments must be previously defined");
+                assert (wrapper != t);
+                t->AddChild(wrapper->GetTreeRef());      // automatically increase the refcnt
+            }
             else {
                 // TODO: write code to handle these situations
                 errs() << "Unhandle-able instruction operand! Quit\n";
+                errs() << "Operand: "; v->print(errs()); errs() << "\n";
                 exit(EXIT_FAILURE);
             }
         } //end of operand loop
@@ -137,6 +147,11 @@ void FunctionToAssembly(Function &func) {
     // local variables, free registers, etc
     FunctionState fstate(func.getName(), NumRegs);
 
+    // pass in arguments
+    Function::ArgumentListType &arguments = func.getArgumentList();
+    for (Argument &arg : arguments)
+        fstate.CreateArgument(&arg);
+
     Function::BasicBlockListType &basic_blocks = func.getBasicBlockList();
     // === First pass: Collect basic block info, which basic block will need label
     for (BasicBlock &bb : basic_blocks) {
@@ -167,6 +182,7 @@ void FunctionToAssembly(Function &func) {
             Tree *t = treeList[i];
 #if VERBOSE > 2
             errs() << Instruction::getOpcodeName(t->GetOpCode()) << "\tLEVEL:\t" << t->GetLevel() << "\tRefCount:\t" << t->GetRefCount() << "\n";
+            errs() << "NumOperands: " << t->GetNumKids() << "\n";
 #endif
             // check if this tree satisfies the condition for saving into register
             if (t->GetRefCount() == 0/* || t->GetRefCount() > 2*/) {

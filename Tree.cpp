@@ -94,7 +94,7 @@ void Tree::DisplayTree(int indent) {
             std::cerr << "op: " << "mem" << std::endl;
             break;
         default:
-            std::cerr << "op: " << llvm::Instruction::getOpcodeName(op) << "(" << op << ")" << "\tval: " << val.val.i32s << std::endl;
+            std::cerr << "op: " << llvm::Instruction::getOpcodeName(op) << "(" << op << ")" << std::endl;
     }
     for (int i = 0; i < kids.size(); i++) {
         kids[i]->DisplayTree(indent + 1);

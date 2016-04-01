@@ -4,7 +4,7 @@
 #include <sstream>
 #include <iostream>
 
-enum X86OperandType { X86Reg, X86Imm, X86Mem, X86Label, X86Function };
+enum X86OperandType { X86Reg, X86Imm, X86Mem, X86Arg, X86Label, X86Function };
 typedef X86OperandType OP_TYPE;
 
 typedef struct VALUE {

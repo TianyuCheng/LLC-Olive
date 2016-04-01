@@ -6,7 +6,7 @@ CC			:=$(BIN_ROOT)/clang
 OLIVE		:=./olive/olive
 EXE			:=$(BIN_ROOT)/llc-olive
 
-NUM_REGS  	:= 2
+NUM_REGS  	:= 16
 # colorful terminal output
 RED  =`tput setaf 1`
 GREEN=`tput setaf 2`
@@ -29,6 +29,9 @@ for: $(EXE) $(bitcodes)
 
 while: $(EXE) $(bitcodes)
 	$(EXE) --num_regs=$(NUM_REGS) ./testcases/while.bc -o ./testcases/while.s
+
+function: $(EXE) $(bitcodes)
+	$(EXE) --num_regs=$(NUM_REGS) ./testcases/function.bc -o ./testcases/function.s
 
 $(EXE): llc_olive.cpp llc_olive.brg
 	(cd $(TOOL_ROOT); make -j6)
