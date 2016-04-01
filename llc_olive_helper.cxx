@@ -142,28 +142,34 @@ void BasicBlockToExprTrees(FunctionState &fstate,
     } // end of instruction loop in a basic block
 }
 
-void FunctionToIntervals () {
+void FunctionToIntervals (Function &func) {
     std::map<BasicBlock*, std::set<int>*> livein;
     std::map<Value*, int> v2vr_map;
     std::map<int, LiveRange*> all_intervals;
     int vr_count = 0;
+    Function::BasicBlockListType &basic_blocks = func.getBasicBlockList();
     // FIXME: presume bb.begin(), bb.end() is reverse order iteration
     for (auto bb = basic_blocks.rbegin(); bb != basic_blocks.rend(); bb++) {
+        BasicBlock *block = &(*bb);
         // 1. get union of successor.livein FOR EACH successor
         TerminatorInst* termInst = bb->getTerminator();
         int numSuccessors = termInst->getNumSuccessors();
-        std::set<int> live();
-        if (!numSuccessors) livein[bb] = &live;
+        std::set<int> live;
+        if (!numSuccessors) {
+            livein.insert(std::pair<BasicBlock*, std::set<int>*>(block, &live));
+        }
         for (int i = 0; i < numSuccessors; i++) {
             BasicBlock* succ = termInst->getSuccessor(i);
-            set<int>* succ_livein = livein[succ];
+            auto it = livein.find(succ);
+            assert((it != livein.end()) && "find succ fails");
+            std::set<int>* succ_livein = it->second;
             for (auto it=succ_livein->begin(); it!=succ_livein->end(); it++)
                 live.insert(*it);
         }
         // 2. FOR EACH PHI function of 
         for (int i = 0; i < numSuccessors; i++) {
             BasicBlock* succ = termInst->getSuccessor(i);
-            for (auto inst=succ.begin(); inst!=succ.end(); inst++) {
+            for (auto inst=succ->begin(); inst!=succ->end(); inst++) {
                 unsigned opcode = inst->getOpcode();
                 if (opcode != PHI) continue;
                 int num_operands = inst->getNumOperands();
@@ -177,7 +183,7 @@ void FunctionToIntervals () {
             }
         }
         // 3. add ranges FOR EACH opd (virtual register) in live
-        for (opd : live) {
+        for (int opd : live) {
             int bbfrom = -1, bbto = -1;
             if (all_intervals.find(opd) == all_intervals.end()) {
                 LiveRange lr (bbfrom, bbto);
@@ -186,14 +192,14 @@ void FunctionToIntervals () {
                 // FIXME: check the definition of addRange()
                 // use min-max or add another interval?
                 LiveRange* lr = all_intervals[opd];
-                lr->startpoint = min(lr->startpoint, bbfrom);
-                lr->endpoint = max(lr->endpoint, bbto);
+                lr->startpoint = std::min(lr->startpoint, bbfrom);
+                lr->endpoint = std::max(lr->endpoint, bbto);
             }
         }
         // 4. 
         
         // 5. 
-        for (auto inst=bb.begin(); inst!=bb.end(); inst++) {
+        for (auto inst=bb->begin(); inst!=bb->end(); inst++) {
             unsigned opcode = inst->getOpcode();
             if (opcode != PHI) continue;
             int num_operands = inst->getNumOperands();
@@ -206,7 +212,7 @@ void FunctionToIntervals () {
         // 6. 
 
         // 7.
-        livein[bb] = &live;
+        livein.insert(std::pair<BasicBlock*, std::set<int>*>(block, &live));
     }
 }
 
@@ -290,7 +296,7 @@ int main(int argc, char *argv[])
     // obtain a function list in module, and iterate over function
     Module::FunctionListType &function_list = module->getFunctionList();
     for (Function &func : function_list) {
-        FunctionToIntervals();
+        FunctionToIntervals(func);
         FunctionToAssembly(func);
     }
 

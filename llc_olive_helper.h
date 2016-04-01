@@ -5,7 +5,9 @@
 #include <sstream>
 #include <fstream>
 #include <cassert>
+#include <set>
 #include <vector>
+#include <cmath>
 
 #include <llvm/Support/CommandLine.h>
 #include <llvm/IR/Module.h>
