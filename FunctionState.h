@@ -31,9 +31,14 @@ public:
 
     Tree* FindLabel(llvm::BasicBlock *bb);
     Tree* CreateLabel(llvm::BasicBlock *bb);
+    void CreateLocal(Tree *t, int bytes = 8);
+    X86Operand* GetLocalMemoryAddress(Tree *t);
+    void CreateArgument(llvm::Argument *arg);
     void CreateVirtualReg(Tree *t);
+    void CreatePhysicalReg(Tree *t, Register r);
     void AssignVirtualReg(Tree *lhs, Tree *rhs);
-    void CopyVirtualReg(VALUE &dst, VALUE &src);
+    void LoadFromReg(VALUE &dst, VALUE &src);
+    void LoadFromImm(VALUE &dst, VALUE &src);
     void GenerateLabelStmt(const char *label);
     void GenerateLabelStmt(VALUE &v);
     void GenerateMovStmt(X86Operand *dst, X86Operand *src);
@@ -54,19 +59,26 @@ public:
         return std::vector<LiveRange>();        // NOT IMPLEMENTED
     }
 
-    void CreateLocal(Tree *t, int bytes = 8);
-    X86Operand* GetLocalMemoryAddress(Tree *t);
 
     void AddInst(X86Inst *inst) { assembly.push_back(inst); }
     void RestoreStack();
 
     // TreeMap management
     void AddToTreeMap(llvm::Instruction *instruction, Tree *t) {
-        treeMap.insert(std::pair<llvm::Instruction*, Tree*>(instruction, t));
+        instMap.insert(std::pair<llvm::Instruction*, Tree*>(instruction, t));
+    }
+    void AddToTreeMap(llvm::Argument *arg, Tree *t) {
+        argsMap.insert(std::pair<llvm::Argument*, Tree*>(arg, t));
     }
     Tree* FindFromTreeMap(llvm::Instruction *instruction) const {
-        auto it = treeMap.find(instruction);
-        if (it != treeMap.end())
+        auto it = instMap.find(instruction);
+        if (it != instMap.end())
+            return it->second;
+        return nullptr;
+    }
+    Tree* FindFromTreeMap(llvm::Argument *arg) const {
+        auto it = argsMap.find(arg);
+        if (it != argsMap.end())
             return it->second;
         return nullptr;
     }
@@ -85,6 +97,7 @@ private:
     std::string function_name;
     int label;
     int local_bytes;
+    int num_args;
 
     // information about instruction and registers
     RegisterAllocator allocator;
@@ -93,7 +106,8 @@ private:
     std::map<int, LiveRange*> liveness;
     std::map<Tree*, X86Operand*> locals;
     std::map<llvm::BasicBlock*, Tree*> labelMap;
-    std::map<llvm::Instruction*, Tree*> treeMap;
+    std::map<llvm::Instruction*, Tree*> instMap;
+    std::map<llvm::Argument*, Tree*> argsMap;
 };
 
 typedef FunctionState* FUNCTION_STATE;

@@ -10,18 +10,24 @@
 %term Trunc=36 ZExt=37 SExt=38 FPToUI=39 FPToSI=40 UIToFP=41 SIToFP=42 FPTrunc=43 FPExt=44 PtrToInt=45 IntToPtr=46 BitCast=47 AddrSpaceCast=48
 %term CleanupPad=49 CatchPad=50
 %term ICmp=51 FCmp=52 PHI=53 Call=54 Select=55 UserOp1=56 UserOp2=57 VAArg=58 ExtractElement=59 InsertElement=60 ShuffleVector=61 ExtractValue=62 InsertValue=63 LandingPad=64
-%term REG IMM MEM LABEL
+%term REG IMM MEM LABEL ARGS NOARGS
 
 %declare<void> stmt     <FUNCTION_STATE fstate>;
+%declare<void> value    <FUNCTION_STATE fstate>;
 %declare<void> reg      <FUNCTION_STATE fstate>;
 %declare<void> imm      <FUNCTION_STATE fstate>;
 %declare<void> mem      <FUNCTION_STATE fstate>;
 %declare<void> cond     <FUNCTION_STATE fstate>;
 %declare<void> label    <FUNCTION_STATE fstate>;
+%declare<void> args     <FUNCTION_STATE fstate>;
 %%
 
 stmt:   reg                 { return 1;                                         } = { $action[1](fstate); };
 stmt:   mem                 { return 1;                                         } = { $action[1](fstate); };
+
+value:  reg                 { $cost[0].cost = $cost[1].cost;                    } = { $action[1](fstate); };
+value:  imm                 { $cost[0].cost = $cost[1].cost;                    } = { $action[1](fstate); };
+value:  mem                 { $cost[0].cost = $cost[1].cost;                    } = { $action[1](fstate); };
 
 reg:    REG                 { $cost[0].cost = 1;                                } = { };
 imm:    Load(IMM)           { $cost[0].cost = 0;                                } = { };
@@ -82,7 +88,7 @@ reg:    Load(reg)           { $cost[0].cost = $cost[2].cost + 1;    } = {
              */
             $action[2](fstate);
             fstate->AssignVirtualReg($0, $2);    // assign a virtual register to the inst
-            fstate->CopyVirtualReg($0->GetValue(), $2->GetValue());
+            fstate->LoadFromReg($0->GetValue(), $2->GetValue());
             // this will record the ending in liveness range for a register
             // if the input is a register, and the register dies
             fstate->RecordLiveness($2);
@@ -132,6 +138,11 @@ mem:    Store(reg, mem)      { $cost[0].cost = $cost[2].cost + $cost[3].cost;   
             // if the input is a register, and the register dies
             fstate->RecordLiveness($2);
             fstate->RecordLiveness($3);
+        };
+mem:    Store(mem, mem)      { $cost[0].cost = $cost[2].cost + $cost[3].cost;    } = {
+            $action[2](fstate);
+            $action[3](fstate);
+            std::cerr << "leave the implementation to later\n";
         };
 reg:    Add(reg, reg)       { $cost[0].cost = $cost[2].cost + $cost[3].cost + 2;    } = {
             /*
@@ -219,6 +230,23 @@ reg:    Mul(reg, reg)       { $cost[0].cost = $cost[2].cost + $cost[3].cost + 4;
         };
 
 stmt:   cond                 { $cost[0].cost = $cost[1].cost;                       } = { };
+cond:   ICmp(imm, imm)       { $cost[0].cost = $cost[2].cost + $cost[3].cost;       } = { 
+            $action[2](fstate);
+            $action[3](fstate);
+            fstate->CreateVirtualReg($0);
+            fstate->GenerateMovStmt(
+                new X86Operand(fstate, OP_TYPE::X86Reg, $0->GetValue()),
+                new X86Operand(fstate, OP_TYPE::X86Imm, $2->GetValue())
+            );
+            fstate->GenerateBinaryStmt("sub", 
+                new X86Operand(fstate, OP_TYPE::X86Reg, $0->GetValue()),
+                new X86Operand(fstate, OP_TYPE::X86Imm, $3->GetValue())
+            );
+            // this will record the ending in liveness range for a register
+            // if the input is a register, and the register dies
+            fstate->RecordLiveness($2);
+            fstate->RecordLiveness($3);
+        };
 cond:   ICmp(reg, imm)       { $cost[0].cost = $cost[2].cost + $cost[3].cost;       } = { 
             $action[2](fstate);
             $action[3](fstate);
@@ -244,6 +272,19 @@ stmt:   Br(cond, label, label)   { $cost[0].cost = $cost[2].cost + $cost[3].cost
                     new X86Operand(fstate, OP_TYPE::X86Label, $3->GetValue())
             ));
             $action[4](fstate);
+            $action[3](fstate);
+        };
+reg:    Call(args)               { $cost[0].cost = $cost[2].cost + 5; } = {
+            $action[2](fstate);
+            std::cerr << "=== CALL FUNCTION ===" << std::endl;
+        };
+args:   NOARGS                  { $cost[0].cost = 0;                  } = {
+            // for args tree termination
+            std::cerr << "=== CALL ARGS TERMINATION ===" << std::endl;
+        };
+args:   ARGS(value, args)        { $cost[0].cost = $cost[2].cost + $cost[3].cost; } = {
+            std::cerr << "=== CALL ARGS EXPANSION ===" << std::endl;
+            // $action[2](fstate);
             $action[3](fstate);
         };
 %%

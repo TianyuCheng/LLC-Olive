@@ -4,8 +4,37 @@ Tree::~Tree() {
     for (Tree *ct : freeList) delete ct;
 }
 
+/**
+ * Turn n-ary tree into binary tree
+ * for argument matching
+ * */
+void Tree::KidsAsArguments() {
+    int n = GetNumKids();
+    if (n == 0) {
+        // if no arg is provided, then terminate it
+        AddChild(new Tree(NOARGS));
+    } else {
+        // if args are provided, then transform it into binary tree
+        std::vector<Tree*> copy = kids;
+        kids = std::vector<Tree*>();
+        
+        Tree *current = new Tree(ARGS);
+        this->AddChild(current);
+
+        for (int i = 0; i < n; i++) {
+            Tree *args;
+            if (i != n - 1) args = new Tree(ARGS);
+            else            args = new Tree(NOARGS);
+            current->AddChild(copy[i]);
+            current->AddChild(args);
+            current = args;
+        }
+    }
+}
+
 void Tree::AddChild(Tree *ct) {
     kids.push_back(ct);
+    level = std::max(level, ct->GetLevel() + 1);
 }
 
 Tree* Tree::GetChild(int n) {
@@ -73,12 +102,18 @@ void Tree::CastFP(llvm::ConstantFP *cnst) {
     this->AddChild(ct);
 }
 
-void Tree::DisplayTree(Tree *t, int indent) {
+void Tree::DisplayTree(int indent) {
     for (int i = 0; i < 2 * indent; i++)
         std::cerr << " ";
-    switch (t->op) {
+    switch (op) {
         case DUMMY:
             std::cerr << "op: " << "dummy" << std::endl;
+            break;
+        case ARGS:
+            std::cerr << "op: " << "args" << std::endl;
+            break;
+        case NOARGS:
+            std::cerr << "op: " << "noargs" << std::endl;
             break;
         case LABEL:
             std::cerr << "op: " << "label" << std::endl;
@@ -93,10 +128,10 @@ void Tree::DisplayTree(Tree *t, int indent) {
             std::cerr << "op: " << "mem" << std::endl;
             break;
         default:
-            std::cerr << "op: " << llvm::Instruction::getOpcodeName(t->op) << "(" << t->op << ")" << "\tval: " << t->val.val.i32s << std::endl;
+            std::cerr << "op: " << llvm::Instruction::getOpcodeName(op) << "(" << op << ")" << std::endl;
     }
-    std::cerr << "child num: " << kids.size() << std::endl;
-    // for (int i = 0; i < kids.size(); i++)
-    //     DisplayTree(kids[i], indent + 1);
+    for (int i = 0; i < kids.size(); i++) {
+        kids[i]->DisplayTree(indent + 1);
+    }
 }
 

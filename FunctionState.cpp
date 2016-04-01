@@ -60,7 +60,7 @@ Tree* FunctionState::CreateLabel(llvm::BasicBlock *bb) {
 
     // this basic block has never been seen,
     // assign a new label, add it to the label map
-    Tree *treeLabel = new Tree(LABEL, nullptr, nullptr);
+    Tree *treeLabel = new Tree(LABEL);
     treeLabel->SetValue(label++);
     labelMap.insert(std::pair<llvm::BasicBlock*, Tree*>(bb, treeLabel));
     return treeLabel;
@@ -69,17 +69,16 @@ Tree* FunctionState::CreateLabel(llvm::BasicBlock *bb) {
 void FunctionState::CreateLocal(Tree *t, int bytes) {
     // already allocated
     auto it = locals.find(t);
-    if (it != locals.end())
-        return;
+    if (it != locals.end()) return;
 
     // now allocate local variable
     if (bytes % 4 != 0) bytes += 4 - bytes % 4;
     local_bytes += bytes;
     X86Operand *local = new X86Operand(this, OP_TYPE::X86Mem, 
-            new X86Operand(this, RBP),                     // base_address, should be $rbp
+            new X86Operand(this, RBP),                     // base_address, should be rbp
             new X86Operand(this, OP_TYPE::X86Imm, 0),      // displacement
             0,                                             // multiplier    
-            local_bytes - bytes);
+            -(local_bytes - bytes));                       // negate because locals are below rbp
     // save the local variable memory address for future use
     locals.insert(std::pair<Tree*, X86Operand*>(t, local));
 }
@@ -93,14 +92,46 @@ X86Operand* FunctionState::GetLocalMemoryAddress(Tree *t) {
 void FunctionState::RestoreStack() {
     if (local_bytes > 0)
         assembly.push_back(new X86Inst("addq",
-                new X86Operand(this, RSP),   // should be $rsp
+                new X86Operand(this, RSP),   // should be rsp
                 new X86Operand(this, OP_TYPE::X86Imm, local_bytes)
         ));
+}
+
+void FunctionState::CreateArgument(llvm::Argument *arg) {
+    Tree *t = nullptr;
+    X86Operand *op = nullptr;
+
+    if (num_args < 6) {                 // first six parameters are passed in registers
+        t = new Tree(REG, params_regs[num_args]);
+        CreatePhysicalReg(t, params_regs[num_args]);
+        op = new X86Operand(this, t->GetValue().AsVirtualReg());     // initialized as a physical register by constructor
+        // insert into liveness: should be live from start
+        int startLine = assembly.size();
+        liveness.insert(std::pair<int, LiveRange*>(t->GetValue().AsVirtualReg(), new LiveRange(startLine)));
+    } else {
+        t = new Tree(MEM);
+        op = new X86Operand(this, OP_TYPE::X86Mem, 
+            new X86Operand(this, RBP),                     // base_address, should be rbp
+            new X86Operand(this, OP_TYPE::X86Imm, 0),      // displacement
+            0,                                             // multiplier    
+            8 * num_args);                                 // offset
+    }
+    argsMap.insert(std::pair<llvm::Argument*, Tree*>(arg, t));
+    locals.insert(std::pair<Tree*, X86Operand*>(t, op));
+    num_args++;
 }
 
 void FunctionState::CreateVirtualReg(Tree *t) {
     int v = virtual2machine.size();
     virtual2machine.push_back(-1);      // -1 not allocated
+    t->val = v;
+    t->UseAsRegister();
+    RecordLiveStart(t);                 // newly allocated virtual register must be added to liveness
+}
+
+void FunctionState::CreatePhysicalReg(Tree *t, Register r) {
+    int v = virtual2machine.size();
+    virtual2machine.push_back(r);      // explicitly assign 
     t->val = v;
     t->UseAsRegister();
     RecordLiveStart(t);                 // newly allocated virtual register must be added to liveness
@@ -116,16 +147,23 @@ void FunctionState::AssignVirtualReg(Tree *lhs, Tree *rhs) {
         // we will still be using rhs in the future, 
         // so better not overwrite the rhs
         CreateVirtualReg(lhs);      // assign a virtual register to the inst
-        CopyVirtualReg(lhs->val, rhs->val);
+        LoadFromReg(lhs->val, rhs->val);
     }
 }
 
-void FunctionState::CopyVirtualReg(VALUE &dst, VALUE &src) {
+void FunctionState::LoadFromReg(VALUE &dst, VALUE &src) {
     if (src.val.i32s == dst.val.i32s) return;
     // only copy register when src and dst are different
     GenerateMovStmt(
         new X86Operand(this, OP_TYPE::X86Reg, dst),
         new X86Operand(this, OP_TYPE::X86Reg, src)
+    );
+}
+
+void FunctionState::LoadFromImm(VALUE &dst, VALUE &src) {
+    GenerateMovStmt(
+        new X86Operand(this, OP_TYPE::X86Reg, dst),
+        new X86Operand(this, OP_TYPE::X86Imm, src)
     );
 }
 

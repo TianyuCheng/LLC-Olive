@@ -1,6 +1,7 @@
 #ifndef TREE_H
 #define TREE_H
 
+#include <cmath>
 #include <iostream>
 #include <sstream>
 #include <fstream>
@@ -38,7 +39,6 @@ public:
 
     int GetOpCode() const { 
         // std::cerr << "GET OPCODE: " << op << std::endl;
-        // if (op < 0 || op > LABEL) return DUMMY;     // HACK: somehow DUMMY data is corrupted
         return op; 
     }
     
@@ -60,6 +60,7 @@ public:
     Tree** GetKids() { return &kids[0]; }
     void AddChild(Tree *ct);
     Tree* GetChild(int n);
+    void KidsAsArguments();
 
     Tree* GetTreeRef() { refcnt++; return this; }
     void RemoveRef() { refcnt--; }
@@ -70,14 +71,14 @@ public:
     void CastInt(llvm::ConstantInt *cnst);
     void CastFP(llvm::ConstantFP *cnst);
 
-    void DisplayTree() { DisplayTree(this, 0); std::cerr << "\n"; }
+    void DisplayTree() { DisplayTree(0); std::cerr << "\n"; }
 
     // leave these attributes public for simplicity
 	struct { struct burm_state *state; } x;
 	VALUE val;
 
 private:
-    void DisplayTree(Tree *t, int indent = 0);
+    void DisplayTree(int indent);
 
 private:
 	int op;
