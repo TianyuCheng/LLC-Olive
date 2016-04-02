@@ -334,7 +334,7 @@ void FunctionToAssembly(Function &func) {
     fstate.PrintAssembly(std::cerr);
 
     // clean up
-    for (Tree *t : treeList) delete t;
+    // for (Tree *t : treeList) delete t;
 }
 
 int main(int argc, char *argv[])
@@ -352,7 +352,7 @@ int main(int argc, char *argv[])
     // obtain a function list in module, and iterate over function
     Module::FunctionListType &function_list = module->getFunctionList();
     for (Function &func : function_list) {
-        FunctionToIntervals(func);
+        // FunctionToIntervals(func);
         FunctionToAssembly(func);
     }
 

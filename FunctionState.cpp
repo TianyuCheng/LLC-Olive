@@ -15,6 +15,9 @@ FunctionState::~FunctionState() {
         delete it->second;
     for (auto it = liveness.begin(); it != liveness.end(); ++it)
         delete it->second;
+    for (auto operand : freeList) {
+        delete operand;
+    }
 }
 
 void FunctionState::PrintAssembly(std::ostream &out) {
@@ -42,6 +45,7 @@ void FunctionState::PrintAssembly(std::ostream &out) {
     // TODO: remember to print function begin and ends
     for (X86Inst *inst : assembly)
         out << *inst;
+
     for(auto it = locals.begin(); it != locals.end(); ++it ) {
         delete it->second;
     }
@@ -198,14 +202,14 @@ void FunctionState::GenerateBinaryStmt(const char *op_raw, Tree *dst, Tree *src)
 
 void FunctionState::GeneratePushStmt(Tree *t) {
     if (t->GetOpCode() == REG) {
-        AddInst(new X86Inst("pushq", 
-            new X86Operand(this, OP_TYPE::X86Reg, t->GetValue().AsVirtualReg())
-        ));
+        auto operand = new X86Operand(this, OP_TYPE::X86Reg, t->GetValue().AsVirtualReg());
+        AddInst(new X86Inst("pushq", operand));
+        freeList.push_back(operand);
     }
     else if (t->GetOpCode() == IMM) {
-        AddInst(new X86Inst("pushq", 
-            new X86Operand(this, OP_TYPE::X86Imm, t->GetValue())
-        ));
+        auto operand = new X86Operand(this, OP_TYPE::X86Imm, t->GetValue().AsVirtualReg());
+        AddInst(new X86Inst("pushq", operand));
+        freeList.push_back(operand);
     }
     // else if (t->GetOpCode() == MEM) {
     //     GenerateMovStmt(

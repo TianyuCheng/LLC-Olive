@@ -109,6 +109,7 @@ private:
     std::map<llvm::BasicBlock*, Tree*> labelMap;
     std::map<llvm::Instruction*, Tree*> instMap;
     std::map<llvm::Argument*, Tree*> argsMap;
+    std::vector<X86Operand*> freeList;
 };
 
 typedef FunctionState* FUNCTION_STATE;
@@ -123,7 +124,7 @@ public:
 
     X86Operand(FUNCTION_STATE fs, int r)
         : fstate(fs), type(OP_TYPE::X86Reg), val(r), explicit_reg(true), base_address(nullptr), displacement(nullptr) {
-            std::cerr << "CTREATE A PHYSICAL REGISTER: " << registers[r] << std::endl;
+            // std::cerr << "CREATE A PHYSICAL REGISTER: " << registers[r] << std::endl;
     }
 
     X86Operand(FUNCTION_STATE fs, OP_TYPE t, VALUE v) 
@@ -138,8 +139,8 @@ public:
     }
 
     virtual ~X86Operand() {
-        if (base_address) { delete base_address; base_address = nullptr; }
-        if (displacement) { delete displacement; displacement = nullptr; }
+        // if (base_address) { delete base_address; base_address = nullptr; }
+        // if (displacement) { delete displacement; displacement = nullptr; }
     }
 
     friend std::ostream& operator<<(std::ostream& out, X86Operand &op) {
