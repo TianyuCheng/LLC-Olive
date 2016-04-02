@@ -91,6 +91,7 @@ public:
 	struct { struct burm_state *state; } x;
 	VALUE val;
 
+    void SetX86Operand(X86Operand *oper) { operand = oper; }
     X86Operand *AsX86Operand(FunctionState *fs);
 
 private:

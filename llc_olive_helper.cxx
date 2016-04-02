@@ -1,4 +1,4 @@
-#define VERBOSE  0
+#define VERBOSE  4
 
 using namespace llvm;
 
@@ -334,7 +334,7 @@ void FunctionToAssembly(Function &func) {
     fstate.PrintAssembly(std::cerr);
 
     // clean up
-    // for (Tree *t : treeList) delete t;
+    for (Tree *t : treeList) delete t;
 }
 
 int main(int argc, char *argv[])

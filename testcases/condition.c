@@ -1,7 +1,7 @@
 int main()
 {
-    int r = 1;
-    int ret;
+    long long r = 1;
+    long long ret;
 
     if (r > 1)
         r = 10;

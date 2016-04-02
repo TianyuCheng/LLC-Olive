@@ -1,7 +1,7 @@
 int main()
 {
-    int i;
-    int ret = 0;
+    long long i;
+    long long ret = 0;
     for (i = 0; i < 10; i++) {
         ret += i;
     }

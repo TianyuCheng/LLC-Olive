@@ -2,9 +2,9 @@
 #include "stdio.h"
 
 int main () {
-    int ret = 0;
-    int x = 40;
-    int y = 60;
+    long long ret = 0;
+    long long x = 40;
+    long long y = 60;
     ret = x + y;
     return ret;
 }

@@ -38,9 +38,19 @@ void FunctionState::PrintAssembly(std::ostream &out) {
     if (std::string(function_name) == std::string("main"))
         out << "\t.globl" << std::endl;
 
+    // prolog
     out << function_name  << ":" << std::endl;
     out << "\tpushq\t%rbp" << std::endl;
     out << "\tsubq\t%rsp, $" << local_bytes << std::endl;
+
+    // epilog
+    std::stringstream ss;
+    ss << "." << function_name << "End";
+    std::string s = ss.str();
+    GenerateLabelStmt(s.c_str());
+    RestoreStack();
+    AddInst(new X86Inst("leave"));
+    AddInst(new X86Inst("ret"));
 
     // TODO: remember to print function begin and ends
     for (X86Inst *inst : assembly)
@@ -188,6 +198,10 @@ void FunctionState::GenerateMovStmt(Tree *dst, Tree *src) {
     GenerateBinaryStmt("mov", dst, src);
 }
 
+void FunctionState::GenerateMovStmt(X86Operand *dst, X86Operand *src) {
+    GenerateBinaryStmt("mov", dst, src);
+}
+
 void FunctionState::GenerateBinaryStmt(const char *op_raw, Tree *dst, Tree *src) {
     // Keep this one-line function, since we might want 
     // to migrate to different operand sizes, so we will
@@ -198,6 +212,15 @@ void FunctionState::GenerateBinaryStmt(const char *op_raw, Tree *dst, Tree *src)
         dst->AsX86Operand(this), 
         src->AsX86Operand(this)
     ));
+}
+
+void FunctionState::GenerateBinaryStmt(const char *op_raw, X86Operand *dst, X86Operand *src) {
+    // Keep this one-line function, since we might want 
+    // to migrate to different operand sizes, so we will
+    // be using suffixes b, w, l, q according to the
+    // operands
+    std::string op = std::string(op_raw) + "q";
+    AddInst(new X86Inst(op.c_str(), dst, src));
 }
 
 void FunctionState::GeneratePushStmt(Tree *t) {

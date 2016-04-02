@@ -42,9 +42,12 @@ public:
     void GenerateLabelStmt(const char *label);
     void GenerateLabelStmt(Tree *v);
     void GenerateMovStmt(Tree *dst, Tree *src);
+    void GenerateMovStmt(X86Operand *dst, X86Operand *src);
     void GenerateBinaryStmt(const char *op, Tree *dst, Tree *src);
+    void GenerateBinaryStmt(const char *op, X86Operand *dst, X86Operand *src);
     void GeneratePushStmt(Tree *t);
 
+    std::string GetFuncName() const { return function_name; }
     std::string GetMCRegAt(int index) const { 
 #if 1
         std::cerr << "index: " << index << std::endl;

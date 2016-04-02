@@ -32,17 +32,17 @@ typedef struct VALUE {
         isSigned = false;
     }
 
-    VALUE(bool i)     { bitWidth = 1;  isSigned = true;  isFP = false; val.b = i;    }
-    VALUE(int8_t i)   { bitWidth =  4; isSigned = true;  isFP = false; val.i8s = i;  }
-    VALUE(int16_t i)  { bitWidth = 16; isSigned = true;  isFP = false; val.i16s = i; }
-    VALUE(int32_t i)  { bitWidth = 32; isSigned = true;  isFP = false; val.i32s = i; }
-    VALUE(int64_t i)  { bitWidth = 64; isSigned = true;  isFP = false; val.i64s = i; }
-    VALUE(uint8_t i)  { bitWidth =  8; isSigned = false; isFP = false; val.i8u = i;  }
-    VALUE(uint16_t i) { bitWidth = 16; isSigned = false; isFP = false; val.i16u = i; }
-    VALUE(uint32_t i) { bitWidth = 32; isSigned = false; isFP = false; val.i32u = i; }
-    VALUE(uint64_t i) { bitWidth = 64; isSigned = false; isFP = false; val.i64u = i; }
-    VALUE(float f)    { bitWidth = 32;                   isFP = true ; val.f32 = f;  }
-    VALUE(double f)   { bitWidth = 64;                   isFP = true ; val.f32 = f;  }
+    VALUE(bool i)     { val.i64u = 0; bitWidth = 1;  isSigned = true;  isFP = false; val.b = i;    }
+    VALUE(int8_t i)   { val.i64u = 0; bitWidth =  4; isSigned = true;  isFP = false; val.i8s = i;  }
+    VALUE(int16_t i)  { val.i64u = 0; bitWidth = 16; isSigned = true;  isFP = false; val.i16s = i; }
+    VALUE(int32_t i)  { val.i64u = 0; bitWidth = 32; isSigned = true;  isFP = false; val.i32s = i; }
+    VALUE(int64_t i)  { val.i64u = 0; bitWidth = 64; isSigned = true;  isFP = false; val.i64s = i; }
+    VALUE(uint8_t i)  { val.i64u = 0; bitWidth =  8; isSigned = false; isFP = false; val.i8u = i;  }
+    VALUE(uint16_t i) { val.i64u = 0; bitWidth = 16; isSigned = false; isFP = false; val.i16u = i; }
+    VALUE(uint32_t i) { val.i64u = 0; bitWidth = 32; isSigned = false; isFP = false; val.i32u = i; }
+    VALUE(uint64_t i) { val.i64u = 0; bitWidth = 64; isSigned = false; isFP = false; val.i64u = i; }
+    VALUE(float f)    { val.i64u = 0; bitWidth = 32;                   isFP = true ; val.f32 = f;  }
+    VALUE(double f)   { val.i64u = 0; bitWidth = 64;                   isFP = true ; val.f32 = f;  }
 
     int AsVirtualReg() const { return val.i32s; }       // some time a tree node to represent a register
     const char* AsLabel() const {
