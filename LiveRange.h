@@ -3,7 +3,7 @@
 
 #include <string>
 #include <vector>
-#include <climit>
+#include <climits>
 
 struct LiveRange {
     int startpoint;
@@ -52,13 +52,13 @@ struct Interval {
             if (updated_startpoint <= liveranges[i].startpoint && 
                     liveranges[i].endpoint <= updated_endpoint) {
                 if (!include_found) include_found = !include_found;
-                max_include_idx = max(max_include_idx, i);
-                min_include_idx = min(min_include_idx, i);
+                max_include_idx = std::max(max_include_idx, i);
+                min_include_idx = std::min(min_include_idx, i);
             }
 
         // 4. modify liveranges
         auto begin_iter = liveranges.begin();
-        if (found)
+        if (include_found)
             liveranges.erase(begin_iter+min_include_idx, begin_iter+max_include_idx+1);
         begin_iter = liveranges.begin();
         LiveRange new_insert_lr (updated_startpoint, updated_endpoint);
@@ -74,12 +74,11 @@ struct Interval {
                 break;
             } else if (pos == lr.endpoint) {
                 // case 2: shorten point is exactly the endpoint (impossible)
-                assert(false && "shorten point cannot be the endpoint")
+                assert(false && "shorten point cannot be the endpoint");
             }
         }
     }
-
-}
+};
 
 
 #endif /* end of include guard: LIVERANGE_H */
