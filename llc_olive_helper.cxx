@@ -142,26 +142,45 @@ void BasicBlockToExprTrees(FunctionState &fstate,
     } // end of instruction loop in a basic block
 }
 
+void get_opr_counter (Function &func, &std::map<Instruction*, int>& inst_opr_counter, std::map<BasicBlock*, pair<int,int>>& bb_opr_counter) {
+    Function::BasicBlockListType &basic_blocks = func.getBasicBlockList();
+    int counter = 0;
+    for (auto bb = basic_blocks.begin(); bb != basic_blocks.end(); bb++) {
+        int from = counter;
+        for (auto inst=bb->begin(); inst!=bb->end(); inst++) {
+            unsigned opcode = inst->getOpcode();
+            if (opcode != PHI) { // only assign number to non-phi instruction 
+                inst_opr_counter.insert(std::make_pair(&(*inst), counter));
+                counter += 2;
+            }
+        }
+        int to = counter;
+        // left inclusive, right exclusive
+        bb_opr_counter.insert(std::make_pair(&(*bb)), std::make_pair(from,to));
+    }
+    return ;
+}
+
 void FunctionToIntervals (Function &func) {
     std::map<BasicBlock*, std::set<int>*> livein;
     std::map<Value*, int> v2vr_map;
-    std::map<int, LiveRange*> all_intervals;
+    std::map<int, Interval*> all_intervals;
+    std::map<Instruction*, int> inst_opr_counter;
+    std::map<BasicBlock*, int> bb_opr_counter;
+    get_opr_counter(func, inst_opr_counter, bb_opr_counter);
     int vr_count = 0;
     Function::BasicBlockListType &basic_blocks = func.getBasicBlockList();
-    // FIXME: presume bb.begin(), bb.end() is reverse order iteration
+    // FOR EACH block in reverse order
     for (auto bb = basic_blocks.rbegin(); bb != basic_blocks.rend(); bb++) {
+        std::set<int> live;
         BasicBlock *block = &(*bb);
         // 1. get union of successor.livein FOR EACH successor
         TerminatorInst* termInst = bb->getTerminator();
         int numSuccessors = termInst->getNumSuccessors();
-        std::set<int> live;
-        if (!numSuccessors) {
-            livein.insert(std::pair<BasicBlock*, std::set<int>*>(block, &live));
-        }
         for (int i = 0; i < numSuccessors; i++) {
             BasicBlock* succ = termInst->getSuccessor(i);
             auto it = livein.find(succ);
-            assert((it != livein.end()) && "find succ fails");
+            assert((it != livein.end()) && "find succ fails at 1.");
             std::set<int>* succ_livein = it->second;
             for (auto it=succ_livein->begin(); it!=succ_livein->end(); it++)
                 live.insert(*it);
@@ -174,6 +193,7 @@ void FunctionToIntervals (Function &func) {
                 if (opcode != PHI) continue;
                 int num_operands = inst->getNumOperands();
                 for (int j = 0; j < num_operands; j++) {
+                    // TODO: particularly consider constant type
                     Value *v = inst->getOperand(j);
                     if (v2vr_map.find(v) == v2vr_map.end()) 
                         // create an new virtual register number and assign to it
@@ -183,35 +203,62 @@ void FunctionToIntervals (Function &func) {
             }
         }
         // 3. add ranges FOR EACH opd (virtual register) in live
+        pair<int,int> opr_pair;
+        if (bb_opr_counter.find(block) == bb_opr_counter.end())
+            assert(false && "BasicBlock not found in bb_opr_counter!");
+        else 
+            opr_pair = bb_opr_counter[block];
+        int bb_from = opr_pair.first, bb_to = opr_pair.second;
         for (int opd : live) {
-            int bbfrom = -1, bbto = -1;
             if (all_intervals.find(opd) == all_intervals.end()) {
-                LiveRange lr (bbfrom, bbto);
+                LiveRange lr (bb_from, bb_to);
                 all_intervals[opd] = &lr; 
             } else {
-                // FIXME: check the definition of addRange()
-                // use min-max or add another interval?
-                LiveRange* lr = all_intervals[opd];
-                lr->startpoint = std::min(lr->startpoint, bbfrom);
-                lr->endpoint = std::max(lr->endpoint, bbto);
+                all_intervals[opd].addRange(bbfrom, bbto);
             }
         }
         // 4. 
-        
+        for (auto inst=bb->rbegin(); inst!=bb->rend(); inst++) {
+            unsigned opcode = inst->getOpcode();
+            if (opcode == PHI) continue; // FIXME: check if non-phi instruction
+            // FOR EACH output operand of inst
+            if (v2vr_map.find(inst) == v2vr_map.end()) {
+                assert(false && "inst is not found in 4.");
+            } else {
+                int opid = -1; // TODO: 
+                all_intervals[v2vr_map[inst]].setFrom(opid);
+                live.erase(v2vr_map[inst]);
+            }
+            live.erase(v2vr_map[inst]);
+            // FOR EACH input operand of inst
+            int num_operands = inst->getNumOperands();
+            for (int j = 0; j < num_operands; j++) {
+                Value *v = inst->getOperand(j);
+                if (v2vr_map.find(v) == v2vr_map.end()) {
+                    assert(false && "v is not found in 4.");
+                } else {
+                    int bfrom = -1, opid = -1; // TODO:
+                    all_intervals[v2vr_map[v]].addRange(bfrom, opid);
+                    live.insert(v2vr_map[v]);
+                }
+            }
+        }
         // 5. 
         for (auto inst=bb->begin(); inst!=bb->end(); inst++) {
             unsigned opcode = inst->getOpcode();
             if (opcode != PHI) continue;
-            int num_operands = inst->getNumOperands();
-            for (int j = 0; j < num_operands; j++) {
-                Value *v = inst->getOperand(j);
-                if (v2vr_map.find(v) == v2vr_map.end()) continue;
-                else live.erase(v2vr_map[v]);
+            if (v2vr_map.find(inst) == v2vr_map.end()) continue;
+            else live.erase(v2vr_map[v]);
+        }
+        // 6. if b is loop header
+        if ( block ==  ) {
+            ;
+            for (int opd : live) {
+                int bfrom = -1, loopEndTo = -1;
+                all_intervals[opd].addRange(bfrom, loopEndTo);
             }
         }
-        // 6. 
-
-        // 7.
+        // 7. update back to livein
         livein.insert(std::pair<BasicBlock*, std::set<int>*>(block, &live));
     }
 }

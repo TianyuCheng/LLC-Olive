@@ -1,5 +1,17 @@
 #include "RegisterAllocator.h"
 
+void RegisterAllocator::buildIntervals() {
+    
+}
+
+void RegisterAllocator::allocateFreeReg() {
+
+}
+
+void RegisterAllocator::allocateBlockedReg() {
+
+}
+
 void RegisterAllocator::linearScanAllocate () {
     this->active_set.clear();
     for (int i = 0; i < all_intervals.size(); i ++) {
