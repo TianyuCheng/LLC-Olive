@@ -164,13 +164,15 @@ void get_opr_counter (Function &func, std::map<Instruction*, int>& inst_opr_coun
 }
 
 void FunctionToIntervals (Function &func) {
+    // Preliminary: local variables
     std::map<BasicBlock*, std::set<int>*> livein;
     std::map<Value*, int> v2vr_map;
     std::map<int, Interval*> all_intervals;
     std::map<Instruction*, int> inst_opr_counter;
     std::map<BasicBlock*, std::pair<int,int>> bb_opr_counter;
-    get_opr_counter(func, inst_opr_counter, bb_opr_counter);
     int vr_count = 0;
+    // Preliminary: get operation numbers and all basic blocks within functions
+    get_opr_counter(func, inst_opr_counter, bb_opr_counter);
     Function::BasicBlockListType &basic_blocks = func.getBasicBlockList();
     // FOR EACH block in reverse order
     for (auto bb = basic_blocks.rbegin(); bb != basic_blocks.rend(); bb++) {
@@ -220,16 +222,20 @@ void FunctionToIntervals (Function &func) {
             }
         }
         // 4. 
-        for (auto inst=bb->rbegin(); inst!=bb->rend(); inst++) {
+        for (auto it=bb->rbegin(); it!=bb->rend(); it++) {
+            Instruction* inst = &(*it);
             unsigned opcode = inst->getOpcode();
             if (opcode == PHI) continue; // FIXME: check if non-phi instruction
+            int opid; 
+            if (inst_opr_counter.find(inst) == inst_opr_counter.end())
+                assert(false && "inst not found in inst_opr_counter!");
+            else opid = inst_opr_counter[inst];
             // FOR EACH output operand of inst
             Value* v = (Value *) (&(* inst));
             if (v2vr_map.find(v) == v2vr_map.end()) {
                 assert(false && "inst is not found in 4.");
             } else {
-                int opid = -1; // TODO: 
-                Value* v = (Value *) (&(* inst));
+                Value* v = (Value *) (&(* inst)); 
                 all_intervals[v2vr_map[v]]->setFrom(opid);
                 live.erase(v2vr_map[v]);
             }
@@ -240,8 +246,7 @@ void FunctionToIntervals (Function &func) {
                 if (v2vr_map.find(v) == v2vr_map.end()) {
                     assert(false && "v is not found in 4.");
                 } else {
-                    int bfrom = -1, opid = -1; // TODO:
-                    all_intervals[v2vr_map[v]]->addRange(bfrom, opid);
+                    all_intervals[v2vr_map[v]]->addRange(bb_from, opid);
                     live.insert(v2vr_map[v]);
                 }
             }
@@ -255,17 +260,21 @@ void FunctionToIntervals (Function &func) {
             else live.erase(v2vr_map[v]);
         }
         // 6. if b is loop header
-        /*
-        if ( block ==  ) {
-            ;
+        LoopInfo& loopinfo = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+        if (loopinfo.isLoopHeader(block)) {
+            Loop* cur_loop = loopinfo.getLoopFor(block);
+            BasicBlock* loopEnd = &(*(cur_loop->rbegin()));
+            int loopEndTo;
+            if (bb_opr_counter.find(loopEnd) == bb_opr_counter.end())
+                assert(false && "BasicBlock LoopEnd not found in bb_opr_counter!");
+            else 
+                loopEndTo = bb_opr_counter[loopEnd].second;           
             for (int opd : live) {
-                int bfrom = -1, loopEndTo = -1;
-                all_intervals[opd]->addRange(bfrom, loopEndTo);
+                all_intervals[opd]->addRange(bb_from, loopEndTo);
             }
         }
-        */
         // 7. update back to livein
-        livein.insert(std::pair<BasicBlock*, std::set<int>*>(block, &live));
+        livein.insert(std::make_pair<BasicBlock*, std::set<int>*>(block, &live));
     }
 }
 

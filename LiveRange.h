@@ -33,7 +33,6 @@ class Interval {
         LiveRange lr (start, stop);
         liveranges.push_back(lr);
     }
-
     void addRange(int start, int end) {
         // 1. look for those live ranges where start and end reside
         int start_lr_idx = -1, end_lr_idx = -1;
