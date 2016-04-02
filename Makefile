@@ -45,7 +45,7 @@ test: clean $(EXE) $(bitcodes) $(assembly)
 	$(EXE) --num_regs=$(NUM_REGS) $< -o $@
 
 %.bc: %.c
-	@$(CC) -O0 -emit-llvm $< -S -o $@
+	@$(CC) -O0 -emit-llvm $< -S -w -o $@
 
 clean:
 	@rm -rf $(EXE)

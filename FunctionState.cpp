@@ -24,9 +24,11 @@ void FunctionState::PrintAssembly(std::ostream &out) {
     // print assembly to file
     
     // pass liveness analysis to register allocator
-    allocator.set_intervals(liveness);
+    /*
+       allocator.set_intervals(liveness);
     allocator.linearScanAllocate();
     virtual2machine = allocator.get_virtual2machine();
+    */
 
     // print function entrance
     // TODO: make these a part of the assembly code

@@ -144,7 +144,7 @@ void BasicBlockToExprTrees(FunctionState &fstate,
     } // end of instruction loop in a basic block
 }
 
-void get_opr_counter (Function &func, &std::map<Instruction*, int>& inst_opr_counter, std::map<BasicBlock*, pair<int,int>>& bb_opr_counter) {
+void get_opr_counter (Function &func, std::map<Instruction*, int>& inst_opr_counter, std::map<BasicBlock*, std::pair<int,int>>& bb_opr_counter) {
     Function::BasicBlockListType &basic_blocks = func.getBasicBlockList();
     int counter = 0;
     for (auto bb = basic_blocks.begin(); bb != basic_blocks.end(); bb++) {
@@ -158,7 +158,7 @@ void get_opr_counter (Function &func, &std::map<Instruction*, int>& inst_opr_cou
         }
         int to = counter;
         // left inclusive, right exclusive
-        bb_opr_counter.insert(std::make_pair(&(*bb)), std::make_pair(from,to));
+        bb_opr_counter.insert(std::make_pair(&(*bb), std::make_pair(from,to)));
     }
     return ;
 }
@@ -168,7 +168,7 @@ void FunctionToIntervals (Function &func) {
     std::map<Value*, int> v2vr_map;
     std::map<int, Interval*> all_intervals;
     std::map<Instruction*, int> inst_opr_counter;
-    std::map<BasicBlock*, int> bb_opr_counter;
+    std::map<BasicBlock*, std::pair<int,int>> bb_opr_counter;
     get_opr_counter(func, inst_opr_counter, bb_opr_counter);
     int vr_count = 0;
     Function::BasicBlockListType &basic_blocks = func.getBasicBlockList();
@@ -205,7 +205,7 @@ void FunctionToIntervals (Function &func) {
             }
         }
         // 3. add ranges FOR EACH opd (virtual register) in live
-        pair<int,int> opr_pair;
+        std::pair<int,int> opr_pair;
         if (bb_opr_counter.find(block) == bb_opr_counter.end())
             assert(false && "BasicBlock not found in bb_opr_counter!");
         else 
@@ -213,10 +213,10 @@ void FunctionToIntervals (Function &func) {
         int bb_from = opr_pair.first, bb_to = opr_pair.second;
         for (int opd : live) {
             if (all_intervals.find(opd) == all_intervals.end()) {
-                LiveRange lr (bb_from, bb_to);
-                all_intervals[opd] = &lr; 
+                Interval interval (bb_from, bb_to);
+                all_intervals.insert(std::make_pair(opd, &interval)); 
             } else {
-                all_intervals[opd].addRange(bbfrom, bbto);
+                all_intervals[opd]->addRange(bb_from, bb_to);
             }
         }
         // 4. 
@@ -224,14 +224,15 @@ void FunctionToIntervals (Function &func) {
             unsigned opcode = inst->getOpcode();
             if (opcode == PHI) continue; // FIXME: check if non-phi instruction
             // FOR EACH output operand of inst
-            if (v2vr_map.find(inst) == v2vr_map.end()) {
+            Value* v = (Value *) (&(* inst));
+            if (v2vr_map.find(v) == v2vr_map.end()) {
                 assert(false && "inst is not found in 4.");
             } else {
                 int opid = -1; // TODO: 
-                all_intervals[v2vr_map[inst]].setFrom(opid);
-                live.erase(v2vr_map[inst]);
+                Value* v = (Value *) (&(* inst));
+                all_intervals[v2vr_map[v]]->setFrom(opid);
+                live.erase(v2vr_map[v]);
             }
-            live.erase(v2vr_map[inst]);
             // FOR EACH input operand of inst
             int num_operands = inst->getNumOperands();
             for (int j = 0; j < num_operands; j++) {
@@ -240,7 +241,7 @@ void FunctionToIntervals (Function &func) {
                     assert(false && "v is not found in 4.");
                 } else {
                     int bfrom = -1, opid = -1; // TODO:
-                    all_intervals[v2vr_map[v]].addRange(bfrom, opid);
+                    all_intervals[v2vr_map[v]]->addRange(bfrom, opid);
                     live.insert(v2vr_map[v]);
                 }
             }
@@ -249,17 +250,20 @@ void FunctionToIntervals (Function &func) {
         for (auto inst=bb->begin(); inst!=bb->end(); inst++) {
             unsigned opcode = inst->getOpcode();
             if (opcode != PHI) continue;
-            if (v2vr_map.find(inst) == v2vr_map.end()) continue;
+            Value* v = (Value *) (&(* inst));
+            if (v2vr_map.find(v) == v2vr_map.end()) continue;
             else live.erase(v2vr_map[v]);
         }
         // 6. if b is loop header
+        /*
         if ( block ==  ) {
             ;
             for (int opd : live) {
                 int bfrom = -1, loopEndTo = -1;
-                all_intervals[opd].addRange(bfrom, loopEndTo);
+                all_intervals[opd]->addRange(bfrom, loopEndTo);
             }
         }
+        */
         // 7. update back to livein
         livein.insert(std::pair<BasicBlock*, std::set<int>*>(block, &live));
     }
@@ -306,7 +310,7 @@ void FunctionToAssembly(Function &func) {
 
         // iterate through tree list for each individual instruction tree
         // replace the complicated/common tree expression with registers
-        for (int i = size; i < treeList.size(); i++) {
+        for (unsigned i = size; i < treeList.size(); i++) {
             Tree *t = treeList[i];
             Instruction::getOpcodeName(t->GetOpCode());
             t->GetLevel();

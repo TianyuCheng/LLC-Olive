@@ -5,7 +5,8 @@
 #include <vector>
 #include <climits>
 
-struct LiveRange {
+class LiveRange {
+    public:
     int startpoint;
     int endpoint;
 
@@ -22,10 +23,16 @@ struct LiveRange {
     }
 };
 
-struct Interval {
+class Interval {
+    public:
     std::vector<LiveRange> liveranges; // increasing order of startpoint
     int register_id;  //  
     std::string location;  // location information
+
+    Interval (int start, int stop) {
+        LiveRange lr (start, stop);
+        liveranges.push_back(lr);
+    }
 
     void addRange(int start, int end) {
         // 1. look for those live ranges where start and end reside
@@ -74,7 +81,7 @@ struct Interval {
                 break;
             } else if (pos == lr.endpoint) {
                 // case 2: shorten point is exactly the endpoint (impossible)
-                assert(false && "shorten point cannot be the endpoint");
+                // assert(false && "shorten point cannot be the endpoint");
             }
         }
     }
