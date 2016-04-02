@@ -27,6 +27,7 @@ static const char* registers[] = {
 };
 static int NUM_REGS = 16;
 
+/*
 // use naive linear search to insert elem 
 static void insert_active_set (std::vector<LiveRange*>& vec, LiveRange* elem) {
     vec.push_back(elem);
@@ -52,6 +53,7 @@ static void insert_intervals (std::vector<LiveRange*>& vec, LiveRange* elem) {
         }
     }
 }
+*/
 
 /**
  * Register Allocator

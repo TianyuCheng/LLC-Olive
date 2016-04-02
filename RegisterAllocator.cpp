@@ -1,5 +1,6 @@
 #include "RegisterAllocator.h"
 
+/*
 void RegisterAllocator::buildIntervals() {
     
 }
@@ -71,3 +72,4 @@ void RegisterAllocator::spillAtInterval (int i) {
         // locations[i] = -1;   // TODO: TEMPORARILY PUT -1 for compilation
     }
 }
+*/
