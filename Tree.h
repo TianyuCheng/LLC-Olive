@@ -17,19 +17,23 @@
 #include "Insts.h"
 #include "Value.h"
 
+enum X86OperandType;
+class X86Operand;
+class FunctionState;
+
 class Tree
 {
 public:
     Tree(int opcode)
-        : op(opcode), val(0), refcnt(0), level(1) 
+        : op(opcode), val(0), refcnt(0), level(1), operand(nullptr)
     {
     }
     Tree(int opcode, VALUE v)
-        : op(opcode), val(v), refcnt(0), level(1) 
+        : op(opcode), val(v), refcnt(0), level(1), operand(nullptr)
     {
     }
     Tree(int opcode, Tree *l, Tree *r)
-        : op(opcode), val(0), refcnt(0), level(1) 
+        : op(opcode), val(0), refcnt(0), level(1), operand(nullptr)
     {
         AddChild(l);
         AddChild(r);
@@ -37,6 +41,7 @@ public:
 
     virtual ~Tree();
 
+    void SetOpCode(int c) { op = c; }
     int GetOpCode() const { 
         // std::cerr << "GET OPCODE: " << op << std::endl;
         return op; 
@@ -45,8 +50,17 @@ public:
     void SetValue(VALUE v) { val = v; }
     VALUE& GetValue() { return val; }
 
-    void UseAsRegister() { isReg = true; }
+    void SetFuncName(std::string n) { func_name = n; }
+    std::string GetFuncName() const { return func_name; }
+
+    void UseAsMemory() { isReg = false; otype = MEM; }
+    void UseAsImmediate() { isReg = false; otype = IMM; }
+    void UseAsRegister() { isReg = true; otype = REG; }
+
+    void UseAsVirtualRegister() { isReg = true; otype = REG; }
+    void UseAsPhysicalRegister() { isReg = true; isPhysicalReg = true; otype = REG; }
     bool IsVirtualReg() const { return isReg; }
+    bool IsPhysicalReg() const { return isPhysicalReg; }
     int  GetVirtualReg() const { return val.AsVirtualReg(); }
 
     void SetComputed(bool c) { computed = c; }
@@ -77,17 +91,25 @@ public:
 	struct { struct burm_state *state; } x;
 	VALUE val;
 
+    X86Operand *AsX86Operand(FunctionState *fs);
+
 private:
     void DisplayTree(int indent);
 
 private:
 	int op;
+    int otype;      // used for operand generation
 
     int level;
     int refcnt;
 
     bool isReg;
     bool computed;
+    bool isPhysicalReg;
+
+    X86Operand *operand;
+
+    std::string func_name;
 
     X86OperandType operandType;
     llvm::Instruction *inst;

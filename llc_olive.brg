@@ -19,7 +19,7 @@
 %declare<void> mem      <FUNCTION_STATE fstate>;
 %declare<void> cond     <FUNCTION_STATE fstate>;
 %declare<void> label    <FUNCTION_STATE fstate>;
-%declare<void> args     <FUNCTION_STATE fstate>;
+%declare<void> args     <FUNCTION_STATE fstate, int n>;
 %%
 
 stmt:   reg                 { return 1;                                         } = { $action[1](fstate); };
@@ -29,10 +29,10 @@ value:  reg                 { $cost[0].cost = $cost[1].cost;                    
 value:  imm                 { $cost[0].cost = $cost[1].cost;                    } = { $action[1](fstate); };
 value:  mem                 { $cost[0].cost = $cost[1].cost;                    } = { $action[1](fstate); };
 
-reg:    REG                 { $cost[0].cost = 1;                                } = { };
-imm:    Load(IMM)           { $cost[0].cost = 0;                                } = { };
-imm:    IMM                 { $cost[0].cost = 0;                                } = { };
-mem:    MEM                 { $cost[0].cost = 10;                               } = { };
+reg:    REG                 { $cost[0].cost = 1;                                } = { $0->UseAsRegister(); };
+imm:    Load(IMM)           { $cost[0].cost = 0;                                } = { $0->UseAsImmediate(); };
+imm:    IMM                 { $cost[0].cost = 0;                                } = { $0->UseAsImmediate(); };
+mem:    MEM                 { $cost[0].cost = 10;                               } = { $0->UseAsMemory(); };
 label:  LABEL               { $cost[0].cost = 1;                                } = { };
 
 stmt:   Ret(imm)            { $cost[0].cost = $cost[2].cost + 1;                } = {
@@ -41,10 +41,8 @@ stmt:   Ret(imm)            { $cost[0].cost = $cost[2].cost + 1;                
              * X86 Ret takes no argument, return value is passed by %eax
              */
             $action[2](fstate);
-            fstate->AddInst(new X86Inst("movq",
-                        new X86Operand(fstate, RAX),
-                        new X86Operand(fstate, OP_TYPE::X86Imm, $2->GetValue())
-            ));
+            fstate->CreatePhysicalReg($0, RAX);
+            fstate->LoadFromImm($0, $2);
             // this will record the ending in liveness range for a register
             // if the input is a register, and the register dies
             fstate->RecordLiveness($2);
@@ -59,13 +57,11 @@ stmt:   Ret(reg)            { $cost[0].cost = $cost[2].cost + 1;                
              * X86 Ret takes no argument, return value is passed by %eax
              */
             $action[2](fstate);
-            fstate->AddInst(new X86Inst("movq",
-                        new X86Operand(fstate, RAX),
-                        new X86Operand(fstate, OP_TYPE::X86Reg, $2->GetValue())
-            ));
+            fstate->CreatePhysicalReg($0, RAX);
+            fstate->LoadFromReg($0, $2);
             // this will record the ending in liveness range for a register
             // if the input is a register, and the register dies
-            fstate->RecordLiveness($2);
+            // fstate->RecordLiveness($2);
             fstate->RestoreStack();
             fstate->AddInst(new X86Inst("leave"));
             fstate->AddInst(new X86Inst("ret"));
@@ -80,6 +76,7 @@ mem:    Alloca(imm)         { $cost[0].cost = $cost[2].cost + 1;    } = {
             // this will record the ending in liveness range for a register
             // if the input is a register, and the register dies
             fstate->RecordLiveness($2);
+            $0->UseAsMemory();
         };
 reg:    Load(reg)           { $cost[0].cost = $cost[2].cost + 1;    } = {
             /*
@@ -88,61 +85,55 @@ reg:    Load(reg)           { $cost[0].cost = $cost[2].cost + 1;    } = {
              */
             $action[2](fstate);
             fstate->AssignVirtualReg($0, $2);    // assign a virtual register to the inst
-            fstate->LoadFromReg($0->GetValue(), $2->GetValue());
+            fstate->LoadFromReg($0, $2);
             // this will record the ending in liveness range for a register
             // if the input is a register, and the register dies
             fstate->RecordLiveness($2);
+            $0->UseAsRegister();
         };
 reg:    Load(imm)           { $cost[0].cost = $cost[2].cost + 1;    } = {
             $action[2](fstate);
             fstate->CreateVirtualReg($0);      // assign a virtual register to the inst
-            fstate->GenerateMovStmt(
-                new X86Operand(fstate, OP_TYPE::X86Reg, $0->GetValue()),
-                new X86Operand(fstate, OP_TYPE::X86Imm, $2->GetValue())
-            );
+            fstate->GenerateMovStmt($0, $2);
             // this will record the ending in liveness range for a register
             // if the input is a register, and the register dies
             fstate->RecordLiveness($2);
+            $0->UseAsRegister();
         };
 reg:    Load(mem)           { $cost[0].cost = $cost[2].cost + 1;    } = {
             $action[2](fstate);
             fstate->CreateVirtualReg($0);      // assign a virtual register to the inst
-            fstate->GenerateMovStmt(
-                new X86Operand(fstate, OP_TYPE::X86Reg, $0->GetValue()),
-                fstate->GetLocalMemoryAddress($2)
-            );
+            fstate->GenerateMovStmt($0, $2);
             // this will record the ending in liveness range for a register
             // if the input is a register, and the register dies
             fstate->RecordLiveness($2);
+            $0->UseAsRegister();
         };
-mem:    Store(imm, mem)      { $cost[0].cost = $cost[2].cost + $cost[3].cost;    } = {
+stmt:   Store(imm, mem)      { $cost[0].cost = $cost[2].cost + $cost[3].cost;    } = {
             $action[2](fstate);
             $action[3](fstate);
-            fstate->GenerateMovStmt(
-                fstate->GetLocalMemoryAddress($3),
-                new X86Operand(fstate, OP_TYPE::X86Imm, $2->GetValue())
-            );
+            fstate->GenerateMovStmt($3, $2);
             // this will record the ending in liveness range for a register
             // if the input is a register, and the register dies
             fstate->RecordLiveness($2);
             fstate->RecordLiveness($3);
         };
-mem:    Store(reg, mem)      { $cost[0].cost = $cost[2].cost + $cost[3].cost;    } = {
+stmt:   Store(reg, mem)      { $cost[0].cost = $cost[2].cost + $cost[3].cost;    } = {
             $action[2](fstate);
             $action[3](fstate);
-            fstate->GenerateMovStmt(
-                fstate->GetLocalMemoryAddress($3),
-                new X86Operand(fstate, OP_TYPE::X86Reg, $2->GetValue())
-            );
+            fstate->GenerateMovStmt($3, $2);
             // this will record the ending in liveness range for a register
             // if the input is a register, and the register dies
             fstate->RecordLiveness($2);
             fstate->RecordLiveness($3);
         };
-mem:    Store(mem, mem)      { $cost[0].cost = $cost[2].cost + $cost[3].cost;    } = {
+stmt:   Store(mem, mem)      { $cost[0].cost = $cost[2].cost + $cost[3].cost;    } = {
             $action[2](fstate);
             $action[3](fstate);
-            std::cerr << "leave the implementation to later\n";
+            fstate->CreateVirtualReg($0->GetTreeRef());
+            fstate->GenerateMovStmt($0, $2);
+            fstate->GenerateMovStmt($3, $0);
+            fstate->RecordLiveness($0);
         };
 reg:    Add(reg, reg)       { $cost[0].cost = $cost[2].cost + $cost[3].cost + 2;    } = {
             /*
@@ -153,21 +144,16 @@ reg:    Add(reg, reg)       { $cost[0].cost = $cost[2].cost + $cost[3].cost + 2;
             $action[3](fstate);
             if ($2->GetRefCount() < $3->GetRefCount()) {
                 fstate->AssignVirtualReg($0, $2);    // assign a virtual register to the inst
-                fstate->GenerateBinaryStmt("add", 
-                    new X86Operand(fstate, OP_TYPE::X86Reg, $0->GetValue()),
-                    new X86Operand(fstate, OP_TYPE::X86Reg, $3->GetValue())
-                );
+                fstate->GenerateBinaryStmt("add", $0, $3);
             } else {
                 fstate->AssignVirtualReg($0, $3);    // assign a virtual register to the inst
-                fstate->GenerateBinaryStmt("add", 
-                    new X86Operand(fstate, OP_TYPE::X86Reg, $0->GetValue()),
-                    new X86Operand(fstate, OP_TYPE::X86Reg, $2->GetValue())
-                );
+                fstate->GenerateBinaryStmt("add", $0, $2);
             }
             // this will record the ending in liveness range for a register
             // if the input is a register, and the register dies
             fstate->RecordLiveness($2);
             fstate->RecordLiveness($3);
+            $0->UseAsRegister();
         };
 reg:    Add(reg, imm)       { $cost[0].cost = $cost[2].cost + $cost[3].cost + 2;    } = {
             /*
@@ -177,14 +163,12 @@ reg:    Add(reg, imm)       { $cost[0].cost = $cost[2].cost + $cost[3].cost + 2;
             $action[2](fstate);
             $action[3](fstate);
             fstate->AssignVirtualReg($0, $2);    // assign a virtual register to the inst
-            fstate->GenerateBinaryStmt("add", 
-                new X86Operand(fstate, OP_TYPE::X86Reg, $0->GetValue()),
-                new X86Operand(fstate, OP_TYPE::X86Imm, $3->GetValue())
-            );
+            fstate->GenerateBinaryStmt("add", $0, $3);
             // this will record the ending in liveness range for a register
             // if the input is a register, and the register dies
             fstate->RecordLiveness($2);
             fstate->RecordLiveness($3);
+            $0->UseAsRegister();
         };
 reg:    Sub(reg, reg)       { $cost[0].cost = $cost[2].cost + $cost[3].cost + 2;    } = {
             /*
@@ -194,14 +178,12 @@ reg:    Sub(reg, reg)       { $cost[0].cost = $cost[2].cost + $cost[3].cost + 2;
             $action[2](fstate);
             $action[3](fstate);
             fstate->AssignVirtualReg($0, $2);    // assign a virtual register to the inst
-            fstate->GenerateBinaryStmt("sub", 
-                new X86Operand(fstate, OP_TYPE::X86Reg, $0->GetValue()),
-                new X86Operand(fstate, OP_TYPE::X86Reg, $3->GetValue())
-            );
+            fstate->GenerateBinaryStmt("sub", $0, $3);
             // this will record the ending in liveness range for a register
             // if the input is a register, and the register dies
             fstate->RecordLiveness($2);
             fstate->RecordLiveness($3);
+            $0->UseAsRegister();
         };
 reg:    Mul(reg, reg)       { $cost[0].cost = $cost[2].cost + $cost[3].cost + 4;    } = {
             /*
@@ -212,21 +194,16 @@ reg:    Mul(reg, reg)       { $cost[0].cost = $cost[2].cost + $cost[3].cost + 4;
             $action[3](fstate);
             if ($2->GetRefCount() < $3->GetRefCount()) {
                 fstate->AssignVirtualReg($0, $2);    // assign a virtual register to the inst
-                fstate->GenerateBinaryStmt("imul", 
-                    new X86Operand(fstate, OP_TYPE::X86Reg, $0->GetValue()),
-                    new X86Operand(fstate, OP_TYPE::X86Reg, $3->GetValue())
-                );
+                fstate->GenerateBinaryStmt("imul", $0, $3);
             } else {
                 fstate->AssignVirtualReg($0, $3);    // assign a virtual register to the inst
-                fstate->GenerateBinaryStmt("imul", 
-                    new X86Operand(fstate, OP_TYPE::X86Reg, $0->GetValue()),
-                    new X86Operand(fstate, OP_TYPE::X86Reg, $2->GetValue())
-                );
+                fstate->GenerateBinaryStmt("imul", $0, $2);
             }
             // this will record the ending in liveness range for a register
             // if the input is a register, and the register dies
             fstate->RecordLiveness($2);
             fstate->RecordLiveness($3);
+            $0->UseAsRegister();
         };
 
 stmt:   cond                 { $cost[0].cost = $cost[1].cost;                       } = { };
@@ -234,14 +211,8 @@ cond:   ICmp(imm, imm)       { $cost[0].cost = $cost[2].cost + $cost[3].cost;   
             $action[2](fstate);
             $action[3](fstate);
             fstate->CreateVirtualReg($0);
-            fstate->GenerateMovStmt(
-                new X86Operand(fstate, OP_TYPE::X86Reg, $0->GetValue()),
-                new X86Operand(fstate, OP_TYPE::X86Imm, $2->GetValue())
-            );
-            fstate->GenerateBinaryStmt("sub", 
-                new X86Operand(fstate, OP_TYPE::X86Reg, $0->GetValue()),
-                new X86Operand(fstate, OP_TYPE::X86Imm, $3->GetValue())
-            );
+            fstate->GenerateMovStmt($0, $2);
+            fstate->GenerateBinaryStmt("sub", $0, $3);
             // this will record the ending in liveness range for a register
             // if the input is a register, and the register dies
             fstate->RecordLiveness($2);
@@ -251,10 +222,7 @@ cond:   ICmp(reg, imm)       { $cost[0].cost = $cost[2].cost + $cost[3].cost;   
             $action[2](fstate);
             $action[3](fstate);
             fstate->AssignVirtualReg($0, $2);    // assign a virtual register to the inst
-            fstate->GenerateBinaryStmt("sub", 
-                new X86Operand(fstate, OP_TYPE::X86Reg, $0->GetValue()),
-                new X86Operand(fstate, OP_TYPE::X86Imm, $3->GetValue())
-            );
+            fstate->GenerateBinaryStmt("sub", $0, $3);
             // this will record the ending in liveness range for a register
             // if the input is a register, and the register dies
             fstate->RecordLiveness($2);
@@ -275,17 +243,25 @@ stmt:   Br(cond, label, label)   { $cost[0].cost = $cost[2].cost + $cost[3].cost
             $action[3](fstate);
         };
 reg:    Call(args)               { $cost[0].cost = $cost[2].cost + 5; } = {
-            $action[2](fstate);
-            std::cerr << "=== CALL FUNCTION ===" << std::endl;
+            $action[2](fstate, 0);
+            std::stringstream ss;
+            ss << "call\t" << $0->GetFuncName();
+            std::string s = ss.str();
+            fstate->AddInst(new X86Inst(s.c_str()));
+            fstate->CreatePhysicalReg($0, RAX);
         };
 args:   NOARGS                  { $cost[0].cost = 0;                  } = {
             // for args tree termination
-            std::cerr << "=== CALL ARGS TERMINATION ===" << std::endl;
         };
 args:   ARGS(value, args)        { $cost[0].cost = $cost[2].cost + $cost[3].cost; } = {
-            std::cerr << "=== CALL ARGS EXPANSION ===" << std::endl;
-            // $action[2](fstate);
-            $action[3](fstate);
+            $action[2](fstate);
+            $action[3](fstate, n + 1);
+            if (n < 6) {
+                $2->UseAsPhysicalRegister();
+            } else {
+                // more than 6 argments should be pushed on stack in reversed order
+                fstate->GeneratePushStmt($2);
+            }
         };
 %%
 #include "llc_olive_helper.cxx"

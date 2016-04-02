@@ -37,15 +37,16 @@ public:
     void CreateVirtualReg(Tree *t);
     void CreatePhysicalReg(Tree *t, Register r);
     void AssignVirtualReg(Tree *lhs, Tree *rhs);
-    void LoadFromReg(VALUE &dst, VALUE &src);
-    void LoadFromImm(VALUE &dst, VALUE &src);
+    void LoadFromReg(Tree *dst, Tree *src);
+    void LoadFromImm(Tree *dst, Tree *src);
     void GenerateLabelStmt(const char *label);
-    void GenerateLabelStmt(VALUE &v);
-    void GenerateMovStmt(X86Operand *dst, X86Operand *src);
-    void GenerateBinaryStmt(const char *op, X86Operand *dst, X86Operand *src);
+    void GenerateLabelStmt(Tree *v);
+    void GenerateMovStmt(Tree *dst, Tree *src);
+    void GenerateBinaryStmt(const char *op, Tree *dst, Tree *src);
+    void GeneratePushStmt(Tree *t);
 
     std::string GetMCRegAt(int index) const { 
-#if 0
+#if 1
         std::cerr << "index: " << index << std::endl;
         std::cerr << "v2m size: " << virtual2machine.size() << std::endl;
 #endif
@@ -122,6 +123,7 @@ public:
 
     X86Operand(FUNCTION_STATE fs, int r)
         : fstate(fs), type(OP_TYPE::X86Reg), val(r), explicit_reg(true), base_address(nullptr), displacement(nullptr) {
+            std::cerr << "CTREATE A PHYSICAL REGISTER: " << registers[r] << std::endl;
     }
 
     X86Operand(FUNCTION_STATE fs, OP_TYPE t, VALUE v) 
@@ -148,12 +150,13 @@ public:
             if (op.explicit_reg) {
                 out << "%" << registers[op.val.AsVirtualReg()];
             }
-            else
-#if 1
+            else {
+#if 0
                 out << "%" << op.fstate->GetMCRegAt(op.val.AsVirtualReg());
 #else
                 out << "%" << op.val.AsVirtualReg();
 #endif
+            }
         }
         else if (op.type == OP_TYPE::X86Mem) {
             // output memory address by x86 addressing mode
@@ -210,10 +213,6 @@ public:
         isLabel = false;
     }
     virtual ~X86Inst() {
-#if 1   // DO NOT FREE X86Mem HERE, IT WILL CAUSE DOUBLE FREE for function locals
-        if (dst && dst->type != OP_TYPE::X86Mem) { delete dst; dst = nullptr; }
-        if (src && src->type != OP_TYPE::X86Mem) { delete src; src = nullptr; }
-#endif
     }
 
     friend std::ostream& operator<<(std::ostream& out, X86Inst &inst) {

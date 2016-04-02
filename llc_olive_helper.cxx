@@ -55,7 +55,6 @@ void BasicBlockToExprTrees(FunctionState &fstate,
             v->print(errs());
             errs() << "\n";
 #endif
-
             if (Constant *def = dyn_cast<Constant>(v)) {
                 // check if the operand is a constant
                 if (ConstantInt *cnst = dyn_cast<ConstantInt>(v)) {
@@ -72,11 +71,14 @@ void BasicBlockToExprTrees(FunctionState &fstate,
                     errs() << "NOT IMPLEMENTED CONST EXPR\n";
                     exit(EXIT_FAILURE);
                 }
+                else if (Function *func = dyn_cast<Function>(v)) {
+                    t->SetFuncName(v->getName().str());
+                }
                 // ... There are many kinds of constant, right now we do not deal with them ...
                 else {
                     // this is bad and probably needs to terminate the execution
                     errs() << "NOT IMPLEMENTED OTHER CONST TYPES:\t"; instruction.print(errs()); errs() << "\n";
-                    // errs() << "OPERAND: "; v->print(errs()); errs() << "\n";
+                    errs() << "OPERAND: "; v->print(errs()); errs() << "\n";
 #if 0               // we might need to handle undef value some time later
                     if (UndefValue *undef = dyn_cast<UndefValue>(v)) {
                         errs() << "OPERAND IS AN UNDEF VALUE\n";
@@ -251,7 +253,7 @@ void FunctionToAssembly(Function &func) {
     for (BasicBlock &bb : basic_blocks) {
         int size = treeList.size();
         if (Tree * wrapper = fstate.FindLabel(&bb)) {
-            fstate.GenerateLabelStmt(wrapper->GetValue());
+            fstate.GenerateLabelStmt(wrapper);
         }
         BasicBlockToExprTrees(fstate, treeList, bb);
 
@@ -259,6 +261,9 @@ void FunctionToAssembly(Function &func) {
         // replace the complicated/common tree expression with registers
         for (int i = size; i < treeList.size(); i++) {
             Tree *t = treeList[i];
+            Instruction::getOpcodeName(t->GetOpCode());
+            t->GetLevel();
+            t->GetRefCount();
 #if VERBOSE > 2
             errs() << Instruction::getOpcodeName(t->GetOpCode()) << "\tLEVEL:\t" << t->GetLevel() << "\tRefCount:\t" << t->GetRefCount() << "\n";
             errs() << "NumOperands: " << t->GetNumKids() << "\n";

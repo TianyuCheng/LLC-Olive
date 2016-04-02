@@ -1,7 +1,7 @@
 #include "FunctionState.h"
 
 FunctionState::FunctionState(std::string name, int n, int l)
-    : function_name(name), label(l), local_bytes(8), allocator(n)
+    : function_name(name), label(l), local_bytes(8), num_args(0), allocator(n)
 {
     // initialize function state here
     // local_bytes is initiated to 8 for saved rip
@@ -33,7 +33,7 @@ void FunctionState::PrintAssembly(std::ostream &out) {
     if (std::string(function_name) == std::string("main"))
         out << "\t.globl" << std::endl;
 
-    out << "main:" << std::endl;
+    out << function_name  << ":" << std::endl;
     out << "\tpushq\t%rbp" << std::endl;
     out << "\tsubq\t%rsp, $" << local_bytes << std::endl;
 
@@ -104,7 +104,6 @@ void FunctionState::CreateArgument(llvm::Argument *arg) {
     if (num_args < 6) {                 // first six parameters are passed in registers
         t = new Tree(REG, params_regs[num_args]);
         CreatePhysicalReg(t, params_regs[num_args]);
-        op = new X86Operand(this, t->GetValue().AsVirtualReg());     // initialized as a physical register by constructor
         // insert into liveness: should be live from start
         int startLine = assembly.size();
         liveness.insert(std::pair<int, LiveRange*>(t->GetValue().AsVirtualReg(), new LiveRange(startLine)));
@@ -114,10 +113,11 @@ void FunctionState::CreateArgument(llvm::Argument *arg) {
             new X86Operand(this, RBP),                     // base_address, should be rbp
             new X86Operand(this, OP_TYPE::X86Imm, 0),      // displacement
             0,                                             // multiplier    
-            8 * num_args);                                 // offset
+            8 * (num_args - 6 + 1));                       // offset
+        // std::cerr << "Arg offset: " << 8 * (num_args - 6 + 1) << std::endl;
+        locals.insert(std::pair<Tree*, X86Operand*>(t, op));
     }
     argsMap.insert(std::pair<llvm::Argument*, Tree*>(arg, t));
-    locals.insert(std::pair<Tree*, X86Operand*>(t, op));
     num_args++;
 }
 
@@ -125,57 +125,56 @@ void FunctionState::CreateVirtualReg(Tree *t) {
     int v = virtual2machine.size();
     virtual2machine.push_back(-1);      // -1 not allocated
     t->val = v;
-    t->UseAsRegister();
+    t->UseAsVirtualRegister();
     RecordLiveStart(t);                 // newly allocated virtual register must be added to liveness
 }
 
 void FunctionState::CreatePhysicalReg(Tree *t, Register r) {
-    int v = virtual2machine.size();
-    virtual2machine.push_back(r);      // explicitly assign 
-    t->val = v;
-    t->UseAsRegister();
+    t->val = r;
+    t->UseAsPhysicalRegister();
     RecordLiveStart(t);                 // newly allocated virtual register must be added to liveness
 }
 
 void FunctionState::AssignVirtualReg(Tree *lhs, Tree *rhs) {
-    lhs->UseAsRegister();
+    lhs->UseAsVirtualRegister();
     if (rhs->GetRefCount() == 1) {
         // this register is about to be free, we can reuse it
         lhs->val = rhs->val;
+        lhs->UseAsVirtualRegister();
     }
     else {
         // we will still be using rhs in the future, 
         // so better not overwrite the rhs
         CreateVirtualReg(lhs);      // assign a virtual register to the inst
-        LoadFromReg(lhs->val, rhs->val);
+        LoadFromReg(lhs, rhs);
     }
 }
 
-void FunctionState::LoadFromReg(VALUE &dst, VALUE &src) {
-    if (src.val.i32s == dst.val.i32s) return;
+void FunctionState::LoadFromReg(Tree *dst, Tree *src) {
+    // if (src->IsVirtualReg() && dst->IsVirtualReg())
+    //     if (src->GetValue().AsVirtualReg() != dst->GetValue().AsVirtualReg())
+    //         return;
+    // if (src->IsPhysicalReg() && dst->IsPhysicalReg())
+    //     if (src->GetValue().AsVirtualReg() != dst->GetValue().AsVirtualReg())
+    //         return;
     // only copy register when src and dst are different
-    GenerateMovStmt(
-        new X86Operand(this, OP_TYPE::X86Reg, dst),
-        new X86Operand(this, OP_TYPE::X86Reg, src)
-    );
+    GenerateMovStmt(dst, src);
 }
 
-void FunctionState::LoadFromImm(VALUE &dst, VALUE &src) {
-    GenerateMovStmt(
-        new X86Operand(this, OP_TYPE::X86Reg, dst),
-        new X86Operand(this, OP_TYPE::X86Imm, src)
-    );
+void FunctionState::LoadFromImm(Tree *dst, Tree *src) {
+    GenerateMovStmt(dst, src);
 }
 
 void FunctionState::GenerateLabelStmt(const char *l) {
     AddInst(new X86Inst(l, true));
 }
 
-void FunctionState::GenerateLabelStmt(VALUE &v) {
-    AddInst(new X86Inst(v.AsLabel(), true));
+void FunctionState::GenerateLabelStmt(Tree *t) {
+    AddInst(new X86Inst(t->GetValue().AsLabel(), true));
 }
 
-void FunctionState::GenerateMovStmt(X86Operand *dst, X86Operand *src) {
+void FunctionState::GenerateMovStmt(Tree *dst, Tree *src) {
+    assert(!(dst->GetOpCode() == MEM && src->GetOpCode() == MEM) && "src and dst cannot both come from memory");
     // Keep this one-line function, since we might want 
     // to migrate to different operand sizes, so we will
     // be using movb, movw, movl, movq according to the
@@ -183,25 +182,52 @@ void FunctionState::GenerateMovStmt(X86Operand *dst, X86Operand *src) {
     GenerateBinaryStmt("mov", dst, src);
 }
 
-void FunctionState::GenerateBinaryStmt(const char *op_raw, X86Operand *dst, X86Operand *src) {
+void FunctionState::GenerateBinaryStmt(const char *op_raw, Tree *dst, Tree *src) {
     // Keep this one-line function, since we might want 
     // to migrate to different operand sizes, so we will
     // be using suffixes b, w, l, q according to the
     // operands
     std::string op = std::string(op_raw) + "q";
-    AddInst(new X86Inst(op.c_str(), dst, src));
+    AddInst(new X86Inst(op.c_str(), 
+        dst->AsX86Operand(this), 
+        src->AsX86Operand(this)
+    ));
 }
 
+void FunctionState::GeneratePushStmt(Tree *t) {
+    if (t->GetOpCode() == REG) {
+        AddInst(new X86Inst("pushq", 
+            new X86Operand(this, OP_TYPE::X86Reg, t->GetValue().AsVirtualReg())
+        ));
+    }
+    else if (t->GetOpCode() == IMM) {
+        AddInst(new X86Inst("pushq", 
+            new X86Operand(this, OP_TYPE::X86Imm, t->GetValue())
+        ));
+    }
+    // else if (t->GetOpCode() == MEM) {
+    //     GenerateMovStmt(
+    //         new X86Operand(this, OP_TYPE::X86Reg, dst),
+    //         this->GetLocalMemoryAddress(t);
+    //     );
+    // }
+}
 
 void FunctionState::RecordLiveness(Tree *t) {
     t->RemoveRef();                // decrease the reference counter
 
+#if 0
     if (!t->IsVirtualReg()) return;      // we only care about registers' references
 
     int reg = t->val.AsVirtualReg();
     if (t->GetRefCount() == 0) {
         // this register is dead now, we should set the endLine
         auto it = liveness.find(reg);
+        if (it == liveness.end()) {
+            t->DisplayTree();
+        }
+        if (it == liveness.end())
+            this->PrintAssembly(std::cerr);
         assert(it != liveness.end() && "a dead register should have already in the liveness analysis");
 
         LiveRange *range = it->second;
@@ -210,19 +236,23 @@ void FunctionState::RecordLiveness(Tree *t) {
         liveness.insert(std::pair<int, LiveRange*>(reg, range));
     }
     // else this register is still live now, do not do anything
+#endif
 }
 
 void FunctionState::PrintLiveness(std::ostream &out) {
+#if 0
     for (auto it = liveness.begin(); it != liveness.end(); ++it) {
         LiveRange *range = it->second;
         out << "Virtual Register " << it->first << ":\t" 
             << "start:\t" << range->startpoint << "\t"
             << "end:\t"   << range->endpoint << std::endl;
     }
+#endif
 }
 
 void FunctionState::RecordLiveStart(Tree *t) {
-    if (t->IsVirtualReg() && t->GetRefCount() > 0) {
+#if 0
+    if (t->IsPhysicalReg() || (t->IsVirtualReg() && t->GetRefCount() > 0)) {
         int reg = t->val.AsVirtualReg();
         auto it = liveness.find(reg);
         if (it == liveness.end()) {
@@ -236,4 +266,5 @@ void FunctionState::RecordLiveStart(Tree *t) {
         // in this case, we do not need to do anything in particular
     }
     // this register is dead if refcnt == 0
+#endif
 }
