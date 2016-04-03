@@ -6,22 +6,23 @@ target triple = "x86_64-unknown-linux-gnu"
 define i32 @main() #0 {
 entry:
   %retval = alloca i32, align 4
-  %a = alloca i32, align 4
-  %b = alloca i32, align 4
-  %ret = alloca i32, align 4
+  %a = alloca i64, align 8
+  %b = alloca i64, align 8
+  %ret = alloca i64, align 8
   store i32 0, i32* %retval, align 4
-  store i32 1, i32* %a, align 4
-  store i32 2, i32* %b, align 4
-  %0 = load i32, i32* %a, align 4
-  %1 = load i32, i32* %b, align 4
-  %add = add nsw i32 %0, %1
-  %2 = load i32, i32* %a, align 4
-  %3 = load i32, i32* %b, align 4
-  %sub = sub nsw i32 %2, %3
-  %mul = mul nsw i32 %add, %sub
-  store i32 %mul, i32* %ret, align 4
-  %4 = load i32, i32* %ret, align 4
-  ret i32 %4
+  store i64 1, i64* %a, align 8
+  store i64 2, i64* %b, align 8
+  %0 = load i64, i64* %a, align 8
+  %1 = load i64, i64* %b, align 8
+  %add = add nsw i64 %0, %1
+  %2 = load i64, i64* %a, align 8
+  %3 = load i64, i64* %b, align 8
+  %sub = sub nsw i64 %2, %3
+  %mul = mul nsw i64 %add, %sub
+  store i64 %mul, i64* %ret, align 8
+  %4 = load i64, i64* %ret, align 8
+  %conv = trunc i64 %4 to i32
+  ret i32 %conv
 }
 
 attributes #0 = { nounwind uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }

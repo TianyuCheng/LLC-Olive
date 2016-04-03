@@ -5,6 +5,10 @@ FunctionState::FunctionState(std::string name, int n, int l)
 {
     // initialize function state here
     // local_bytes is initiated to 8 for saved rip
+
+    // // preserve registers
+    // for (int i = 0; i < 7; i++)
+    //     GeneratePushStmt(preserve_regs[i]);
 }
 
 FunctionState::~FunctionState() {
@@ -15,6 +19,9 @@ FunctionState::~FunctionState() {
         delete it->second;
     for (auto it = liveness.begin(); it != liveness.end(); ++it)
         delete it->second;
+    for (auto operand : freeList) {
+        delete operand;
+    }
 }
 
 void FunctionState::PrintAssembly(std::ostream &out) {
@@ -35,13 +42,29 @@ void FunctionState::PrintAssembly(std::ostream &out) {
     if (std::string(function_name) == std::string("main"))
         out << "\t.globl" << std::endl;
 
+    // prolog
     out << function_name  << ":" << std::endl;
     out << "\tpushq\t%rbp" << std::endl;
     out << "\tsubq\t%rsp, $" << local_bytes << std::endl;
 
+    // // restore registers
+    // for (int i = 6; i >= 0; i++)
+    //     GeneratePopStmt(preserve_regs[i]);
+
+    // epilog
+    std::stringstream ss;
+    ss << "." << function_name << "End";
+    std::string s = ss.str();
+    GenerateLabelStmt(s.c_str());
+    RestoreStack();
+    AddInst(new X86Inst("leave"));
+    AddInst(new X86Inst("ret"));
+
     // TODO: remember to print function begin and ends
     for (X86Inst *inst : assembly)
         out << *inst;
+
+
     for(auto it = locals.begin(); it != locals.end(); ++it ) {
         delete it->second;
     }
@@ -184,6 +207,10 @@ void FunctionState::GenerateMovStmt(Tree *dst, Tree *src) {
     GenerateBinaryStmt("mov", dst, src);
 }
 
+void FunctionState::GenerateMovStmt(X86Operand *dst, X86Operand *src) {
+    GenerateBinaryStmt("mov", dst, src);
+}
+
 void FunctionState::GenerateBinaryStmt(const char *op_raw, Tree *dst, Tree *src) {
     // Keep this one-line function, since we might want 
     // to migrate to different operand sizes, so we will
@@ -196,23 +223,51 @@ void FunctionState::GenerateBinaryStmt(const char *op_raw, Tree *dst, Tree *src)
     ));
 }
 
+void FunctionState::GenerateBinaryStmt(const char *op_raw, X86Operand *dst, X86Operand *src) {
+    // Keep this one-line function, since we might want 
+    // to migrate to different operand sizes, so we will
+    // be using suffixes b, w, l, q according to the
+    // operands
+    std::string op = std::string(op_raw) + "q";
+    AddInst(new X86Inst(op.c_str(), dst, src));
+}
+
 void FunctionState::GeneratePushStmt(Tree *t) {
     if (t->GetOpCode() == REG) {
-        AddInst(new X86Inst("pushq", 
-            new X86Operand(this, OP_TYPE::X86Reg, t->GetValue().AsVirtualReg())
-        ));
+        auto operand = new X86Operand(this, OP_TYPE::X86Reg, t->GetValue().AsVirtualReg());
+        AddInst(new X86Inst("pushq", operand));
+        freeList.push_back(operand);
     }
     else if (t->GetOpCode() == IMM) {
-        AddInst(new X86Inst("pushq", 
-            new X86Operand(this, OP_TYPE::X86Imm, t->GetValue())
-        ));
+        auto operand = new X86Operand(this, OP_TYPE::X86Imm, t->GetValue().AsVirtualReg());
+        AddInst(new X86Inst("pushq", operand));
+        freeList.push_back(operand);
     }
-    // else if (t->GetOpCode() == MEM) {
-    //     GenerateMovStmt(
-    //         new X86Operand(this, OP_TYPE::X86Reg, dst),
-    //         this->GetLocalMemoryAddress(t);
-    //     );
-    // }
+}
+
+void FunctionState::GeneratePushStmt(Register r) {
+    auto operand = new X86Operand(this, r);
+    AddInst(new X86Inst("pushq", operand));
+    freeList.push_back(operand);
+}
+
+void FunctionState::GeneratePopStmt(Tree *t) {
+    if (t->GetOpCode() == REG) {
+        auto operand = new X86Operand(this, OP_TYPE::X86Reg, t->GetValue().AsVirtualReg());
+        AddInst(new X86Inst("popq", operand));
+        freeList.push_back(operand);
+    }
+    else if (t->GetOpCode() == IMM) {
+        auto operand = new X86Operand(this, OP_TYPE::X86Imm, t->GetValue().AsVirtualReg());
+        AddInst(new X86Inst("popq", operand));
+        freeList.push_back(operand);
+    }
+}
+
+void FunctionState::GeneratePopStmt(Register r) {
+    auto operand = new X86Operand(this, r);
+    AddInst(new X86Inst("popq", operand));
+    freeList.push_back(operand);
 }
 
 void FunctionState::RecordLiveness(Tree *t) {

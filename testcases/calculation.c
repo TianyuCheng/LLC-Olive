@@ -2,8 +2,8 @@
 
 int main()
 {
-    int a = 1;
-    int b = 2;
-    int ret = (a + b) * (a - b);
+    long long a = 1;
+    long long b = 2;
+    long long ret = (a + b) * (a - b);
     return ret;
 }

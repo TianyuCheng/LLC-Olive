@@ -42,11 +42,17 @@ public:
     void GenerateLabelStmt(const char *label);
     void GenerateLabelStmt(Tree *v);
     void GenerateMovStmt(Tree *dst, Tree *src);
+    void GenerateMovStmt(X86Operand *dst, X86Operand *src);
     void GenerateBinaryStmt(const char *op, Tree *dst, Tree *src);
+    void GenerateBinaryStmt(const char *op, X86Operand *dst, X86Operand *src);
     void GeneratePushStmt(Tree *t);
+    void GeneratePushStmt(Register r);
+    void GeneratePopStmt(Tree *t);
+    void GeneratePopStmt(Register r);
 
+    std::string GetFuncName() const { return function_name; }
     std::string GetMCRegAt(int index) const { 
-#if 1
+#if 0
         std::cerr << "index: " << index << std::endl;
         std::cerr << "v2m size: " << virtual2machine.size() << std::endl;
 #endif
@@ -109,6 +115,7 @@ private:
     std::map<llvm::BasicBlock*, Tree*> labelMap;
     std::map<llvm::Instruction*, Tree*> instMap;
     std::map<llvm::Argument*, Tree*> argsMap;
+    std::vector<X86Operand*> freeList;
 };
 
 typedef FunctionState* FUNCTION_STATE;
@@ -123,7 +130,7 @@ public:
 
     X86Operand(FUNCTION_STATE fs, int r)
         : fstate(fs), type(OP_TYPE::X86Reg), val(r), explicit_reg(true), base_address(nullptr), displacement(nullptr) {
-            std::cerr << "CTREATE A PHYSICAL REGISTER: " << registers[r] << std::endl;
+            // std::cerr << "CREATE A PHYSICAL REGISTER: " << registers[r] << std::endl;
     }
 
     X86Operand(FUNCTION_STATE fs, OP_TYPE t, VALUE v) 
@@ -138,8 +145,8 @@ public:
     }
 
     virtual ~X86Operand() {
-        if (base_address) { delete base_address; base_address = nullptr; }
-        if (displacement) { delete displacement; displacement = nullptr; }
+        // if (base_address) { delete base_address; base_address = nullptr; }
+        // if (displacement) { delete displacement; displacement = nullptr; }
     }
 
     friend std::ostream& operator<<(std::ostream& out, X86Operand &op) {

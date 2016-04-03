@@ -16,7 +16,7 @@ enum Register {
 
 // System V X86_64 's calling convention
 static Register scratch_regs [] = { RAX, RDI, RSI, RDX, RCX, R8, R9, R10, R11 };
-static Register preseve_regs [] = { RBX, RSP, RBP, R12, R13, R14, R15 };
+static Register preserve_regs [] = { RBX, RSP, RBP, R12, R13, R14, R15 };
 static Register params_regs  [] = { RDI, RSI, RDX, RCX, R8, R9 };
 
 static const char* registers[] = {

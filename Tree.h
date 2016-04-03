@@ -25,15 +25,15 @@ class Tree
 {
 public:
     Tree(int opcode)
-        : op(opcode), val(0), refcnt(0), level(1), operand(nullptr)
+        : op(opcode), val(0), refcnt(0), level(1), operand(nullptr), otype(-1), isReg(false), isPhysicalReg(false)
     {
     }
     Tree(int opcode, VALUE v)
-        : op(opcode), val(v), refcnt(0), level(1), operand(nullptr)
+        : op(opcode), val(v), refcnt(0), level(1), operand(nullptr), otype(-1), isReg(false), isPhysicalReg(false)
     {
     }
     Tree(int opcode, Tree *l, Tree *r)
-        : op(opcode), val(0), refcnt(0), level(1), operand(nullptr)
+        : op(opcode), val(0), refcnt(0), level(1), operand(nullptr), otype(-1), isReg(false), isPhysicalReg(false)
     {
         AddChild(l);
         AddChild(r);
@@ -91,6 +91,7 @@ public:
 	struct { struct burm_state *state; } x;
 	VALUE val;
 
+    void SetX86Operand(X86Operand *oper) { operand = oper; }
     X86Operand *AsX86Operand(FunctionState *fs);
 
 private:

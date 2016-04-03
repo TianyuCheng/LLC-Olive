@@ -14,6 +14,8 @@
 
 %declare<void> stmt     <FUNCTION_STATE fstate>;
 %declare<void> value    <FUNCTION_STATE fstate>;
+%declare<void> ri       <FUNCTION_STATE fstate>;
+%declare<void> rm       <FUNCTION_STATE fstate>;
 %declare<void> reg      <FUNCTION_STATE fstate>;
 %declare<void> imm      <FUNCTION_STATE fstate>;
 %declare<void> mem      <FUNCTION_STATE fstate>;
@@ -28,6 +30,11 @@ stmt:   mem                 { return 1;                                         
 value:  reg                 { $cost[0].cost = $cost[1].cost;                    } = { $action[1](fstate); };
 value:  imm                 { $cost[0].cost = $cost[1].cost;                    } = { $action[1](fstate); };
 value:  mem                 { $cost[0].cost = $cost[1].cost;                    } = { $action[1](fstate); };
+
+rm:     reg                 { $cost[0].cost = $cost[1].cost;                    } = { $action[1](fstate); };
+rm:     mem                 { $cost[0].cost = $cost[1].cost;                    } = { $action[1](fstate); };
+ri:     reg                 { $cost[0].cost = $cost[1].cost;                    } = { $action[1](fstate); };
+ri:     imm                 { $cost[0].cost = $cost[1].cost;                    } = { $action[1](fstate); };
 
 reg:    REG                 { $cost[0].cost = 1;                                } = { $0->UseAsRegister(); };
 imm:    Load(IMM)           { $cost[0].cost = 0;                                } = { $0->UseAsImmediate(); };
@@ -46,10 +53,10 @@ stmt:   Ret(imm)            { $cost[0].cost = $cost[2].cost + 1;                
             // this will record the ending in liveness range for a register
             // if the input is a register, and the register dies
             fstate->RecordLiveness($2);
-
-            fstate->RestoreStack();
-            fstate->AddInst(new X86Inst("leave"));
-            fstate->AddInst(new X86Inst("ret"));
+            std::stringstream ss;
+            ss << "jmp\t." << fstate->GetFuncName() << "End";
+            std::string s = ss.str();
+            fstate->AddInst(new X86Inst(s.c_str()));
         };
 stmt:   Ret(reg)            { $cost[0].cost = $cost[2].cost + 1;                } = {
             /*
@@ -61,10 +68,11 @@ stmt:   Ret(reg)            { $cost[0].cost = $cost[2].cost + 1;                
             fstate->LoadFromReg($0, $2);
             // this will record the ending in liveness range for a register
             // if the input is a register, and the register dies
-            // fstate->RecordLiveness($2);
-            fstate->RestoreStack();
-            fstate->AddInst(new X86Inst("leave"));
-            fstate->AddInst(new X86Inst("ret"));
+            fstate->RecordLiveness($2);
+            std::stringstream ss;
+            ss << "jmp\t." << fstate->GetFuncName() << "End";
+            std::string s = ss.str();
+            fstate->AddInst(new X86Inst(s.c_str()));
         };
 mem:    Alloca(imm)         { $cost[0].cost = $cost[2].cost + 1;    } = {
             /*
@@ -228,6 +236,16 @@ cond:   ICmp(reg, imm)       { $cost[0].cost = $cost[2].cost + $cost[3].cost;   
             fstate->RecordLiveness($2);
             fstate->RecordLiveness($3);
         };
+cond:   ICmp(reg, reg)       { $cost[0].cost = $cost[2].cost + $cost[3].cost;       } = { 
+            $action[2](fstate);
+            $action[3](fstate);
+            fstate->AssignVirtualReg($0, $2);    // assign a virtual register to the inst
+            fstate->GenerateBinaryStmt("sub", $0, $3);
+            // this will record the ending in liveness range for a register
+            // if the input is a register, and the register dies
+            fstate->RecordLiveness($2);
+            fstate->RecordLiveness($3);
+        };
 stmt:   Br(label, DUMMY, DUMMY)   { $cost[0].cost = $cost[2].cost + 5; } = {
             fstate->AddInst(new X86Inst("jmp",
                     new X86Operand(fstate, OP_TYPE::X86Label, $2->GetValue())
@@ -244,10 +262,17 @@ stmt:   Br(cond, label, label)   { $cost[0].cost = $cost[2].cost + $cost[3].cost
         };
 reg:    Call(args)               { $cost[0].cost = $cost[2].cost + 5; } = {
             $action[2](fstate, 0);
+            // preserve scratch registers
+            // for (int i = 0; i < 9; i++) {
+            //     fstate->GeneratePushStmt(scratch_regs[i]);
+            // }
             std::stringstream ss;
             ss << "call\t" << $0->GetFuncName();
             std::string s = ss.str();
             fstate->AddInst(new X86Inst(s.c_str()));
+            // for (int i = 8; i >= 1; i++) {
+            //     fstate->GeneratePopStmt(scratch_regs[i]);       // no need to restore rax
+            // }
             fstate->CreatePhysicalReg($0, RAX);
         };
 args:   NOARGS                  { $cost[0].cost = 0;                  } = {
@@ -257,11 +282,80 @@ args:   ARGS(value, args)        { $cost[0].cost = $cost[2].cost + $cost[3].cost
             $action[2](fstate);
             $action[3](fstate, n + 1);
             if (n < 6) {
-                $2->UseAsPhysicalRegister();
+                $0->SetValue(params_regs[n]);
+                $0->UseAsPhysicalRegister();
+                fstate->GenerateMovStmt($0, $2);
             } else {
                 // more than 6 argments should be pushed on stack in reversed order
                 fstate->GeneratePushStmt($2);
             }
+        };
+reg:    Trunc(reg)              { $cost[0].cost = $cost[2].cost + 3;              } = {
+            $action[2](fstate);
+            fstate->CreateVirtualReg($0);
+            fstate->LoadFromReg($0, $2);
+        };
+mem:    GetElementPtr(ri, ri, imm)    { $cost[0].cost = $cost[2].cost + $cost[3].cost + $cost[4].cost + 5; } = {
+            $action[2](fstate);
+            $action[3](fstate);
+            $action[4](fstate);
+            X86Operand *ptr = new X86Operand(fstate, OP_TYPE::X86Mem,
+                $2->AsX86Operand(fstate),         // base
+                nullptr, // $3->AsX86Operand(fstate),         // displacement
+                0,
+                8 * $4->GetValue().val.i64s           // offset
+            );
+            $0->SetX86Operand(ptr);
+        };
+mem:    GetElementPtr(mem, ri, imm)    { $cost[0].cost = $cost[2].cost + $cost[3].cost + $cost[4].cost + 5; } = {
+            $action[2](fstate);
+            $action[3](fstate);
+            $action[4](fstate);
+
+            Tree *t1 = new Tree(REG);
+            fstate->CreateVirtualReg(t1);
+
+            X86Operand *ptr = new X86Operand(fstate, OP_TYPE::X86Mem,
+                t1->AsX86Operand(fstate),          // base
+                nullptr, // $3->AsX86Operand(fstate),         // displacement
+                0,
+                8 * $4->GetValue().val.i64s           // offset
+            );
+            $0->SetX86Operand(ptr);
+        };
+mem:    GetElementPtr(ri, ri, reg)    { $cost[0].cost = $cost[2].cost + $cost[3].cost + $cost[4].cost + 5; } = {
+            $action[2](fstate);
+            $action[3](fstate);
+            $action[4](fstate);
+            X86Operand *ptr = new X86Operand(fstate, OP_TYPE::X86Mem,
+                $2->AsX86Operand(fstate),         // base
+                $4->AsX86Operand(fstate),
+                8,
+                0
+            );
+            $0->SetX86Operand(ptr);
+        };
+mem:    GetElementPtr(mem, ri, reg)    { $cost[0].cost = $cost[2].cost + $cost[3].cost + $cost[4].cost + 5; } = {
+            $action[2](fstate);
+            $action[3](fstate);
+            $action[4](fstate);
+
+            Tree *t1 = new Tree(REG);
+            fstate->CreateVirtualReg(t1);
+            fstate->GenerateMovStmt(t1, $2);
+
+            X86Operand *ptr = new X86Operand(fstate, OP_TYPE::X86Mem,
+                t1->AsX86Operand(fstate),         // base
+                $4->AsX86Operand(fstate),
+                8,
+                0
+            );
+            $0->SetX86Operand(ptr);
+        };
+reg:    BitCast(rm)             { $cost[0].cost = $cost[2].cost + 1; } = {
+            $action[2](fstate);
+            fstate->CreateVirtualReg($0);      // assign a virtual register to the inst
+            fstate->GenerateMovStmt($0, $2);
         };
 %%
 #include "llc_olive_helper.cxx"
