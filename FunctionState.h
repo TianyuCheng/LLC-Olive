@@ -43,8 +43,8 @@ public:
     void GenerateLabelStmt(Tree *v);
     void GenerateMovStmt(Tree *dst, Tree *src);
     void GenerateMovStmt(X86Operand *dst, X86Operand *src);
-    void GenerateBinaryStmt(const char *op, Tree *dst, Tree *src);
-    void GenerateBinaryStmt(const char *op, X86Operand *dst, X86Operand *src);
+    void GenerateBinaryStmt(const char *op, Tree *dst, Tree *src, bool suffix=true);
+    void GenerateBinaryStmt(const char *op, X86Operand *dst, X86Operand *src, bool suffix=true);
     void GeneratePushStmt(Tree *t);
 
     std::string GetFuncName() const { return function_name; }

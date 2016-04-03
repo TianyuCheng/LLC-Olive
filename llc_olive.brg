@@ -230,7 +230,7 @@ cond:   ICmp(reg, imm)       { $cost[0].cost = $cost[2].cost + $cost[3].cost;   
             $action[2](fstate);
             $action[3](fstate);
             fstate->AssignVirtualReg($0, $2);    // assign a virtual register to the inst
-            fstate->GenerateBinaryStmt("sub", $0, $3);
+            fstate->GenerateBinaryStmt("cmp", $0, $3, false);
             // this will record the ending in liveness range for a register
             // if the input is a register, and the register dies
             fstate->RecordLiveness($2);
@@ -243,10 +243,62 @@ stmt:   Br(label, DUMMY, DUMMY)   { $cost[0].cost = $cost[2].cost + 5; } = {
             $action[2](fstate);
         };
 stmt:   Br(cond, label, label)   { $cost[0].cost = $cost[2].cost + $cost[3].cost + $cost[4].cost + 5; } = {
+            using namespace llvm;
+
             $action[2](fstate);
-            fstate->AddInst(new X86Inst("je",
+            CmpInst *inst = dyn_cast<CmpInst>($2->GetInst());
+            assert(inst && "cond node must have instruction attached");
+
+            std::string op;
+            CmpInst::Predicate pred = inst->getPredicate();
+            switch (pred) {
+                case CmpInst::Predicate::ICMP_EQ:
+                    // equal
+                    op = "je";
+                    break;
+                case CmpInst::Predicate::ICMP_NE:
+                    // not equal
+                    op = "jne";
+                    break;
+                case CmpInst::Predicate::ICMP_UGT:
+                    // unsigned greater than
+                    op = "ja";
+                    break;
+                case CmpInst::Predicate::ICMP_UGE:
+                    // unsigned greater or equal
+                    op = "jae";
+                    break;
+                case CmpInst::Predicate::ICMP_ULT:
+                    // unsigned less than
+                    op = "jb";
+                    break;
+                case CmpInst::Predicate::ICMP_ULE:
+                    // unsigned less or equal
+                    op = "jbe";
+                    break;
+                case CmpInst::Predicate::ICMP_SGT:
+                    // signed greater than
+                    op = "jg";
+                    break;
+                case CmpInst::Predicate::ICMP_SGE:
+                    // signed greater or equal
+                    op = "jge";
+                    break;
+                case CmpInst::Predicate::ICMP_SLT:
+                    // signed less than
+                    op = "jl";
+                    break;
+                case CmpInst::Predicate::ICMP_SLE:
+                    // signed less or equal
+                    op = "jle";
+                    break;
+                default:
+                    assert(false && "FP TYPES NOT SUPPORTED!");
+            }
+            fstate->AddInst(new X86Inst(op.c_str(),
                     new X86Operand(fstate, OP_TYPE::X86Label, $3->GetValue())
             ));
+
             $action[4](fstate);
             $action[3](fstate);
         };

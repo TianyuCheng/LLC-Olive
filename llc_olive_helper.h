@@ -20,6 +20,7 @@
 #include <llvm/IR/Instructions.h>
 #include <llvm/IR/Constants.h>
 #include <llvm/IR/Argument.h>
+#include <llvm/IR/InstrTypes.h>
 
 #include "Insts.h"
 #include "Tree.h"
