@@ -163,13 +163,14 @@ void get_opr_counter (Function &func, std::map<Instruction*, int>& inst_opr_coun
     return ;
 }
 
-void FunctionToIntervals (Function &func) {
+void BuildIntervals (Function &func) {
     // Preliminary: local variables
     std::map<BasicBlock*, std::set<int>*> livein;
     std::map<Value*, int> v2vr_map;
     std::map<int, Interval*> all_intervals;
     std::map<Instruction*, int> inst_opr_counter;
     std::map<BasicBlock*, std::pair<int,int>> bb_opr_counter;
+    LoopInfo& loopinfo = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
     int vr_count = 0;
     // Preliminary: get operation numbers and all basic blocks within functions
     get_opr_counter(func, inst_opr_counter, bb_opr_counter);
@@ -260,7 +261,6 @@ void FunctionToIntervals (Function &func) {
             else live.erase(v2vr_map[v]);
         }
         // 6. if b is loop header
-        LoopInfo& loopinfo = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
         if (loopinfo.isLoopHeader(block)) {
             Loop* cur_loop = loopinfo.getLoopFor(block);
             BasicBlock* loopEnd = &(*(cur_loop->rbegin()));
@@ -269,9 +269,8 @@ void FunctionToIntervals (Function &func) {
                 assert(false && "BasicBlock LoopEnd not found in bb_opr_counter!");
             else 
                 loopEndTo = bb_opr_counter[loopEnd].second;           
-            for (int opd : live) {
+            for (int opd : live) 
                 all_intervals[opd]->addRange(bb_from, loopEndTo);
-            }
         }
         // 7. update back to livein
         livein.insert(std::make_pair<BasicBlock*, std::set<int>*>(block, &live));
@@ -281,7 +280,7 @@ void FunctionToIntervals (Function &func) {
 /**
  * Generate assembly for a single function
  * */
-void FunctionToAssembly(Function &func) {
+void MakeAssembly(Function &func) {
 
     // prepare a function state container
     // to store function information, such as
@@ -361,8 +360,10 @@ int main(int argc, char *argv[])
     // obtain a function list in module, and iterate over function
     Module::FunctionListType &function_list = module->getFunctionList();
     for (Function &func : function_list) {
-        FunctionToIntervals(func);
-        FunctionToAssembly(func);
+        BuildIntervals(func);
+        // TODO: linear scan algorithm
+        // LinearScan();
+        MakeAssembly(func);
     }
 
     return 0;

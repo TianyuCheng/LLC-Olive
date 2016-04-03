@@ -1,19 +1,79 @@
 #include "RegisterAllocator.h"
+#ifndef CLIMITS_H
+#include <climits>
+#endif
+
+int maxIndexVector (vector<int>& vec) {
+    int max_elem = -1, max_index = 0;
+    for (int i = 0; i < vec.size(); i ++) {
+        if (vec[i] == INT_MAX) return i;
+        if (vec[i] > max_elem) {
+            max_index = i;
+            max_elem = vec[i];
+        }
+    }
+    return max_index;
+}
+
+int RegisterAllocator::findNextIntersect(int pos) {
+
+}
+
+int RegisterAllocator::tryAllocateFreeReg(int cur_iid) {
+    vector<int> freeUntilPos (NUM_REGS, INT_MAX);
+    // FOR EACH active interval
+    for (int iid : active) freeUntilPos[iid] = 0;
+    // FOR EACH inactive interval
+    for (int iid : inactive) {
+        // TODO: 
+        if (not_intersect) continue; 
+        int pos = all_intervals[cur_iid].; 
+        freeUntilPos[iid] = findNextIntersect();
+    }
+    return maxIndexVector(freeUntilPos);
+}
+
+int RegisterAllocator::allocateBlockedReg(int cur_iid) {
+    vector<int> nextUsePos (NUM_REGS, INT_MAX);
+    // FOR EACH active interval
+    for (int iid : active) 
+        nextUsePos[iid] = 
+    // FOR EACH inactive interval
+    for (int i = 0; ; ) {
+        
+    }
+    return maxIndexVector(nextUsePos);
+}
+
+void RegisterAllocator::expirePrevIntervals() {
+
+}
+
+void RegisterAllocator::resolve() {
+
+}
+
+/* Linear Scan Algorithm for SSA form (support splitting of interval) */
+void RegisterAllocator::linearScanSSA () {
+    this->active_set.clear();
+    for (int i = 0; i < all_intervals.size(); i ++) {
+        expirePrevIntervals();
+        if (active_set.size() == NUM_REGS) {
+            // look for one occupied register to allocate
+            allocateBlockedReg();
+            //  system state transition
+
+        } else {
+            // look for one register to allocate
+            tryAllocateFreeReg(); 
+            // system state transition
+            insert_active_set (active_set, all_intervals[i]);
+        }
+    }
+}
 
 /*
-void RegisterAllocator::buildIntervals() {
-    
-}
-
-void RegisterAllocator::allocateFreeReg() {
-
-}
-
-void RegisterAllocator::allocateBlockedReg() {
-
-}
-
-void RegisterAllocator::linearScanAllocate () {
+void RegisterAllocator::linearScanNaive () {
     this->active_set.clear();
     for (int i = 0; i < all_intervals.size(); i ++) {
         expireOldIntervals(i);
