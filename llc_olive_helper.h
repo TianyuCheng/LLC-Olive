@@ -21,6 +21,8 @@
 #include <llvm/IR/Constants.h>
 #include <llvm/IR/Argument.h>
 #include <llvm/IR/InstrTypes.h>
+#include <llvm/Analysis/LoopPass.h>
+#include <llvm/Analysis/LoopInfo.h>
 
 #include "Insts.h"
 #include "Tree.h"

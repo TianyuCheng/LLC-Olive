@@ -5,6 +5,10 @@ FunctionState::FunctionState(std::string name, int n, int l)
 {
     // initialize function state here
     // local_bytes is initiated to 8 for saved rip
+
+    // // preserve registers
+    // for (int i = 0; i < 7; i++)
+    //     GeneratePushStmt(preserve_regs[i]);
 }
 
 FunctionState::~FunctionState() {
@@ -43,6 +47,10 @@ void FunctionState::PrintAssembly(std::ostream &out) {
     out << "\tpushq\t%rbp" << std::endl;
     out << "\tsubq\t%rsp, $" << local_bytes << std::endl;
 
+    // // restore registers
+    // for (int i = 6; i >= 0; i++)
+    //     GeneratePopStmt(preserve_regs[i]);
+
     // epilog
     std::stringstream ss;
     ss << "." << function_name << "End";
@@ -55,6 +63,7 @@ void FunctionState::PrintAssembly(std::ostream &out) {
     // TODO: remember to print function begin and ends
     for (X86Inst *inst : assembly)
         out << *inst;
+
 
     for(auto it = locals.begin(); it != locals.end(); ++it ) {
         delete it->second;
@@ -237,12 +246,31 @@ void FunctionState::GeneratePushStmt(Tree *t) {
         AddInst(new X86Inst("pushq", operand));
         freeList.push_back(operand);
     }
-    // else if (t->GetOpCode() == MEM) {
-    //     GenerateMovStmt(
-    //         new X86Operand(this, OP_TYPE::X86Reg, dst),
-    //         this->GetLocalMemoryAddress(t);
-    //     );
-    // }
+}
+
+void FunctionState::GeneratePushStmt(Register r) {
+    auto operand = new X86Operand(this, r);
+    AddInst(new X86Inst("pushq", operand));
+    freeList.push_back(operand);
+}
+
+void FunctionState::GeneratePopStmt(Tree *t) {
+    if (t->GetOpCode() == REG) {
+        auto operand = new X86Operand(this, OP_TYPE::X86Reg, t->GetValue().AsVirtualReg());
+        AddInst(new X86Inst("popq", operand));
+        freeList.push_back(operand);
+    }
+    else if (t->GetOpCode() == IMM) {
+        auto operand = new X86Operand(this, OP_TYPE::X86Imm, t->GetValue().AsVirtualReg());
+        AddInst(new X86Inst("popq", operand));
+        freeList.push_back(operand);
+    }
+}
+
+void FunctionState::GeneratePopStmt(Register r) {
+    auto operand = new X86Operand(this, r);
+    AddInst(new X86Inst("popq", operand));
+    freeList.push_back(operand);
 }
 
 void FunctionState::RecordLiveness(Tree *t) {

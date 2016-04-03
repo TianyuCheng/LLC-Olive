@@ -15,6 +15,9 @@ RESET=`tput sgr0`
 assembly:=$(patsubst %.c,%.s,$(wildcard $(TEST_DIR)/*.c))
 bitcodes:=$(patsubst %.c,%.bc,$(wildcard $(TEST_DIR)/*.c))
 
+max: $(EXE) $(bitcodes)
+	$(EXE) --num_regs=$(NUM_REGS) ./testcases/max.bc -o ./testcases/max.s
+
 array: $(EXE) $(bitcodes)
 	$(EXE) --num_regs=$(NUM_REGS) ./testcases/array.bc -o ./testcases/array.s
 

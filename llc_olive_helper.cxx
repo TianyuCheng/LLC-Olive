@@ -67,9 +67,10 @@ void BasicBlockToExprTrees(FunctionState &fstate,
                 }
                 else if (ConstantExpr *cnst = dyn_cast<ConstantExpr>(v)) {
                     // check if the operand is a constant int
-                    // errs() << "FOUND CONST EXPR:\t" << *cnst << "\n";
+#if 0
                     errs() << "NOT IMPLEMENTED CONST EXPR\n";
                     exit(EXIT_FAILURE);
+#endif
                 }
                 else if (Function *func = dyn_cast<Function>(v)) {
                     t->SetFuncName(v->getName().str());
@@ -163,14 +164,18 @@ void get_opr_counter (Function &func, std::map<Instruction*, int>& inst_opr_coun
     return ;
 }
 
-void FunctionToIntervals (Function &func) {
+void BuildIntervals (Function &func) {
+    // Preliminary: local variables
     std::map<BasicBlock*, std::set<int>*> livein;
     std::map<Value*, int> v2vr_map;
     std::map<int, Interval*> all_intervals;
     std::map<Instruction*, int> inst_opr_counter;
     std::map<BasicBlock*, std::pair<int,int>> bb_opr_counter;
-    get_opr_counter(func, inst_opr_counter, bb_opr_counter);
+    std::map<int, std::vector<int>*> use_contexts;
+    LoopInfo& loopinfo = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
     int vr_count = 0;
+    // Preliminary: get operation numbers and all basic blocks within functions
+    get_opr_counter(func, inst_opr_counter, bb_opr_counter);
     Function::BasicBlockListType &basic_blocks = func.getBasicBlockList();
     // FOR EACH block in reverse order
     for (auto bb = basic_blocks.rbegin(); bb != basic_blocks.rend(); bb++) {
@@ -220,16 +225,20 @@ void FunctionToIntervals (Function &func) {
             }
         }
         // 4. 
-        for (auto inst=bb->rbegin(); inst!=bb->rend(); inst++) {
+        for (auto it=bb->rbegin(); it!=bb->rend(); it++) {
+            Instruction* inst = &(*it);
             unsigned opcode = inst->getOpcode();
             if (opcode == PHI) continue; // FIXME: check if non-phi instruction
+            int opid; 
+            if (inst_opr_counter.find(inst) == inst_opr_counter.end())
+                assert(false && "inst not found in inst_opr_counter!");
+            else opid = inst_opr_counter[inst];
             // FOR EACH output operand of inst
             Value* v = (Value *) (&(* inst));
             if (v2vr_map.find(v) == v2vr_map.end()) {
                 assert(false && "inst is not found in 4.");
             } else {
-                int opid = -1; // TODO: 
-                Value* v = (Value *) (&(* inst));
+                Value* v = (Value *) (&(* inst)); 
                 all_intervals[v2vr_map[v]]->setFrom(opid);
                 live.erase(v2vr_map[v]);
             }
@@ -240,10 +249,19 @@ void FunctionToIntervals (Function &func) {
                 if (v2vr_map.find(v) == v2vr_map.end()) {
                     assert(false && "v is not found in 4.");
                 } else {
-                    int bfrom = -1, opid = -1; // TODO:
-                    all_intervals[v2vr_map[v]]->addRange(bfrom, opid);
+                    all_intervals[v2vr_map[v]]->addRange(bb_from, opid);
                     live.insert(v2vr_map[v]);
                 }
+                int v_opr_number;
+                if (inst_opr_counter.find(v) == inst_opr_counter.end())
+                    assert(false && "v cannot be found in inst_opr_counter in 4.");
+                else 
+                    v_opr_number = inst_opr_counter[v];
+                if (use_contexts.find(opd) == use_contexts.end()) {
+                    std::vector<int> new_use (1, v_opr_number);
+                    use_contexts.insert(std::make_pair(opd, &new_use)); 
+                } else use_contexts[opd]->push_back(v_opr_number);
+                
             }
         }
         // 5. 
@@ -255,24 +273,29 @@ void FunctionToIntervals (Function &func) {
             else live.erase(v2vr_map[v]);
         }
         // 6. if b is loop header
-        /*
-        if ( block ==  ) {
-            ;
-            for (int opd : live) {
-                int bfrom = -1, loopEndTo = -1;
-                all_intervals[opd]->addRange(bfrom, loopEndTo);
-            }
+        if (loopinfo.isLoopHeader(block)) {
+            Loop* cur_loop = loopinfo.getLoopFor(block);
+            BasicBlock* loopEnd = &(*(cur_loop->rbegin()));
+            int loopEndTo;
+            if (bb_opr_counter.find(loopEnd) == bb_opr_counter.end())
+                assert(false && "BasicBlock LoopEnd not found in bb_opr_counter!");
+            else 
+                loopEndTo = bb_opr_counter[loopEnd].second;           
+            for (int opd : live) 
+                all_intervals[opd]->addRange(bb_from, loopEndTo);
         }
-        */
         // 7. update back to livein
-        livein.insert(std::pair<BasicBlock*, std::set<int>*>(block, &live));
+        livein.insert(std::make_pair<BasicBlock*, std::set<int>*>(block, &live));
     }
+    // post processing: reverse all use_contexts[opd]
+    for (auto it=use_contexts.begin(); it != use_contexts.end(); it++) 
+        it.second->reverse();
 }
 
 /**
  * Generate assembly for a single function
  * */
-void FunctionToAssembly(Function &func) {
+void MakeAssembly(Function &func) {
 
     // prepare a function state container
     // to store function information, such as
@@ -289,12 +312,27 @@ void FunctionToAssembly(Function &func) {
     for (BasicBlock &bb : basic_blocks) {
         for (auto inst = bb.begin(); inst != bb.end(); inst++) {
             int num_operands = inst->getNumOperands();
+            // check basic block being referenced
             for (int i = 0; i < num_operands; i++) {
                 Value *v = inst->getOperand(i);
                 if (!dyn_cast<Instruction>(v))
                     if (BasicBlock *block = dyn_cast<BasicBlock>(v))
                         fstate.CreateLabel(block);
             } // end of operand loop
+
+#if 0
+            // check phi instruction
+            Instruction instruction = *inst;
+            if (PhiNode::classof(&instruction)) {
+                for (int i = 0; i < num_operands; i++) {
+                    Value *v = inst->getOperand(i);
+                    if (Instruction *def = dyn_cast<Instruction>(v)) {
+                        BasicBlock *parentBlock = def->getParent();
+                        Instruction *ins = new Instruction(v, , parentBlock);
+                    }
+                }
+            }
+#endif
         } // end of inst loop
     } // end of BB loop
     // ------------------------------------------------------------------------
@@ -352,8 +390,10 @@ int main(int argc, char *argv[])
     // obtain a function list in module, and iterate over function
     Module::FunctionListType &function_list = module->getFunctionList();
     for (Function &func : function_list) {
-        // FunctionToIntervals(func);
-        FunctionToAssembly(func);
+        BuildIntervals(func);
+        // TODO: linear scan algorithm
+        // LinearScan();
+        MakeAssembly(func);
     }
 
     return 0;

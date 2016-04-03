@@ -46,10 +46,13 @@ public:
     void GenerateBinaryStmt(const char *op, Tree *dst, Tree *src, bool suffix=true);
     void GenerateBinaryStmt(const char *op, X86Operand *dst, X86Operand *src, bool suffix=true);
     void GeneratePushStmt(Tree *t);
+    void GeneratePushStmt(Register r);
+    void GeneratePopStmt(Tree *t);
+    void GeneratePopStmt(Register r);
 
     std::string GetFuncName() const { return function_name; }
     std::string GetMCRegAt(int index) const { 
-#if 1
+#if 0
         std::cerr << "index: " << index << std::endl;
         std::cerr << "v2m size: " << virtual2machine.size() << std::endl;
 #endif
