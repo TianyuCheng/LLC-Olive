@@ -171,6 +171,7 @@ void BuildIntervals (Function &func) {
     std::map<int, Interval*> all_intervals;
     std::map<Instruction*, int> inst_opr_counter;
     std::map<BasicBlock*, std::pair<int,int>> bb_opr_counter;
+    std::map<int, std::vector<int>*> use_contexts;
     LoopInfo& loopinfo = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
     int vr_count = 0;
     // Preliminary: get operation numbers and all basic blocks within functions
@@ -251,6 +252,16 @@ void BuildIntervals (Function &func) {
                     all_intervals[v2vr_map[v]]->addRange(bb_from, opid);
                     live.insert(v2vr_map[v]);
                 }
+                int v_opr_number;
+                if (inst_opr_counter.find(v) == inst_opr_counter.end())
+                    assert(false && "v cannot be found in inst_opr_counter in 4.");
+                else 
+                    v_opr_number = inst_opr_counter[v];
+                if (use_contexts.find(opd) == use_contexts.end()) {
+                    std::vector<int> new_use (1, v_opr_number);
+                    use_contexts.insert(std::make_pair(opd, &new_use)); 
+                } else use_contexts[opd]->push_back(v_opr_number);
+                
             }
         }
         // 5. 
@@ -276,6 +287,9 @@ void BuildIntervals (Function &func) {
         // 7. update back to livein
         livein.insert(std::make_pair<BasicBlock*, std::set<int>*>(block, &live));
     }
+    // post processing: reverse all use_contexts[opd]
+    for (auto it=use_contexts.begin(); it != use_contexts.end(); it++) 
+        it.second->reverse();
 }
 
 /**

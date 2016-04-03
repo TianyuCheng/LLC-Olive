@@ -99,6 +99,7 @@ private:
     std::set<int> handled;
     std::set<int> unhandled;
     std::vector<Interval*> all_intervals;
+    std::map<int, std::vector<int>*> use_contexts;
 
     // gloally restore ssa form mapping
     std::vector<int> virtual2machine;

@@ -17,6 +17,7 @@ int maxIndexVector (vector<int>& vec) {
 
 int RegisterAllocator::findNextIntersect(int pos, Interval* cur_itv, Interval* itv) {
     int i = 0, j = 0;
+    // move iterator after pos
     int size_cur_itv = cur_itv->liveranges.size();
     int size_itv = itv->liveranges.size();
     for (; i < size_cur_itv; i ++) 
@@ -41,7 +42,7 @@ int RegisterAllocator::findNextIntersect(int pos, Interval* cur_itv, Interval* i
     found = false;
     for (j = itv_st_idx; !found && j < size_itv; j ++) {
         int startpoint = itv->liveranges[j].startpoint;
-        for (i = cur_itv_st_idx; i < size_cur_itv; i ++) { 
+        for (i = cur_itv_st_idx; i < size_cur_itv; i ++) {
             if (cur_itv->liveranges[i].startpoint <= startpoint && 
                     startpoint <= cur_itv->liveranges[i].endpoint) {
                 visit2_min = startpoint;
@@ -53,6 +54,10 @@ int RegisterAllocator::findNextIntersect(int pos, Interval* cur_itv, Interval* i
     return std::min(visit1_min, visit2_min);
 }
 
+bool RegisterAllocator::isIntersect(Interval* ia, Interval* ib) {
+    return false;
+}
+
 int RegisterAllocator::tryAllocateFreeReg(int cur_iid) {
     vector<int> freeUntilPos (NUM_REGS, INT_MAX);
     // FOR EACH active interval
@@ -62,21 +67,35 @@ int RegisterAllocator::tryAllocateFreeReg(int cur_iid) {
         int pos; // TODO:
         Interval* cur_itv = all_intervals[cur_iid]; 
         Interval* itv = all_intervals[iid]; 
-        // pos, 
         freeUntilPos[iid] = findNextIntersect(pos, cur_itv, itv);
     }
     return maxIndexVector(freeUntilPos);
+}
+
+int RegisterAllocator::findNextUse(int cur_iid, int iid) {
+    int start_of_current = all_intervals[cur_iid].liveranges[0].startpoint;
+    int next_use = findNextUseHelper(use_contexts[iid], start_of_current);
+    if (next_use < 0)
+        assert(false && "No next use! There should be one for the inactive interval");
+    return next_use;
+}
+
+int RegisterAllocator::findNextUse(std::vector<int> use_vec, int after) {
+    for (int use_pos : use_vec) 
+        if (use_pos > after) 
+            return use_pos;
+    return -1;
 }
 
 int RegisterAllocator::allocateBlockedReg(int cur_iid) {
     vector<int> nextUsePos (NUM_REGS, INT_MAX);
     // FOR EACH active interval
     for (int iid : active) 
-        nextUsePos[iid] = 
+        nextUsePos[iid] = findNextUse(cur_iid, iid);
     // FOR EACH inactive interval
-    for (int i = 0; ; ) {
-        nextUsePos[] = ;
-    }
+    for (int iid : inactive) 
+        if (isIntersect(all_intervals[iid], all_intervals[cur_iid])) 
+            nextUsePos[iid] = findNextUse(cur_iid, iid);
     return maxIndexVector(nextUsePos);
 }
 
