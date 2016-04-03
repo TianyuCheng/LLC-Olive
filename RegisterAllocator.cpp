@@ -85,7 +85,7 @@ int RegisterAllocator::tryAllocateFreeReg(int cur_iid) {
     // FOR EACH active interval
     for (int iid : active) freeUntilPos[iid] = 0;
     // FOR EACH inactive interval
-    int pos = all_intervals[cur_iid].liveranges[0].startpoint; // TODO: FIXME
+    int pos = all_intervals[cur_iid]->liveranges[0].startpoint; // TODO: FIXME
     for (int iid : inactive) {
         Interval* cur_itv = all_intervals[cur_iid]; 
         Interval* itv = all_intervals[iid]; 
@@ -95,7 +95,7 @@ int RegisterAllocator::tryAllocateFreeReg(int cur_iid) {
 }
 
 int RegisterAllocator::findNextUse(int cur_iid, int iid) {
-    int start_of_current = all_intervals[cur_iid].liveranges[0].startpoint;
+    int start_of_current = all_intervals[cur_iid]->liveranges[0].startpoint;
     int next_use = findNextUseHelper(use_contexts[iid], start_of_current);
     if (next_use < 0)
         assert(false && "No next use! There should be one for the inactive interval");
@@ -122,11 +122,54 @@ int RegisterAllocator::allocateBlockedReg(int cur_iid) {
 }
 
 void RegisterAllocator::expirePrevIntervals(int cur_iid) {
-    for () {
-        if () {
-
+    // start_of_current
+    int pos = all_intervals[cur_iid]->liveranges[0].startpoint;
+    // update active
+    set<int> active2handled; 
+    set<int> active2inactive;
+    for (int iid : active) {
+        Interval* iid_it = all_intervals[iid];
+        int iid_lr_size = iid_it->liveranges.size();
+        int iid_endpoint = iid_it->liveranges.rbegin()->second;
+        if (iid_endpoint < pos) 
+            active2handled.insert(iid);
+        else {
+            bool still_active = false;
+            for (int i = 0; i < iid_lr_size; i ++) {
+                if (iid_it->liveranges[i].startpoint <= pos && 
+                     pos <= iid_it->liveranges[i].endpoint)
+                    // iid_lr is still active
+                    still_active = true;
+                    break;
+            }
+            if (!still_active) active2inactive.insert(iid);
         }
     }
+    // update inactive
+    set<int> inactive2handled; 
+    set<int> inactive2active;
+    for (int iid : inactive) {
+        Interval* iid_it = all_intervals[iid];
+        int iid_lr_size = iid_it->liveranges.size();
+        int iid_endpoint = iid_it->liveranges.rbegin()->second;
+        if (iid_endpoint < pos) inactive2handled.insert(iid);
+        else {
+            bool turn_active = false;
+            for (int i = 0; i < iid_lr_size; i ++) {
+                if (iid_it->liveranges[i].startpoint <= pos && 
+                     pos <= iid_it->liveranges[i].endpoint)
+                    // iid_lr is still active
+                    turn_active = true;
+                    break;
+            }
+            if (turn_active) inactive2active.insert(iid);
+        }
+    }   
+    // apply all update
+    for (int iid : active2inactive) { active.erase(iid); inactive.insert(iid); }
+    for (int iid : active2handled) { active.erase(iid); handled.insert(iid); }
+    for (int iid : inactive2active) { inactive.erase(iid); active.insert(iid); }
+    for (int iid : inactive2handled) { inactive.erase(iid); handled.insert(iid); }
     return ;
 }
 
