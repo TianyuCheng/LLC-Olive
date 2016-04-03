@@ -55,6 +55,28 @@ int RegisterAllocator::findNextIntersect(int pos, Interval* cur_itv, Interval* i
 }
 
 bool RegisterAllocator::isIntersect(Interval* ia, Interval* ib) {
+    int size_ia = ia->liveranges.size();
+    int size_ib = ib->liveranges.size();
+    for (i = 0; i < size_ia; i++) { 
+        int startpoint = ia->liveranges[i].startpoint;
+        int endpoint = ia->liveranges[i].endpoint;
+        for (j = 0; j < size_ib; j ++) {
+            if ((ib->liveranges[j].startpoint <= startpoint && startpoint <= ib->liveranges[j].endpoint)
+                 || (ib->liveranges[j].startpoint <= endpoint && endpoint <= ib->liveranges[j].endpoint)) {
+                return true;
+            } else if (endpoint < ib->liveranges[j].startpoint) break;
+        }
+    }
+    for (j = 0; j < size_ib; j ++) {
+        int startpoint = ib->liveranges[j].startpoint;
+        int endpoint = ib->liveranges[j].endpoint;
+        for (i = 0; i < size_ia; i++) { 
+            if ((ia->liveranges[i].startpoint <= startpoint && startpoint <= ia->liveranges[i].endpoint)
+                 || (ia->liveranges[i].startpoint <= endpoint && endpoint <= ia->liveranges[i].endpoint)) {
+                return true;
+            } else if (endpoint < ia->liveranges[i].startpoint) break;
+        }
+    }
     return false;
 }
 
@@ -63,8 +85,8 @@ int RegisterAllocator::tryAllocateFreeReg(int cur_iid) {
     // FOR EACH active interval
     for (int iid : active) freeUntilPos[iid] = 0;
     // FOR EACH inactive interval
+    int pos = all_intervals[cur_iid].liveranges[0].startpoint; // TODO: FIXME
     for (int iid : inactive) {
-        int pos; // TODO:
         Interval* cur_itv = all_intervals[cur_iid]; 
         Interval* itv = all_intervals[iid]; 
         freeUntilPos[iid] = findNextIntersect(pos, cur_itv, itv);
@@ -99,8 +121,13 @@ int RegisterAllocator::allocateBlockedReg(int cur_iid) {
     return maxIndexVector(nextUsePos);
 }
 
-void RegisterAllocator::expirePrevIntervals() {
+void RegisterAllocator::expirePrevIntervals(int cur_iid) {
+    for () {
+        if () {
 
+        }
+    }
+    return ;
 }
 
 void RegisterAllocator::resolve() {
@@ -109,20 +136,27 @@ void RegisterAllocator::resolve() {
 
 /* Linear Scan Algorithm for SSA form (support splitting of interval) */
 void RegisterAllocator::linearScanSSA () {
-    this->active_set.clear();
+    // initialize four sets recording the system state
+    active.clear();
+    inactive.clear();
+    handled.clear();
+    unhandled.clear();
+    for (int i = 0; i < all_intervals.size(); i ++) unhandled.insert(i);
+    // start linear scan algorithm
     for (int i = 0; i < all_intervals.size(); i ++) {
-        expirePrevIntervals();
+        expirePrevIntervals(i);
         if (active_set.size() == NUM_REGS) {
             // look for one occupied register to allocate
-            allocateBlockedReg();
+            allocateBlockedReg(i);
             //  system state transition
-
+            
         } else {
             // look for one register to allocate
-            tryAllocateFreeReg(); 
+            tryAllocateFreeReg(i); 
             // system state transition
-            insert_active_set (active_set, all_intervals[i]);
+            active.insert(i);
         }
+        unhandled.erase(i);
     }
 }
 
