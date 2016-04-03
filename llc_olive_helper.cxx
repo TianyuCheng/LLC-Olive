@@ -67,9 +67,10 @@ void BasicBlockToExprTrees(FunctionState &fstate,
                 }
                 else if (ConstantExpr *cnst = dyn_cast<ConstantExpr>(v)) {
                     // check if the operand is a constant int
-                    // errs() << "FOUND CONST EXPR:\t" << *cnst << "\n";
+#if 0
                     errs() << "NOT IMPLEMENTED CONST EXPR\n";
                     exit(EXIT_FAILURE);
+#endif
                 }
                 else if (Function *func = dyn_cast<Function>(v)) {
                     t->SetFuncName(v->getName().str());
@@ -289,12 +290,27 @@ void FunctionToAssembly(Function &func) {
     for (BasicBlock &bb : basic_blocks) {
         for (auto inst = bb.begin(); inst != bb.end(); inst++) {
             int num_operands = inst->getNumOperands();
+            // check basic block being referenced
             for (int i = 0; i < num_operands; i++) {
                 Value *v = inst->getOperand(i);
                 if (!dyn_cast<Instruction>(v))
                     if (BasicBlock *block = dyn_cast<BasicBlock>(v))
                         fstate.CreateLabel(block);
             } // end of operand loop
+
+#if 0
+            // check phi instruction
+            Instruction instruction = *inst;
+            if (PhiNode::classof(&instruction)) {
+                for (int i = 0; i < num_operands; i++) {
+                    Value *v = inst->getOperand(i);
+                    if (Instruction *def = dyn_cast<Instruction>(v)) {
+                        BasicBlock *parentBlock = def->getParent();
+                        Instruction *ins = new Instruction(v, , parentBlock);
+                    }
+                }
+            }
+#endif
         } // end of inst loop
     } // end of BB loop
     // ------------------------------------------------------------------------

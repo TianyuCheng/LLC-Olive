@@ -236,6 +236,16 @@ cond:   ICmp(reg, imm)       { $cost[0].cost = $cost[2].cost + $cost[3].cost;   
             fstate->RecordLiveness($2);
             fstate->RecordLiveness($3);
         };
+cond:   ICmp(reg, reg)       { $cost[0].cost = $cost[2].cost + $cost[3].cost;       } = { 
+            $action[2](fstate);
+            $action[3](fstate);
+            fstate->AssignVirtualReg($0, $2);    // assign a virtual register to the inst
+            fstate->GenerateBinaryStmt("sub", $0, $3);
+            // this will record the ending in liveness range for a register
+            // if the input is a register, and the register dies
+            fstate->RecordLiveness($2);
+            fstate->RecordLiveness($3);
+        };
 stmt:   Br(label, DUMMY, DUMMY)   { $cost[0].cost = $cost[2].cost + 5; } = {
             fstate->AddInst(new X86Inst("jmp",
                     new X86Operand(fstate, OP_TYPE::X86Label, $2->GetValue())
@@ -252,10 +262,17 @@ stmt:   Br(cond, label, label)   { $cost[0].cost = $cost[2].cost + $cost[3].cost
         };
 reg:    Call(args)               { $cost[0].cost = $cost[2].cost + 5; } = {
             $action[2](fstate, 0);
+            // preserve scratch registers
+            // for (int i = 0; i < 9; i++) {
+            //     fstate->GeneratePushStmt(scratch_regs[i]);
+            // }
             std::stringstream ss;
             ss << "call\t" << $0->GetFuncName();
             std::string s = ss.str();
             fstate->AddInst(new X86Inst(s.c_str()));
+            // for (int i = 8; i >= 1; i++) {
+            //     fstate->GeneratePopStmt(scratch_regs[i]);       // no need to restore rax
+            // }
             fstate->CreatePhysicalReg($0, RAX);
         };
 args:   NOARGS                  { $cost[0].cost = 0;                  } = {
@@ -303,6 +320,35 @@ mem:    GetElementPtr(mem, ri, imm)    { $cost[0].cost = $cost[2].cost + $cost[3
                 nullptr, // $3->AsX86Operand(fstate),         // displacement
                 0,
                 8 * $4->GetValue().val.i64s           // offset
+            );
+            $0->SetX86Operand(ptr);
+        };
+mem:    GetElementPtr(ri, ri, reg)    { $cost[0].cost = $cost[2].cost + $cost[3].cost + $cost[4].cost + 5; } = {
+            $action[2](fstate);
+            $action[3](fstate);
+            $action[4](fstate);
+            X86Operand *ptr = new X86Operand(fstate, OP_TYPE::X86Mem,
+                $2->AsX86Operand(fstate),         // base
+                $4->AsX86Operand(fstate),
+                8,
+                0
+            );
+            $0->SetX86Operand(ptr);
+        };
+mem:    GetElementPtr(mem, ri, reg)    { $cost[0].cost = $cost[2].cost + $cost[3].cost + $cost[4].cost + 5; } = {
+            $action[2](fstate);
+            $action[3](fstate);
+            $action[4](fstate);
+
+            Tree *t1 = new Tree(REG);
+            fstate->CreateVirtualReg(t1);
+            fstate->GenerateMovStmt(t1, $2);
+
+            X86Operand *ptr = new X86Operand(fstate, OP_TYPE::X86Mem,
+                t1->AsX86Operand(fstate),         // base
+                $4->AsX86Operand(fstate),
+                8,
+                0
             );
             $0->SetX86Operand(ptr);
         };
