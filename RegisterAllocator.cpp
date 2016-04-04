@@ -181,6 +181,7 @@ void RegisterAllocator::updateRAState(int i) {
     std::cout << "update active done" << std::endl;
 
     // update inactive
+    /*
     std::set<int> inactive2handled; 
     std::set<int> inactive2active;
     for (int iid : inactive) {
@@ -201,11 +202,12 @@ void RegisterAllocator::updateRAState(int i) {
         }
     }   
     std::cout << "update inactive done" << std::endl;
+    */
     // apply all update
-    for (int iid : active2inactive) { active.erase(iid); inactive.insert(iid); }
+   // for (int iid : active2inactive) { active.erase(iid); inactive.insert(iid); }
     for (int iid : active2handled) { active.erase(iid); handled.insert(iid); }
-    for (int iid : inactive2active) { inactive.erase(iid); active.insert(iid); }
-    for (int iid : inactive2handled) { inactive.erase(iid); handled.insert(iid); }
+    // for (int iid : inactive2active) { inactive.erase(iid); active.insert(iid); }
+   // for (int iid : inactive2handled) { inactive.erase(iid); handled.insert(iid); }
     return ;
 }
 
@@ -236,17 +238,24 @@ void RegisterAllocator::splitInterval(int iid, int start, int reg) {
     }
     int tmp_endpoint = interval->liveranges[lr_id].endpoint;  // b
     interval->liveranges[lr_id].endpoint = start;
+    std::cout << "split_to: " << interval->liveranges[lr_id].startpoint << ", " << interval->liveranges[lr_id].endpoint << std::endl;
     // insert an new holes
     LiveRange hole (start, next_use);
     stack.push_back(iid);
     hole.set_in_stack (stack.size()-1);
     interval->holes.push_back(hole);
 
+    std::cout << "hole: " << hole.startpoint << ", " << hole.endpoint << std::endl;
+
     // insert an new live range
     LiveRange lr (next_use, tmp_endpoint);
     lr.set_in_register(reg);
     // std::cout << "insert():" << std::endl;
     interval->liveranges.insert(interval->liveranges.begin()+lr_id+1, lr);
+    iid_start_pairs.push_back(std::make_pair(iid, next_use));
+    // system state update: transit iid from active to inactive
+    active.erase(iid);
+    inactive.insert(iid);
     return ;
 }
 
