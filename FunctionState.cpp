@@ -25,9 +25,9 @@ FunctionState::~FunctionState() {
 }
 
 void FunctionState::PrintAssembly(std::ostream &out, RegisterAllocator &ra) {
-    out << "#####################################################" << std::endl;
-    this->PrintLiveness(out);
-    out << "#####################################################" << std::endl;
+    // out << "#####################################################" << std::endl;
+    // this->PrintLiveness(out);
+    // out << "#####################################################" << std::endl;
     // print assembly to file
     
     // pass liveness analysis to register allocator
@@ -61,8 +61,17 @@ void FunctionState::PrintAssembly(std::ostream &out, RegisterAllocator &ra) {
     AddInst(new X86Inst("ret"));
 
     // TODO: remember to print function begin and ends
-    for (X86Inst *inst : assembly)
+    for (X86Inst *inst : assembly) {
+        X86Operand *dst = inst->GetDst();
+        X86Operand *src = inst->GetSrc();
+        if (dst && dst->GetType() == OP_TYPE::X86Reg) {
+            // call allocator, print spill if needed
+        }
+        if (src && src->GetType() == OP_TYPE::X86Reg) {
+            // call allocator, print spill if needed
+        }
         out << *inst;
+    }
 
     for(auto it = locals.begin(); it != locals.end(); ++it ) {
         delete it->second;
@@ -151,8 +160,9 @@ void FunctionState::CreateVirtualReg(Tree *t) {
     using namespace llvm;
     int v = virtual2value.size();
     llvm::Value *val = t->GetLLVMValue();
-    if (!val)
+    if (!val) {
         std::cerr << "VIRTUAL REG NULL VALUE (OP): " << t->GetOpCode() << std::endl;
+    }
     assert(val && "llvm value should not be null");
     virtual2value.push_back(val);
     t->val = v;
