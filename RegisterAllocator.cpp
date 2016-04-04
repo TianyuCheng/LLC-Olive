@@ -83,19 +83,19 @@ bool RegisterAllocator::isIntersect(Interval* ia, Interval* ib) {
     return false;
 }
 
-int RegisterAllocator::tryAllocateFreeReg(int cur_iid) {
+int RegisterAllocator::tryAllocateFreeReg(int i) {
     std::vector<int> freeUntilPos (NUM_REGS, INT_MAX);
    // std::cout << "active_size: " << active.size() << std::endl;
    // std::cout << "inactive_size: " << inactive.size() << std::endl;
     // FOR EACH active interval
     for (int iid : active) {
        //  std::cout << "active_iid: " << iid << std::endl;
-        freeUntilPos[virtual2machine[iid]] = 0;
+        freeUntilPos[virtual2machine[iid]] = 0; // TODO: interval's physical register will change
     }
     // FOR EACH inactive interval
-    int pos = all_intervals[cur_iid]->liveranges[0].startpoint; // TODO: FIXME
+    int pos = iid_start_pairs[i].second; 
     for (int iid : inactive) {
-        Interval* cur_itv = all_intervals[cur_iid]; 
+        Interval* cur_itv = all_intervals[iid_start_pairs[i].first]; 
         Interval* itv = all_intervals[iid]; 
         freeUntilPos[iid] = findNextIntersect(pos, cur_itv, itv);
     }
@@ -133,9 +133,10 @@ int RegisterAllocator::findNextUse(int cur_iid, int iid) {
     return next_use;
 }
 
-int RegisterAllocator::allocateBlockedReg(int cur_iid) {
+int RegisterAllocator::allocateBlockedReg(int i) {
     std::vector<int> nextUsePos (NUM_REGS, INT_MAX);
     // FOR EACH active interval
+    int cur_iid = iid_start_pairs[i].first;
     for (int iid : active) {
         std::cout << "active_iid: " << iid << std::endl;
         nextUsePos[virtual2machine[iid]] = findNextUse(cur_iid, iid);
@@ -149,23 +150,27 @@ int RegisterAllocator::allocateBlockedReg(int cur_iid) {
     return maxIndexVector(nextUsePos);
 }
 
-void RegisterAllocator::updateRAState(int cur_iid) {
+void RegisterAllocator::updateRAState(int i) {
     // start_of_current
-    int pos = all_intervals[cur_iid]->liveranges[0].startpoint;
+    int pos = iid_start_pairs[i].second;
     // update active
     std::set<int> active2handled; 
     std::set<int> active2inactive;
     for (int iid : active) {
+   // std::cout << "iid:" << iid << std::endl;
         Interval* iid_it = all_intervals[iid];
         int iid_lr_size = iid_it->liveranges.size();
         int iid_endpoint = iid_it->liveranges.rbegin()->endpoint;
-        if (iid_endpoint < pos) 
+   // std::cout << "bbbbbbbbbbbbbbb" << std::endl;
+        if (iid_endpoint < pos) {
+    // std::cout << "ccccccccc" << std::endl;
             active2handled.insert(iid);
-        else {
+        } else {
             bool still_active = false;
-            for (int i = 0; i < iid_lr_size; i ++) {
-                if (iid_it->liveranges[i].startpoint <= pos && 
-                     pos <= iid_it->liveranges[i].endpoint)
+    // std::cout << "dddddddddd" << std::endl;
+            for (int j = 0; j < iid_lr_size; j ++) {
+                if (iid_it->liveranges[j].startpoint <= pos && 
+                     pos <= iid_it->liveranges[j].endpoint)
                     // iid_lr is still active
                     still_active = true;
                     break;
@@ -173,6 +178,8 @@ void RegisterAllocator::updateRAState(int cur_iid) {
             if (!still_active) active2inactive.insert(iid);
         }
     }
+    std::cout << "update active done" << std::endl;
+
     // update inactive
     std::set<int> inactive2handled; 
     std::set<int> inactive2active;
@@ -183,9 +190,9 @@ void RegisterAllocator::updateRAState(int cur_iid) {
         if (iid_endpoint < pos) inactive2handled.insert(iid);
         else {
             bool turn_active = false;
-            for (int i = 0; i < iid_lr_size; i ++) {
+            for (int j = 0; j < iid_lr_size; j ++) {
                 if (iid_it->liveranges[i].startpoint <= pos && 
-                     pos <= iid_it->liveranges[i].endpoint)
+                     pos <= iid_it->liveranges[j].endpoint)
                     // iid_lr is still active
                     turn_active = true;
                     break;
@@ -193,6 +200,7 @@ void RegisterAllocator::updateRAState(int cur_iid) {
             if (turn_active) inactive2active.insert(iid);
         }
     }   
+    std::cout << "update inactive done" << std::endl;
     // apply all update
     for (int iid : active2inactive) { active.erase(iid); inactive.insert(iid); }
     for (int iid : active2handled) { active.erase(iid); handled.insert(iid); }
@@ -210,10 +218,8 @@ void RegisterAllocator::splitInterval(int iid, int start, int reg) {
     Interval* interval = all_intervals[iid];
     // std::cout << "interval():" << iid << std::endl;
     int next_use;
-    if (use_contexts.find(iid) == use_contexts.end())
-        next_use = INT_MAX;
-    else 
-        next_use = findNextUseHelper(*(use_contexts[iid]), start);
+    if (use_contexts.find(iid) == use_contexts.end()) next_use = INT_MAX;
+    else next_use = findNextUseHelper(*(use_contexts[iid]), start);
     // std::cout << "findNextUseHelper():" << std::endl;
     int lr_id = -1;
     for (int i = 0; i < interval->liveranges.size(); i ++) {
@@ -260,10 +266,14 @@ void RegisterAllocator::linearScanSSA () {
         int cur_start = iid_start_pairs[i].second;
 
         std::cout << "-------------------------------" << std::endl;
-        std::cout << "Interval: " << iid << std::endl;
+        std::cout << "Interval: " << cur_iid << std::endl;
         std::cout << "updateRAState(): " << std::endl;
 
-        updateRAState(cur_iid); // update Register Allocation State
+        std::cout << "active_set_size: "   << active.size() << ", "
+                  << "inactive_set_size: " << inactive.size() 
+                  << std::endl;
+
+        updateRAState(i); // update Register Allocation State
 
         std::cout << "active_set_size: "   << active.size() << ", "
                   << "inactive_set_size: " << inactive.size() 
@@ -279,7 +289,7 @@ void RegisterAllocator::linearScanSSA () {
         if (active.size() == NUM_REGS) {
             // look for one occupied register to allocate
             std::cout << "allocateBlockedReg():" << std::endl;
-            reg = allocateBlockedReg(cur_iid);
+            reg = allocateBlockedReg(i);
             int spill = register_map[reg];
             active.erase(spill);
             inactive.insert(spill);
@@ -292,10 +302,11 @@ void RegisterAllocator::linearScanSSA () {
         } else {
             // look for one register to allocate
             std::cout << "tryAllocateFreeReg():"  << std::endl;
-            reg = tryAllocateFreeReg(cur_iid); 
+            reg = tryAllocateFreeReg(i); 
         }
         std::cout << "register assigned = " << reg << std::endl;
         register_map[reg] = cur_iid;
+        virtual2machine[cur_iid] = reg;
         active.insert(cur_iid);
         unhandled.erase(cur_iid);
     }

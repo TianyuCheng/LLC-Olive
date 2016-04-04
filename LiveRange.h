@@ -60,10 +60,13 @@ class Interval {
 
         // 2. compute updated startpoint and endpoint
         int updated_startpoint, updated_endpoint;
-        if (start_lr_idx < 0) updated_startpoint = start;
-        else updated_startpoint = liveranges[start_lr_idx].startpoint;
-        if (end_lr_idx < 0) updated_endpoint = end;
-        else updated_endpoint = liveranges[end_lr_idx].endpoint;
+        if (start_lr_idx < 0) { 
+            start_lr_idx = 0;
+            updated_startpoint = start;
+        } else updated_startpoint = liveranges[start_lr_idx].startpoint;
+        if (end_lr_idx < 0) {
+            updated_endpoint = end;
+        } else updated_endpoint = liveranges[end_lr_idx].endpoint;
 
         // 3. look for all live ranges between [updated_start, updated_end]
         int max_include_idx = INT_MIN, min_include_idx = INT_MAX;

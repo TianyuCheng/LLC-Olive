@@ -129,16 +129,17 @@ public:
         for (auto it=ai.rbegin(); it!=ai.rend(); it++) {
             int start = it->second->liveranges[0].startpoint;
             std::cout << it->second->liveranges[0].startpoint << " ";
+            all_intervals.insert(ai.begin(), ai.end());
             insert_intervals (it->first, start);
             // std::cout << it->second->liveranges.size() << std::endl;
         }
         std::cout << std::endl << "After Sort: " << std::endl;
-        for (Interval* inter : all_intervals) {
-            std::cout << inter->liveranges[0].startpoint << " ";
+        for (int i = 0; i < iid_start_pairs.size(); i ++) {
+            std::cout << iid_start_pairs[i].second << " ";
         }
         std::cout << std::endl;
         virtual2machine.clear();
-        virtual2machine.resize(all_intervals.size(), -1);
+        virtual2machine.resize(iid_start_pairs.size(), -1);
     }
 
     void set_use_contexts(std::map<int, std::vector<int>*> &uc) {

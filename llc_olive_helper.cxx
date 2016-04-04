@@ -196,7 +196,7 @@ void BuildIntervals (Function &func, std::map<int, Interval*> &all_intervals, st
             }
         }
         // 2. FOR EACH PHI function of 
-      //  std::cout << "Now step 2" << std::endl; 
+      std::cout << "Now step 2" << std::endl; 
         for (int i = 0; i < numSuccessors; i++) {
             BasicBlock* succ = termInst->getSuccessor(i);
             for (auto inst=succ->begin(); inst!=succ->end(); inst++) {
@@ -215,7 +215,7 @@ void BuildIntervals (Function &func, std::map<int, Interval*> &all_intervals, st
             }
         }
         // 3. add ranges FOR EACH opd (virtual register) in live
-       // std::cout << "Now step 3" << std::endl; 
+       std::cout << "Now step 3" << std::endl; 
         std::pair<int,int> opr_pair;
         if (bb_opr_counter.find(block) == bb_opr_counter.end())
             assert(false && "BasicBlock not found in bb_opr_counter!");
@@ -231,7 +231,7 @@ void BuildIntervals (Function &func, std::map<int, Interval*> &all_intervals, st
             }
         }
         // 4. 
-       // std::cout << "Now step 4" << std::endl; 
+       std::cout << "Now step 4" << std::endl; 
         for (auto it=bb->rbegin(); it!=bb->rend(); it++) {
             Instruction* inst = &(*it);
             unsigned opcode = inst->getOpcode();
@@ -248,51 +248,56 @@ void BuildIntervals (Function &func, std::map<int, Interval*> &all_intervals, st
             if (v2vr_map.find(v) == v2vr_map.end()) 
                 v2vr_map.insert(std::make_pair(v, vr_count++));
             // std::cout << "here:2-->" << v2vr_map[v] << std::endl; 
-            int tmp_opd = v2vr_map[v];
-            if (all_intervals.find(tmp_opd) == all_intervals.end()) { 
+            int inst_opd = v2vr_map[v];
+            if (all_intervals.find(inst_opd) == all_intervals.end()) { 
                 Interval* new_interval = new Interval (opid, bb_to);
-                all_intervals.insert(std::make_pair(tmp_opd, new_interval));
+                all_intervals.insert(std::make_pair(inst_opd, new_interval));
             } else 
-                all_intervals[v2vr_map[v]]->setFrom(opid, bb_to);
-            live.erase(v2vr_map[v]);
+                all_intervals[inst_opd]->setFrom(opid, bb_to);
+            live.erase(inst_opd);
             // FOR EACH input operand of inst
             //  std::cout << "FOR EACH input operand of inst: " << std::endl; 
             int num_operands = inst->getNumOperands();
             for (int j = 0; j < num_operands; j++) {
                 v = inst->getOperand(j);
-                int opd;
-                // std::cout << "AAAAAAAAAA: " << std::endl; 
+                int v_opd;
+               // std::cout << "AAAAAAAAAA: " << std::endl; 
                 if (v2vr_map.find(v) == v2vr_map.end()) 
                     v2vr_map.insert(std::make_pair(v, vr_count++));
-                opd = v2vr_map[v];
-                if (all_intervals.find(opd) == all_intervals.end()) {
+                v_opd = v2vr_map[v];
+              //  std::cout << "v_opd: "<< v_opd << std::endl; 
+                if (all_intervals.find(v_opd) == all_intervals.end()) {
+              //  std::cout << "new interval: " << std::endl; 
                     Interval* new_interval = new Interval (bb_from, opid);
-                    all_intervals.insert(std::make_pair(tmp_opd, new_interval));
-                } else 
-                    all_intervals[opd]->addRange(bb_from, opid);
-                // std::cout << "CCCCCCCCC: " << std::endl; 
-                live.insert(opd);
+                    all_intervals.insert(std::make_pair(v_opd, new_interval));
+                } else {
+                  //  std::cout << "addRange: " << bb_from << ", " << opid << std::endl; 
+                   // std::cout << "prev_lr: " << all_intervals[v_opd]->liveranges[0].startpoint << ", "
+                  //      << all_intervals[v_opd]->liveranges[0].endpoint << std::endl; 
+                    all_intervals[v_opd]->addRange(bb_from, opid);
+                }
+               //  std::cout << "CCCCCCCCC: " << std::endl; 
+                live.insert(v_opd);
                 int v_opr_number;
                 if (inst_opr_counter.find(inst) == inst_opr_counter.end())
                     assert(false && "v cannot be found in inst_opr_counter in 4.");
                 else 
                     v_opr_number = inst_opr_counter[inst];
                 //  std::cout << "DDDDDDDDDDDD: " << std::endl; 
-                if (use_contexts.find(opd) == use_contexts.end()) {
+                if (use_contexts.find(v_opd) == use_contexts.end()) {
                     //    std::cout << "sssssssssssssss: " << std::endl; 
                     std::vector<int>* new_use = new std::vector<int>();
                     new_use->push_back(v_opr_number);
-                    use_contexts.insert(std::make_pair(opd, new_use)); 
+                    use_contexts.insert(std::make_pair(v_opd, new_use)); 
                 } else { 
                     //   std::cout << "eeeeeeeeeee: " << std::endl; 
-                    use_contexts[opd]->push_back(v_opr_number);
+                    use_contexts[v_opd]->push_back(v_opr_number);
                 }
                 //  std::cout << "EEEEEEEEE: " << std::endl; 
-                
             }
         }
         // 5. 
-       // std::cout << "Now step 5" << std::endl; 
+       std::cout << "Now step 5" << std::endl; 
         for (auto inst=bb->begin(); inst!=bb->end(); inst++) {
             unsigned opcode = inst->getOpcode();
             if (opcode != PHI) continue;
@@ -443,11 +448,13 @@ int main(int argc, char *argv[])
         for (auto it=all_intervals.begin(); it!=all_intervals.end(); it++) 
             std::cout << it->first << ":" << it->second->liveranges[0].startpoint
                 << ","  << it->second->liveranges[0].endpoint << std::endl;
+        /*
         std::cout << "............................" << std::endl;
         for (auto it=use_contexts.begin(); it!=use_contexts.end(); it++) {
             std::cout << it->first << ":" << std::endl;
         }
         std::cout << "............................" << std::endl;
+        */
         RegisterAllocator ra (NumRegs);
         ra.set_all_intervals(all_intervals);
         ra.set_use_contexts(use_contexts);
