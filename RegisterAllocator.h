@@ -3,8 +3,9 @@
 
 #include <iostream>
 #include <map>
+#include <set>
 #include <queue>
-
+#include "assert.h"
 #include "LiveRange.h"
 
 enum Register {
@@ -63,8 +64,8 @@ class RegisterAllocator
 public:
     RegisterAllocator(int num_regs) {
         // initialize register map
-        for (int i = 0; i < NUM_REGS; i++) 
-            register_map[i] = NULL;
+        // for (int i = 0; i < NUM_REGS; i++) 
+        //    register_map[i] = NULL;
     }
 
     virtual ~RegisterAllocator() { }
@@ -72,13 +73,24 @@ public:
     std::string Allocate() {
         return std::string("rax");
     }
+    /*
+    // naive version of linear scan
     void linearScanAllocate ();
     void expireOldIntervals (int i);
     void spillAtInterval (int i);
+    */
 
-    void buildIntervals();
-    void allocateFreeReg();
-    void allocateBlockedReg();
+
+    bool isIntersect (Interval* ia, Interval* ib);
+    int findNextIntersect (int pos, Interval* cur_itv, Interval* itv);
+    int findNextUseHelper(std::vector<int>& use_vec, int after);
+    int findNextUse (int cur_iid, int iid);
+
+    void updateRAState(int cur_iid);
+    int tryAllocateFreeReg (int cur_iid);
+    int allocateBlockedReg (int cur_iid);
+    void resolveConflicts ();
+    void linearScanSSA ();
 
     std::vector<int> get_virtual2machine() const {
         return virtual2machine;

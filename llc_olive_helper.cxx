@@ -172,7 +172,7 @@ void BuildIntervals (Function &func) {
     std::map<Instruction*, int> inst_opr_counter;
     std::map<BasicBlock*, std::pair<int,int>> bb_opr_counter;
     std::map<int, std::vector<int>*> use_contexts;
-    LoopInfo& loopinfo = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+    // LoopInfo& loopinfo = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
     int vr_count = 0;
     // Preliminary: get operation numbers and all basic blocks within functions
     get_opr_counter(func, inst_opr_counter, bb_opr_counter);
@@ -181,18 +181,24 @@ void BuildIntervals (Function &func) {
     for (auto bb = basic_blocks.rbegin(); bb != basic_blocks.rend(); bb++) {
         std::set<int> live;
         BasicBlock *block = &(*bb);
+       // std::cout << "block:" << bb_opr_counter[block].first << ", " << bb_opr_counter[block].second << std::endl;
         // 1. get union of successor.livein FOR EACH successor
+       // std::cout << "Now step 2" << std::endl; 
         TerminatorInst* termInst = bb->getTerminator();
         int numSuccessors = termInst->getNumSuccessors();
         for (int i = 0; i < numSuccessors; i++) {
             BasicBlock* succ = termInst->getSuccessor(i);
-            auto it = livein.find(succ);
-            assert((it != livein.end()) && "find succ fails at 1.");
-            std::set<int>* succ_livein = it->second;
-            for (auto it=succ_livein->begin(); it!=succ_livein->end(); it++)
-                live.insert(*it);
+            std::cout << "succ:" << bb_opr_counter[succ].first << ", " << bb_opr_counter[succ].second << std::endl;
+            if (livein.find(succ) == livein.end()) { ;
+               // std::cout << "it is succ not processed yet. so insert empty. " << std::endl;
+            } else {
+                std::set<int>* succ_livein = livein[succ];
+                for (auto it=succ_livein->begin(); it!=succ_livein->end(); it++)
+                    live.insert(*it);
+            }
         }
         // 2. FOR EACH PHI function of 
+      //  std::cout << "Now step 2" << std::endl; 
         for (int i = 0; i < numSuccessors; i++) {
             BasicBlock* succ = termInst->getSuccessor(i);
             for (auto inst=succ->begin(); inst!=succ->end(); inst++) {
@@ -202,14 +208,16 @@ void BuildIntervals (Function &func) {
                 for (int j = 0; j < num_operands; j++) {
                     // TODO: particularly consider constant type
                     Value *v = inst->getOperand(j);
-                    if (v2vr_map.find(v) == v2vr_map.end()) 
+                    if (v2vr_map.find(v) == v2vr_map.end()) {
                         // create an new virtual register number and assign to it
-                        live.insert(vr_count++);  
-                    else live.insert(v2vr_map[v]);
+                        live.insert(vr_count);
+                        v2vr_map.insert(std::make_pair(v, vr_count++));
+                    } else live.insert(v2vr_map[v]);
                 }
             }
         }
         // 3. add ranges FOR EACH opd (virtual register) in live
+       // std::cout << "Now step 3" << std::endl; 
         std::pair<int,int> opr_pair;
         if (bb_opr_counter.find(block) == bb_opr_counter.end())
             assert(false && "BasicBlock not found in bb_opr_counter!");
@@ -225,6 +233,7 @@ void BuildIntervals (Function &func) {
             }
         }
         // 4. 
+       // std::cout << "Now step 4" << std::endl; 
         for (auto it=bb->rbegin(); it!=bb->rend(); it++) {
             Instruction* inst = &(*it);
             unsigned opcode = inst->getOpcode();
@@ -234,45 +243,74 @@ void BuildIntervals (Function &func) {
                 assert(false && "inst not found in inst_opr_counter!");
             else opid = inst_opr_counter[inst];
             // FOR EACH output operand of inst
+            if (inst->getOpcode() == PHI) continue;
+           // std::cout << "Instruction: " << opid << std::endl; 
             Value* v = (Value *) (&(* inst));
-            if (v2vr_map.find(v) == v2vr_map.end()) {
-                assert(false && "inst is not found in 4.");
-            } else {
-                Value* v = (Value *) (&(* inst)); 
-                all_intervals[v2vr_map[v]]->setFrom(opid);
-                live.erase(v2vr_map[v]);
-            }
+            // std::cout << "here:1 " << std::endl; 
+            if (v2vr_map.find(v) == v2vr_map.end()) 
+                v2vr_map.insert(std::make_pair(v, vr_count++));
+            // std::cout << "here:2-->" << v2vr_map[v] << std::endl; 
+            int tmp_opd = v2vr_map[v];
+            if (all_intervals.find(tmp_opd) == all_intervals.end()) { 
+                Interval new_interval (opid, bb_to);
+                all_intervals.insert(std::make_pair(tmp_opd, &new_interval));
+            } else 
+                all_intervals[v2vr_map[v]]->setFrom(opid, bb_to);
+            live.erase(v2vr_map[v]);
             // FOR EACH input operand of inst
+          //  std::cout << "FOR EACH input operand of inst: " << std::endl; 
             int num_operands = inst->getNumOperands();
             for (int j = 0; j < num_operands; j++) {
-                Value *v = inst->getOperand(j);
-                if (v2vr_map.find(v) == v2vr_map.end()) {
-                    assert(false && "v is not found in 4.");
-                } else {
-                    all_intervals[v2vr_map[v]]->addRange(bb_from, opid);
-                    live.insert(v2vr_map[v]);
-                }
+                v = inst->getOperand(j);
+                int opd;
+               // std::cout << "AAAAAAAAAA: " << std::endl; 
+                if (v2vr_map.find(v) == v2vr_map.end()) 
+                    v2vr_map.insert(std::make_pair(v, vr_count++));
+                opd = v2vr_map[v];
+                if (all_intervals.find(opd) == all_intervals.end()) {
+                    Interval new_interval (bb_from, opid);
+                    all_intervals.insert(std::make_pair(tmp_opd, &new_interval));
+                } else 
+                    all_intervals[opd]->addRange(bb_from, opid);
+                // std::cout << "CCCCCCCCC: " << std::endl; 
+                live.insert(opd);
                 int v_opr_number;
-                if (inst_opr_counter.find(v) == inst_opr_counter.end())
+                if (inst_opr_counter.find(inst) == inst_opr_counter.end())
                     assert(false && "v cannot be found in inst_opr_counter in 4.");
                 else 
-                    v_opr_number = inst_opr_counter[v];
+                    v_opr_number = inst_opr_counter[inst];
+              //  std::cout << "DDDDDDDDDDDD: " << std::endl; 
                 if (use_contexts.find(opd) == use_contexts.end()) {
-                    std::vector<int> new_use (1, v_opr_number);
-                    use_contexts.insert(std::make_pair(opd, &new_use)); 
-                } else use_contexts[opd]->push_back(v_opr_number);
+                //    std::cout << "sssssssssssssss: " << std::endl; 
+                    std::vector<int>* new_use = new std::vector<int>();
+                    new_use->push_back(v_opr_number);
+                    use_contexts.insert(std::make_pair(opd, new_use)); 
+                } else { 
+                 //   std::cout << "eeeeeeeeeee: " << std::endl; 
+                    use_contexts[opd]->push_back(v_opr_number);
+                }
+               //  std::cout << "EEEEEEEEE: " << std::endl; 
                 
             }
         }
         // 5. 
+       // std::cout << "Now step 5" << std::endl; 
         for (auto inst=bb->begin(); inst!=bb->end(); inst++) {
             unsigned opcode = inst->getOpcode();
             if (opcode != PHI) continue;
+             //std::cout << "qqqqqqqqqqqqq: " << std::endl; 
             Value* v = (Value *) (&(* inst));
-            if (v2vr_map.find(v) == v2vr_map.end()) continue;
-            else live.erase(v2vr_map[v]);
+            // std::cout << "ppppppppp: " << std::endl; 
+            if (v2vr_map.find(v) == v2vr_map.end()) {
+                continue;
+               //  std::cout << "ppppppp111111111pp: " << std::endl; 
+            } else {
+                // std::cout << "ppppppp222222222pp: " << std::endl; 
+                live.erase(v2vr_map[v]);
+            }
         }
         // 6. if b is loop header
+        /*
         if (loopinfo.isLoopHeader(block)) {
             Loop* cur_loop = loopinfo.getLoopFor(block);
             BasicBlock* loopEnd = &(*(cur_loop->rbegin()));
@@ -284,12 +322,18 @@ void BuildIntervals (Function &func) {
             for (int opd : live) 
                 all_intervals[opd]->addRange(bb_from, loopEndTo);
         }
+        */
         // 7. update back to livein
-        livein.insert(std::make_pair<BasicBlock*, std::set<int>*>(block, &live));
+        // livein.insert(std::pair<BasicBlock*, std::set<int>*>(block, &live));
+        // std::cout << "EEEEEEEEE: " << std::endl; 
+        livein.insert(std::make_pair(block, &live));
+        // std::cout << "sddsdssdsd: " << std::endl; 
     }
     // post processing: reverse all use_contexts[opd]
+      //  std::cout << "Now postprocessing" << std::endl; 
     for (auto it=use_contexts.begin(); it != use_contexts.end(); it++) 
-        it.second->reverse();
+        std::reverse(it->second->begin(), it->second->end());
+      //  std::cout << "Now postprocessing end" << std::endl; 
 }
 
 /**

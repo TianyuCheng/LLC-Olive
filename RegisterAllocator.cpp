@@ -3,9 +3,9 @@
 #include <climits>
 #endif
 
-int maxIndexVector (vector<int>& vec) {
+int maxIndexVector (std::vector<int>& vec) {
     int max_elem = -1, max_index = 0;
-    for (int i = 0; i < vec.size(); i ++) {
+    for (unsigned i = 0; i < vec.size(); i ++) {
         if (vec[i] == INT_MAX) return i;
         if (vec[i] > max_elem) {
             max_index = i;
@@ -55,22 +55,22 @@ int RegisterAllocator::findNextIntersect(int pos, Interval* cur_itv, Interval* i
 }
 
 bool RegisterAllocator::isIntersect(Interval* ia, Interval* ib) {
-    int size_ia = ia->liveranges.size();
-    int size_ib = ib->liveranges.size();
-    for (i = 0; i < size_ia; i++) { 
+    unsigned size_ia = ia->liveranges.size();
+    unsigned size_ib = ib->liveranges.size();
+    for (unsigned i = 0; i < size_ia; i++) { 
         int startpoint = ia->liveranges[i].startpoint;
         int endpoint = ia->liveranges[i].endpoint;
-        for (j = 0; j < size_ib; j ++) {
+        for (unsigned j = 0; j < size_ib; j ++) {
             if ((ib->liveranges[j].startpoint <= startpoint && startpoint <= ib->liveranges[j].endpoint)
                  || (ib->liveranges[j].startpoint <= endpoint && endpoint <= ib->liveranges[j].endpoint)) {
                 return true;
             } else if (endpoint < ib->liveranges[j].startpoint) break;
         }
     }
-    for (j = 0; j < size_ib; j ++) {
+    for (unsigned j = 0; j < size_ib; j ++) {
         int startpoint = ib->liveranges[j].startpoint;
         int endpoint = ib->liveranges[j].endpoint;
-        for (i = 0; i < size_ia; i++) { 
+        for (unsigned i = 0; i < size_ia; i++) { 
             if ((ia->liveranges[i].startpoint <= startpoint && startpoint <= ia->liveranges[i].endpoint)
                  || (ia->liveranges[i].startpoint <= endpoint && endpoint <= ia->liveranges[i].endpoint)) {
                 return true;
@@ -81,7 +81,7 @@ bool RegisterAllocator::isIntersect(Interval* ia, Interval* ib) {
 }
 
 int RegisterAllocator::tryAllocateFreeReg(int cur_iid) {
-    vector<int> freeUntilPos (NUM_REGS, INT_MAX);
+    std::vector<int> freeUntilPos (NUM_REGS, INT_MAX);
     // FOR EACH active interval
     for (int iid : active) freeUntilPos[iid] = 0;
     // FOR EACH inactive interval
@@ -94,23 +94,23 @@ int RegisterAllocator::tryAllocateFreeReg(int cur_iid) {
     return maxIndexVector(freeUntilPos);
 }
 
-int RegisterAllocator::findNextUse(int cur_iid, int iid) {
-    int start_of_current = all_intervals[cur_iid]->liveranges[0].startpoint;
-    int next_use = findNextUseHelper(use_contexts[iid], start_of_current);
-    if (next_use < 0)
-        assert(false && "No next use! There should be one for the inactive interval");
-    return next_use;
-}
-
-int RegisterAllocator::findNextUse(std::vector<int> use_vec, int after) {
+int RegisterAllocator::findNextUseHelper(std::vector<int>& use_vec, int after) {
     for (int use_pos : use_vec) 
         if (use_pos > after) 
             return use_pos;
     return -1;
 }
 
+int RegisterAllocator::findNextUse(int cur_iid, int iid) {
+    int start_of_current = all_intervals[cur_iid]->liveranges[0].startpoint;
+    int next_use = findNextUseHelper(*(use_contexts[iid]), start_of_current);
+    if (next_use < 0)
+        assert(false && "No next use! There should be one for the inactive interval");
+    return next_use;
+}
+
 int RegisterAllocator::allocateBlockedReg(int cur_iid) {
-    vector<int> nextUsePos (NUM_REGS, INT_MAX);
+    std::vector<int> nextUsePos (NUM_REGS, INT_MAX);
     // FOR EACH active interval
     for (int iid : active) 
         nextUsePos[iid] = findNextUse(cur_iid, iid);
@@ -121,16 +121,16 @@ int RegisterAllocator::allocateBlockedReg(int cur_iid) {
     return maxIndexVector(nextUsePos);
 }
 
-void RegisterAllocator::expirePrevIntervals(int cur_iid) {
+void RegisterAllocator::updateRAState(int cur_iid) {
     // start_of_current
     int pos = all_intervals[cur_iid]->liveranges[0].startpoint;
     // update active
-    set<int> active2handled; 
-    set<int> active2inactive;
+    std::set<int> active2handled; 
+    std::set<int> active2inactive;
     for (int iid : active) {
         Interval* iid_it = all_intervals[iid];
         int iid_lr_size = iid_it->liveranges.size();
-        int iid_endpoint = iid_it->liveranges.rbegin()->second;
+        int iid_endpoint = iid_it->liveranges.rbegin()->endpoint;
         if (iid_endpoint < pos) 
             active2handled.insert(iid);
         else {
@@ -146,12 +146,12 @@ void RegisterAllocator::expirePrevIntervals(int cur_iid) {
         }
     }
     // update inactive
-    set<int> inactive2handled; 
-    set<int> inactive2active;
+    std::set<int> inactive2handled; 
+    std::set<int> inactive2active;
     for (int iid : inactive) {
         Interval* iid_it = all_intervals[iid];
         int iid_lr_size = iid_it->liveranges.size();
-        int iid_endpoint = iid_it->liveranges.rbegin()->second;
+        int iid_endpoint = iid_it->liveranges.rbegin()->endpoint;
         if (iid_endpoint < pos) inactive2handled.insert(iid);
         else {
             bool turn_active = false;
@@ -173,8 +173,8 @@ void RegisterAllocator::expirePrevIntervals(int cur_iid) {
     return ;
 }
 
-void RegisterAllocator::resolve() {
-
+void RegisterAllocator::resolveConflicts() {
+    
 }
 
 /* Linear Scan Algorithm for SSA form (support splitting of interval) */
@@ -187,18 +187,15 @@ void RegisterAllocator::linearScanSSA () {
     for (int i = 0; i < all_intervals.size(); i ++) unhandled.insert(i);
     // start linear scan algorithm
     for (int i = 0; i < all_intervals.size(); i ++) {
-        expirePrevIntervals(i);
-        if (active_set.size() == NUM_REGS) {
+        updateRAState(i);
+        if (active.size() == NUM_REGS) {
             // look for one occupied register to allocate
             allocateBlockedReg(i);
-            //  system state transition
-            
         } else {
             // look for one register to allocate
             tryAllocateFreeReg(i); 
-            // system state transition
-            active.insert(i);
         }
+        active.insert(i);
         unhandled.erase(i);
     }
 }
