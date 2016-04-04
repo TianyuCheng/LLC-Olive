@@ -35,7 +35,7 @@ void FunctionState::PrintAssembly(std::ostream &out, RegisterAllocator &ra) {
        allocator.set_intervals(liveness);
     allocator.linearScanAllocate();
     */
-    // virtual2machine = ra.get_virtual2machine();
+    // virtual2value = ra.get_virtual2value();
 
     // print function entrance
     // TODO: make these a part of the assembly code
@@ -127,12 +127,14 @@ void FunctionState::CreateArgument(llvm::Argument *arg) {
 
     if (num_args < 6) {                 // first six parameters are passed in registers
         t = new Tree(REG, params_regs[num_args]);
+        t->SetLLVMValue(arg);
         CreatePhysicalReg(t, params_regs[num_args]);
         // insert into liveness: should be live from start
         int startLine = assembly.size();
         liveness.insert(std::pair<int, LiveRange*>(t->GetValue().AsVirtualReg(), new LiveRange(startLine)));
     } else {
         t = new Tree(MEM);
+        t->SetLLVMValue(arg);
         op = new X86Operand(this, OP_TYPE::X86Mem, 
             new X86Operand(this, RBP),                     // base_address, should be rbp
             new X86Operand(this, OP_TYPE::X86Imm, 0),      // displacement
@@ -146,8 +148,13 @@ void FunctionState::CreateArgument(llvm::Argument *arg) {
 }
 
 void FunctionState::CreateVirtualReg(Tree *t) {
-    int v = virtual2machine.size();
-    virtual2machine.push_back(-1);      // -1 not allocated
+    using namespace llvm;
+    int v = virtual2value.size();
+    llvm::Value *val = t->GetLLVMValue();
+    if (!val)
+        std::cerr << "VIRTUAL REG NULL VALUE (OP): " << t->GetOpCode() << std::endl;
+    assert(val && "llvm value should not be null");
+    virtual2value.push_back(val);
     t->val = v;
     t->UseAsVirtualRegister();
     RecordLiveStart(t);                 // newly allocated virtual register must be added to liveness

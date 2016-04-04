@@ -54,10 +54,11 @@ public:
     std::string GetMCRegAt(int index) const { 
 #if 0
         std::cerr << "index: " << index << std::endl;
-        std::cerr << "v2m size: " << virtual2machine.size() << std::endl;
+        std::cerr << "v2m size: " << virtual2value.size() << std::endl;
 #endif
-        assert ((index >= 0 && index < virtual2machine.size()) && "virtual register index not in range");
-        return std::string(registers[virtual2machine[index]]);
+        // assert ((index >= 0 && index < virtual2value.size()) && "virtual register index not in range");
+        // return std::string(registers[virtual2value[index]]);
+        return std::string("%rax");
     }
     void PrintAssembly(std::ostream &out, RegisterAllocator &ra);
 
@@ -108,7 +109,7 @@ private:
 
     // information about instruction and registers
     RegisterAllocator allocator;
-    std::vector<int> virtual2machine;
+    std::vector<llvm::Value*> virtual2value;
     std::vector<X86Inst*> assembly;
     std::map<int, LiveRange*> liveness;
     std::map<Tree*, X86Operand*> locals;
