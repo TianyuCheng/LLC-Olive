@@ -211,24 +211,27 @@ void FunctionState::GenerateMovStmt(X86Operand *dst, X86Operand *src) {
     GenerateBinaryStmt("mov", dst, src);
 }
 
-void FunctionState::GenerateBinaryStmt(const char *op_raw, Tree *dst, Tree *src) {
+void FunctionState::GenerateBinaryStmt(const char *op_raw, Tree *dst, Tree *src, bool suffix) {
     // Keep this one-line function, since we might want 
     // to migrate to different operand sizes, so we will
     // be using suffixes b, w, l, q according to the
     // operands
-    std::string op = std::string(op_raw) + "q";
+    std::string op = std::string(op_raw);
+    if (suffix) op = std::string(op_raw) + "q";
+
     AddInst(new X86Inst(op.c_str(), 
         dst->AsX86Operand(this), 
         src->AsX86Operand(this)
     ));
 }
 
-void FunctionState::GenerateBinaryStmt(const char *op_raw, X86Operand *dst, X86Operand *src) {
+void FunctionState::GenerateBinaryStmt(const char *op_raw, X86Operand *dst, X86Operand *src, bool suffix) {
     // Keep this one-line function, since we might want 
     // to migrate to different operand sizes, so we will
     // be using suffixes b, w, l, q according to the
     // operands
-    std::string op = std::string(op_raw) + "q";
+    std::string op = std::string(op_raw);
+    if (suffix) op = std::string(op_raw) + "q";
     AddInst(new X86Inst(op.c_str(), dst, src));
 }
 

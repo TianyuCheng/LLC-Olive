@@ -67,6 +67,7 @@ public:
     bool IsComputed() const { return computed; }
 
     void SetInst(llvm::Instruction *inst) { this->inst = inst; }
+    llvm::Instruction *GetInst() { return inst; }
 
     void SetLevel(int level) { this->level = level; }
     int GetLevel() const { return this->level; }
