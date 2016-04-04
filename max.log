@@ -502,3 +502,17 @@ register assigned = 2
 2
 ------------virtual2machine----END------
 Start Generate Assembly Code..
+Start build intervals..
+Start Linear Scan Allocation..
+............................
+............................
+............................
+Startpoint of Built intervals
+
+After Sort: 
+
+size_use_contexts:0
+Total number of intervals:0
+------------virtual2machine---BEGIN-------
+------------virtual2machine----END------
+Start Generate Assembly Code..

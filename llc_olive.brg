@@ -366,6 +366,7 @@ mem:    GetElementPtr(mem, ri, imm)    { $cost[0].cost = $cost[2].cost + $cost[3
 
             Tree *t1 = new Tree(REG);
             t1->SetLLVMValue($0->GetLLVMValue());
+            assert($0->GetLLVMValue() && "GetElementPtr1");
             fstate->CreateVirtualReg(t1);
 
             X86Operand *ptr = new X86Operand(fstate, OP_TYPE::X86Mem,
@@ -395,6 +396,7 @@ mem:    GetElementPtr(mem, ri, reg)    { $cost[0].cost = $cost[2].cost + $cost[3
 
             Tree *t1 = new Tree(REG);
             t1->SetLLVMValue($0->GetLLVMValue());
+            assert($0->GetLLVMValue() && "GetElementPtr2");
             fstate->CreateVirtualReg(t1);
             fstate->GenerateMovStmt(t1, $2);
 
