@@ -187,6 +187,8 @@ public:
         return out;
     }
 
+    OP_TYPE GetType() const { return type; }
+
 private:
     FUNCTION_STATE fstate;
     // operand type differentor
@@ -223,6 +225,9 @@ public:
     }
     virtual ~X86Inst() {
     }
+
+    X86Operand *GetDst() const { return dst; }
+    X86Operand *GetSrc() const { return src; }
 
     friend std::ostream& operator<<(std::ostream& out, X86Inst &inst) {
         if (!inst.isLabel) {
