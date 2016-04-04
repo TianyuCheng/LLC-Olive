@@ -64,10 +64,12 @@ void FunctionState::PrintAssembly(std::ostream &out, RegisterAllocator &ra) {
     for (X86Inst *inst : assembly) {
         X86Operand *dst = inst->GetDst();
         X86Operand *src = inst->GetSrc();
-        if (dst && dst->GetType() == OP_TYPE::X86Reg) {
+        if (dst && dst->IsVirtualReg()) {
+            llvm::Value *v = virtual2value[dst->GetVirtualReg()];
             // call allocator, print spill if needed
         }
-        if (src && src->GetType() == OP_TYPE::X86Reg) {
+        if (src && src->IsVirtualReg()) {
+            llvm::Value *v = virtual2value[src->GetVirtualReg()];
             // call allocator, print spill if needed
         }
         out << *inst;
