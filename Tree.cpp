@@ -37,6 +37,7 @@ void Tree::KidsAsArguments() {
             Tree *args;
             if (i != n - 1) args = new Tree(ARGS);
             else            args = new Tree(NOARGS);
+            current->SetLLVMValue(copy[i]->GetLLVMValue());
             current->AddChild(copy[i]);
             current->AddChild(args);
             current = args;

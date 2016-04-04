@@ -81,7 +81,7 @@ public:
     int findNextIntersect (int pos, Interval* cur_itv, Interval* itv);
     int findNextUseHelper(std::vector<int>& use_vec, int after);
     int findNextUse (int cur_iid, int iid);
-    void splitInterval(int iid, int start);
+    void splitInterval(int iid, int start, int reg);
 
     void updateRAState(int cur_iid);
     int tryAllocateFreeReg (int cur_iid);

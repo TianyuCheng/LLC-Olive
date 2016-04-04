@@ -66,8 +66,17 @@ public:
     void SetComputed(bool c) { computed = c; }
     bool IsComputed() const { return computed; }
 
-    void SetInst(llvm::Instruction *inst) { this->inst = inst; }
-    llvm::Instruction *GetInst() { return inst; }
+    void SetInst(llvm::Instruction *inst) { 
+        using namespace llvm;
+        this->llvmValue = dyn_cast<llvm::Value>(inst); 
+    }
+    llvm::Instruction *GetInst() { 
+        using namespace llvm;
+        return dyn_cast<llvm::Instruction>(llvmValue); 
+    }
+
+    void SetLLVMValue(llvm::Value *value) { this->llvmValue = llvmValue; }
+    llvm::Value *GetLLVMValue() { return llvmValue; }
 
     void SetLevel(int level) { this->level = level; }
     int GetLevel() const { return this->level; }
@@ -114,7 +123,7 @@ private:
     std::string func_name;
 
     X86OperandType operandType;
-    llvm::Instruction *inst;
+    llvm::Value *llvmValue;
     std::vector<Tree*> kids;
     std::vector<Tree*> freeList;
 };

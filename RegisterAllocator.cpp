@@ -232,7 +232,7 @@ void RegisterAllocator::splitInterval(int iid, int start, int reg) {
     interval->liveranges[lr_id].endpoint = start;
     // insert an new holes
     LiveRange hole (start, next_use);
-    stack.push_back(i);
+    stack.push_back(iid);
     hole.set_in_stack (stack.size()-1);
     interval->holes.push_back(hole);
 
