@@ -56,6 +56,7 @@ static void insert_intervals (std::vector<LiveRange*>& vec, LiveRange* elem) {
 }
 */
 
+
 /**
  * Register Allocator
  * */
@@ -66,20 +67,23 @@ public:
         // initialize register map
         // for (int i = 0; i < NUM_REGS; i++) 
         //    register_map[i] = NULL;
+        // all_intervals.insert(ai.begin(), ai.end()); 
+         // use_contexts.insert(uc.begin(), uc.end()); 
     }
 
     virtual ~RegisterAllocator() { }
 
     std::string Allocate() {
+        // TODO: interaction 
         return std::string("rax");
     }
+
     /*
     // naive version of linear scan
-    void linearScanAllocate ();
     void expireOldIntervals (int i);
     void spillAtInterval (int i);
+    void linearScanAllocate ();
     */
-
 
     bool isIntersect (Interval* ia, Interval* ib);
     int findNextIntersect (int pos, Interval* cur_itv, Interval* itv);
@@ -96,6 +100,38 @@ public:
         return virtual2machine;
     }
 
+    void insert_intervals (Interval* interval) {
+        all_intervals.push_back(interval);
+        for (int i = all_intervals.size()-1; i > 0 ; i --) {
+            int cur_startpoint = all_intervals[i]->liveranges[0].startpoint;
+            int prev_startpoint = all_intervals[i-1]->liveranges[0].startpoint;
+            if ( prev_startpoint <= cur_startpoint ) break;
+            else {
+                Interval* tmp = all_intervals[i];
+                all_intervals[i] = all_intervals[i-1];
+                all_intervals[i-1] = tmp;
+            }
+        }
+    }
+
+    void set_all_intervals(std::map<int, Interval*> &ai) {
+        std::cout << "Startpoint of Built intervals" << std::endl;
+        for (auto it=ai.rbegin(); it!=ai.rend(); it++) {
+            insert_intervals (it->second);
+            // std::cout << it->second->liveranges.size() << std::endl;
+            std::cout << it->second->liveranges[0].startpoint << " ";
+        }
+        std::cout << std::endl << "After Sort: " << std::endl;
+        for (Interval* inter : all_intervals) {
+            std::cout << inter->liveranges[0].startpoint << " ";
+        }
+        std::cout << std::endl;
+    }
+
+    void set_use_contexts(std::map<int, std::vector<int>*> &uc) {
+        use_contexts.insert(uc.begin(), uc.end());
+    }
+
 private:
     int num_regs;
     /*
@@ -106,14 +142,15 @@ private:
     // restore the free registers
     std::map<int, LiveRange*> register_map;
     */
+    // input variables for register allocation
+    std::vector<Interval*> all_intervals;
+    std::map<int, std::vector<int>*> use_contexts;
+    // register allocation process state variables
     std::set<int> active;
     std::set<int> inactive;
     std::set<int> handled;
     std::set<int> unhandled;
-    std::vector<Interval*> all_intervals;
-    std::map<int, std::vector<int>*> use_contexts;
-
-    // gloally restore ssa form mapping
+    // output variable: gloally restore ssa form mapping
     std::vector<int> virtual2machine;
 };
 

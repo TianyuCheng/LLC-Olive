@@ -164,14 +164,12 @@ void get_opr_counter (Function &func, std::map<Instruction*, int>& inst_opr_coun
     return ;
 }
 
-void BuildIntervals (Function &func) {
+void BuildIntervals (Function &func, std::map<int, Interval*> &all_intervals, std::map<int, std::vector<int>*> &use_contexts) {
     // Preliminary: local variables
     std::map<BasicBlock*, std::set<int>*> livein;
     std::map<Value*, int> v2vr_map;
-    std::map<int, Interval*> all_intervals;
     std::map<Instruction*, int> inst_opr_counter;
     std::map<BasicBlock*, std::pair<int,int>> bb_opr_counter;
-    std::map<int, std::vector<int>*> use_contexts;
     // LoopInfo& loopinfo = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
     int vr_count = 0;
     // Preliminary: get operation numbers and all basic blocks within functions
@@ -181,9 +179,9 @@ void BuildIntervals (Function &func) {
     for (auto bb = basic_blocks.rbegin(); bb != basic_blocks.rend(); bb++) {
         std::set<int> live;
         BasicBlock *block = &(*bb);
-       // std::cout << "block:" << bb_opr_counter[block].first << ", " << bb_opr_counter[block].second << std::endl;
+        std::cout << "block:" << bb_opr_counter[block].first << ", " << bb_opr_counter[block].second << std::endl;
         // 1. get union of successor.livein FOR EACH successor
-       // std::cout << "Now step 2" << std::endl; 
+        std::cout << "Now step 2" << std::endl; 
         TerminatorInst* termInst = bb->getTerminator();
         int numSuccessors = termInst->getNumSuccessors();
         for (int i = 0; i < numSuccessors; i++) {
@@ -226,8 +224,8 @@ void BuildIntervals (Function &func) {
         int bb_from = opr_pair.first, bb_to = opr_pair.second;
         for (int opd : live) {
             if (all_intervals.find(opd) == all_intervals.end()) {
-                Interval interval (bb_from, bb_to);
-                all_intervals.insert(std::make_pair(opd, &interval)); 
+                Interval* new_interval = new Interval (bb_from, bb_to);
+                all_intervals.insert(std::make_pair(opd, new_interval)); 
             } else {
                 all_intervals[opd]->addRange(bb_from, bb_to);
             }
@@ -252,8 +250,8 @@ void BuildIntervals (Function &func) {
             // std::cout << "here:2-->" << v2vr_map[v] << std::endl; 
             int tmp_opd = v2vr_map[v];
             if (all_intervals.find(tmp_opd) == all_intervals.end()) { 
-                Interval new_interval (opid, bb_to);
-                all_intervals.insert(std::make_pair(tmp_opd, &new_interval));
+                Interval* new_interval = new Interval (opid, bb_to);
+                all_intervals.insert(std::make_pair(tmp_opd, new_interval));
             } else 
                 all_intervals[v2vr_map[v]]->setFrom(opid, bb_to);
             live.erase(v2vr_map[v]);
@@ -268,8 +266,8 @@ void BuildIntervals (Function &func) {
                     v2vr_map.insert(std::make_pair(v, vr_count++));
                 opd = v2vr_map[v];
                 if (all_intervals.find(opd) == all_intervals.end()) {
-                    Interval new_interval (bb_from, opid);
-                    all_intervals.insert(std::make_pair(tmp_opd, &new_interval));
+                    Interval* new_interval = new Interval (bb_from, opid);
+                    all_intervals.insert(std::make_pair(tmp_opd, new_interval));
                 } else 
                     all_intervals[opd]->addRange(bb_from, opid);
                 // std::cout << "CCCCCCCCC: " << std::endl; 
@@ -434,9 +432,16 @@ int main(int argc, char *argv[])
     // obtain a function list in module, and iterate over function
     Module::FunctionListType &function_list = module->getFunctionList();
     for (Function &func : function_list) {
-        BuildIntervals(func);
+        std::cout << "start build intervals.." << std::endl;
+        std::map<int, Interval*> all_intervals;
+        std::map<int, std::vector<int>*> use_contexts;
+        BuildIntervals(func, all_intervals, use_contexts);
         // TODO: linear scan algorithm
-        // LinearScan();
+        // RegisterAllocator ra (NUM_REGS, all_intervals, use_contexts);
+        RegisterAllocator ra (NUM_REGS);
+        ra.set_all_intervals(all_intervals);
+        ra.set_use_contexts(use_contexts);
+        // ra.linearScanSSA();
         MakeAssembly(func);
     }
 
