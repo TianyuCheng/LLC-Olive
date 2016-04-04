@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <climits>
+#include "assert.h"
 
 class LiveRange {
     public:
@@ -71,18 +72,19 @@ class Interval {
         liveranges.insert(begin_iter+start_lr_idx, new_insert_lr);
     }
 
-    void setFrom(int pos) {
-        for (LiveRange lr : liveranges) {
-            // look for the live range where pos resides
-            if ( lr.startpoint < pos && pos < lr.endpoint ) {
-                // case 1: shorten point is within the endpoint
-                lr.startpoint = pos; 
-                break;
-            } else if (pos == lr.endpoint) {
-                // case 2: shorten point is exactly the endpoint (impossible)
-                // assert(false && "shorten point cannot be the endpoint");
-            }
+    void setFrom(int from, int end_block) {
+        LiveRange* lr = &(liveranges[0]);
+        std::cout << "lr: " << lr->startpoint << "," << lr->endpoint << std::endl;
+        // look for the live range where from resides
+        if ( lr->startpoint < from && from < lr->endpoint ) {
+            // case 1: shorten point is within the endpoint
+            lr->startpoint = from; 
+        } /* 
+             else if (from == lr->endpoint) {
+        // case 2: shorten point is exactly the endpoint (imfromsible)
+        assert(false && "shorten point cannot be the endpoint");
         }
+        */
     }
 };
 
