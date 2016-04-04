@@ -24,7 +24,7 @@ FunctionState::~FunctionState() {
     }
 }
 
-void FunctionState::PrintAssembly(std::ostream &out) {
+void FunctionState::PrintAssembly(std::ostream &out, RegisterAllocator &ra) {
     out << "#####################################################" << std::endl;
     this->PrintLiveness(out);
     out << "#####################################################" << std::endl;
@@ -34,8 +34,8 @@ void FunctionState::PrintAssembly(std::ostream &out) {
     /*
        allocator.set_intervals(liveness);
     allocator.linearScanAllocate();
-    virtual2machine = allocator.get_virtual2machine();
     */
+    // virtual2machine = ra.get_virtual2machine();
 
     // print function entrance
     // TODO: make these a part of the assembly code
@@ -63,7 +63,6 @@ void FunctionState::PrintAssembly(std::ostream &out) {
     // TODO: remember to print function begin and ends
     for (X86Inst *inst : assembly)
         out << *inst;
-
 
     for(auto it = locals.begin(); it != locals.end(); ++it ) {
         delete it->second;

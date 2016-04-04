@@ -337,7 +337,7 @@ void BuildIntervals (Function &func, std::map<int, Interval*> &all_intervals, st
 /**
  * Generate assembly for a single function
  * */
-void MakeAssembly(Function &func) {
+void MakeAssembly(Function &func, RegisterAllocator &ra) {
 
     // prepare a function state container
     // to store function information, such as
@@ -411,7 +411,7 @@ void MakeAssembly(Function &func) {
     // ------------------------------------------------------------------------
 
     // === Third Pass: analyze virtual register live range, allocate machine register and output assembly file
-    fstate.PrintAssembly(std::cerr);
+    fstate.PrintAssembly(std::cerr, ra);
 
     // clean up
     // for (Tree *t : treeList) delete t;
@@ -432,17 +432,19 @@ int main(int argc, char *argv[])
     // obtain a function list in module, and iterate over function
     Module::FunctionListType &function_list = module->getFunctionList();
     for (Function &func : function_list) {
-        std::cout << "start build intervals.." << std::endl;
+        std::cout << "Start build intervals.." << std::endl;
         std::map<int, Interval*> all_intervals;
         std::map<int, std::vector<int>*> use_contexts;
         BuildIntervals(func, all_intervals, use_contexts);
         // TODO: linear scan algorithm
         // RegisterAllocator ra (NUM_REGS, all_intervals, use_contexts);
+        std::cout << "Start Linear Scan Allocation.." << std::endl;
         RegisterAllocator ra (NUM_REGS);
         ra.set_all_intervals(all_intervals);
         ra.set_use_contexts(use_contexts);
-        // ra.linearScanSSA();
-        MakeAssembly(func);
+        ra.linearScanSSA();
+        std::cout << "Start Generate Assembly Code.." << std::endl;
+        MakeAssembly(func, ra);
     }
 
     return 0;

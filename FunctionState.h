@@ -59,7 +59,7 @@ public:
         assert ((index >= 0 && index < virtual2machine.size()) && "virtual register index not in range");
         return std::string(registers[virtual2machine[index]]);
     }
-    void PrintAssembly(std::ostream &out);
+    void PrintAssembly(std::ostream &out, RegisterAllocator &ra);
 
     std::vector<LiveRange> GetRangeAnalysis() {
         assert(false && "get live range analysis not implemented yet");

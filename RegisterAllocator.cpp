@@ -6,7 +6,10 @@
 int maxIndexVector (std::vector<int>& vec) {
     int max_elem = -1, max_index = 0;
     for (unsigned i = 0; i < vec.size(); i ++) {
-        if (vec[i] == INT_MAX) return i;
+        // std::cout << i << ":" << vec[i] << std::endl;
+        if (vec[i] == INT_MAX) {
+            return i;
+        }
         if (vec[i] > max_elem) {
             max_index = i;
             max_elem = vec[i];
@@ -82,8 +85,13 @@ bool RegisterAllocator::isIntersect(Interval* ia, Interval* ib) {
 
 int RegisterAllocator::tryAllocateFreeReg(int cur_iid) {
     std::vector<int> freeUntilPos (NUM_REGS, INT_MAX);
+   // std::cout << "active_size: " << active.size() << std::endl;
+   // std::cout << "inactive_size: " << inactive.size() << std::endl;
     // FOR EACH active interval
-    for (int iid : active) freeUntilPos[iid] = 0;
+    for (int iid : active) {
+       //  std::cout << "active_iid: " << iid << std::endl;
+        freeUntilPos[virtual2machine[iid]] = 0;
+    }
     // FOR EACH inactive interval
     int pos = all_intervals[cur_iid]->liveranges[0].startpoint; // TODO: FIXME
     for (int iid : inactive) {
@@ -91,6 +99,11 @@ int RegisterAllocator::tryAllocateFreeReg(int cur_iid) {
         Interval* itv = all_intervals[iid]; 
         freeUntilPos[iid] = findNextIntersect(pos, cur_itv, itv);
     }
+    /*
+    for (int x : freeUntilPos) 
+        std::cout << x << " "  << std::endl;
+    std::cout <<  std::endl;
+    */
     return maxIndexVector(freeUntilPos);
 }
 
@@ -112,12 +125,16 @@ int RegisterAllocator::findNextUse(int cur_iid, int iid) {
 int RegisterAllocator::allocateBlockedReg(int cur_iid) {
     std::vector<int> nextUsePos (NUM_REGS, INT_MAX);
     // FOR EACH active interval
-    for (int iid : active) 
-        nextUsePos[iid] = findNextUse(cur_iid, iid);
+    for (int iid : active) {
+        // std::cout << "active_iid: " << iid << std::endl;
+        nextUsePos[virtual2machine[iid]] = findNextUse(cur_iid, iid);
+    }
     // FOR EACH inactive interval
-    for (int iid : inactive) 
+    for (int iid : inactive) {
+        // std::cout << "inactive_iid: " << iid << std::endl;
         if (isIntersect(all_intervals[iid], all_intervals[cur_iid])) 
             nextUsePos[iid] = findNextUse(cur_iid, iid);
+    }
     return maxIndexVector(nextUsePos);
 }
 
@@ -186,18 +203,47 @@ void RegisterAllocator::linearScanSSA () {
     unhandled.clear();
     for (int i = 0; i < all_intervals.size(); i ++) unhandled.insert(i);
     // start linear scan algorithm
+    std::cout << "Total number of intervals:" << all_intervals.size() << std::endl;
     for (int i = 0; i < all_intervals.size(); i ++) {
-        updateRAState(i);
+
+        std::cout << "-------------------------------" << std::endl;
+        std::cout << "Interval: " << i << std::endl;
+        std::cout << "updateRAState(): " << std::endl;
+
+        updateRAState(i); // update Register Allocation State
+
+        std::cout << "active_set_size: "   << active.size() << ", "
+                  << "inactive_set_size: " << inactive.size() 
+                  << std::endl;
+        std::cout << "active_iid: ";
+        for (int iid : active) std::cout << iid << " ";
+        std::cout <<  std::endl;
+        std::cout << "inactive_iid: ";
+        for (int iid : inactive) std::cout << iid << " ";
+        std::cout <<  std::endl;
+        
+        int reg;
         if (active.size() == NUM_REGS) {
             // look for one occupied register to allocate
-            allocateBlockedReg(i);
+            std::cout << "allocateBlockedReg():" << std::endl;
+            reg = allocateBlockedReg(i);
+            // TODO: push to stack
         } else {
             // look for one register to allocate
-            tryAllocateFreeReg(i); 
+            std::cout << "tryAllocateFreeReg():"  << std::endl;
+            reg = tryAllocateFreeReg(i); 
         }
+        std::cout << "register assigned = " << reg << std::endl;
+        register_map[reg] = all_intervals[i];
+        virtual2machine[i] = reg;
         active.insert(i);
         unhandled.erase(i);
     }
+    // print virtual2machine
+    std::cout << "------------virtual2machine---BEGIN-------" << std::endl;
+    for (int x : virtual2machine) 
+        std::cout << x << std::endl;
+    std::cout << "------------virtual2machine----END------" << std::endl;
 }
 
 /*

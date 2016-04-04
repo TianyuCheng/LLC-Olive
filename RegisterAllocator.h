@@ -65,8 +65,8 @@ class RegisterAllocator
 public:
     RegisterAllocator(int num_regs) {
         // initialize register map
-        // for (int i = 0; i < NUM_REGS; i++) 
-        //    register_map[i] = NULL;
+        for (int i = 0; i < NUM_REGS; i++) 
+            register_map.insert(std::pair<int, Interval*>(i, NULL));
         // all_intervals.insert(ai.begin(), ai.end()); 
          // use_contexts.insert(uc.begin(), uc.end()); 
     }
@@ -126,6 +126,8 @@ public:
             std::cout << inter->liveranges[0].startpoint << " ";
         }
         std::cout << std::endl;
+        virtual2machine.clear();
+        virtual2machine.resize(all_intervals.size(), -1);
     }
 
     void set_use_contexts(std::map<int, std::vector<int>*> &uc) {
@@ -150,6 +152,7 @@ private:
     std::set<int> inactive;
     std::set<int> handled;
     std::set<int> unhandled;
+    std::map<int, Interval*> register_map;
     // output variable: gloally restore ssa form mapping
     std::vector<int> virtual2machine;
 };
