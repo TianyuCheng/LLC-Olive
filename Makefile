@@ -6,7 +6,7 @@ CC			:=$(BIN_ROOT)/clang
 OLIVE		:=./olive/olive
 EXE			:=$(BIN_ROOT)/llc-olive
 
-NUM_REGS  	:= 16
+NUM_REGS  	:= 3
 # colorful terminal output
 RED  =`tput setaf 1`
 GREEN=`tput setaf 2`

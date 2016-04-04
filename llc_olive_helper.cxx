@@ -256,12 +256,12 @@ void BuildIntervals (Function &func, std::map<int, Interval*> &all_intervals, st
                 all_intervals[v2vr_map[v]]->setFrom(opid, bb_to);
             live.erase(v2vr_map[v]);
             // FOR EACH input operand of inst
-          //  std::cout << "FOR EACH input operand of inst: " << std::endl; 
+            //  std::cout << "FOR EACH input operand of inst: " << std::endl; 
             int num_operands = inst->getNumOperands();
             for (int j = 0; j < num_operands; j++) {
                 v = inst->getOperand(j);
                 int opd;
-               // std::cout << "AAAAAAAAAA: " << std::endl; 
+                // std::cout << "AAAAAAAAAA: " << std::endl; 
                 if (v2vr_map.find(v) == v2vr_map.end()) 
                     v2vr_map.insert(std::make_pair(v, vr_count++));
                 opd = v2vr_map[v];
@@ -277,17 +277,17 @@ void BuildIntervals (Function &func, std::map<int, Interval*> &all_intervals, st
                     assert(false && "v cannot be found in inst_opr_counter in 4.");
                 else 
                     v_opr_number = inst_opr_counter[inst];
-              //  std::cout << "DDDDDDDDDDDD: " << std::endl; 
+                //  std::cout << "DDDDDDDDDDDD: " << std::endl; 
                 if (use_contexts.find(opd) == use_contexts.end()) {
-                //    std::cout << "sssssssssssssss: " << std::endl; 
+                    //    std::cout << "sssssssssssssss: " << std::endl; 
                     std::vector<int>* new_use = new std::vector<int>();
                     new_use->push_back(v_opr_number);
                     use_contexts.insert(std::make_pair(opd, new_use)); 
                 } else { 
-                 //   std::cout << "eeeeeeeeeee: " << std::endl; 
+                    //   std::cout << "eeeeeeeeeee: " << std::endl; 
                     use_contexts[opd]->push_back(v_opr_number);
                 }
-               //  std::cout << "EEEEEEEEE: " << std::endl; 
+                //  std::cout << "EEEEEEEEE: " << std::endl; 
                 
             }
         }
@@ -439,7 +439,16 @@ int main(int argc, char *argv[])
         // TODO: linear scan algorithm
         // RegisterAllocator ra (NUM_REGS, all_intervals, use_contexts);
         std::cout << "Start Linear Scan Allocation.." << std::endl;
-        RegisterAllocator ra (NUM_REGS);
+        std::cout << "............................" << std::endl;
+        for (auto it=all_intervals.begin(); it!=all_intervals.end(); it++) 
+            std::cout << it->first << ":" << it->second->liveranges[0].startpoint
+                << ","  << it->second->liveranges[0].endpoint << std::endl;
+        std::cout << "............................" << std::endl;
+        for (auto it=use_contexts.begin(); it!=use_contexts.end(); it++) {
+            std::cout << it->first << ":" << std::endl;
+        }
+        std::cout << "............................" << std::endl;
+        RegisterAllocator ra (NumRegs);
         ra.set_all_intervals(all_intervals);
         ra.set_use_contexts(use_contexts);
         ra.linearScanSSA();

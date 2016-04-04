@@ -26,7 +26,7 @@ static const char* registers[] = {
     "r8", "r9", "r10", "r11", 
     "r12", "r13", "r14", "r15", 
 };
-static int NUM_REGS = 16;
+// static int NUM_REGS = 16;
 
 /*
 // use naive linear search to insert elem 
@@ -64,9 +64,10 @@ class RegisterAllocator
 {
 public:
     RegisterAllocator(int num_regs) {
+        this->NUM_REGS = num_regs;
         // initialize register map
         for (int i = 0; i < NUM_REGS; i++) 
-            register_map.insert(std::pair<int, Interval*>(i, NULL));
+            register_map.insert(std::pair<int, int>(i, -1));
         // all_intervals.insert(ai.begin(), ai.end()); 
          // use_contexts.insert(uc.begin(), uc.end()); 
     }
@@ -75,20 +76,14 @@ public:
 
     std::string Allocate() {
         // TODO: interaction 
-        return std::string("rax");
+        // return std::string("rax");
     }
-
-    /*
-    // naive version of linear scan
-    void expireOldIntervals (int i);
-    void spillAtInterval (int i);
-    void linearScanAllocate ();
-    */
 
     bool isIntersect (Interval* ia, Interval* ib);
     int findNextIntersect (int pos, Interval* cur_itv, Interval* itv);
     int findNextUseHelper(std::vector<int>& use_vec, int after);
     int findNextUse (int cur_iid, int iid);
+    void splitInterval(int iid, int start);
 
     void updateRAState(int cur_iid);
     int tryAllocateFreeReg (int cur_iid);
@@ -131,11 +126,15 @@ public:
     }
 
     void set_use_contexts(std::map<int, std::vector<int>*> &uc) {
+        std::cout << "size_use_contexts:" << uc.size() << std::endl;
         use_contexts.insert(uc.begin(), uc.end());
+        for (auto it=use_contexts.begin(); it!=use_contexts.end(); it++) {
+            std::cout << it->first << ":" << it->second->size() << std::endl;
+        }
     }
 
 private:
-    int num_regs;
+    int NUM_REGS;
     /*
     // restore active_set set of live interval in increasing order of endpoint
     std::vector<LiveRange*> active_set;
@@ -152,7 +151,7 @@ private:
     std::set<int> inactive;
     std::set<int> handled;
     std::set<int> unhandled;
-    std::map<int, Interval*> register_map;
+    std::map<int, int> register_map; // physical register 2 virtual
     // output variable: gloally restore ssa form mapping
     std::vector<int> virtual2machine;
 };
