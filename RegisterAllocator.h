@@ -152,6 +152,8 @@ private:
     std::set<int> handled;
     std::set<int> unhandled;
     std::map<int, int> register_map; // physical register 2 virtual
+
+    std::vector<int> stack;
     // output variable: gloally restore ssa form mapping
     std::vector<int> virtual2machine;
 };

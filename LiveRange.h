@@ -11,9 +11,20 @@ class LiveRange {
     int startpoint;
     int endpoint;
 
-    int register_id;
-    std::string location;
+    int pos; // register_id or stack_pos
+    bool is_in_register = false;
+    bool is_in_stack = false;
 
+    void set_in_register (int pos) {
+        this->pos = pos; 
+        this->is_in_register = true;
+        this->is_in_stack = false;
+    }
+    void set_in_stack (int pos) {
+        this->pos = pos; 
+        this->is_in_register = false;
+        this->is_in_stack = true;
+    }
     LiveRange(int start) {
         startpoint = start;
         endpoint = -1;
@@ -27,6 +38,8 @@ class LiveRange {
 class Interval {
     public:
     std::vector<LiveRange> liveranges; // increasing order of startpoint
+    std::vector<LiveRange> holes; // increasing order of startpoint
+
     int register_id;  //  
     std::string location;  // location information
 

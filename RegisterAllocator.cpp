@@ -206,7 +206,7 @@ void RegisterAllocator::resolveConflicts() {
 }
 
 // split [a,b] to [a, start] and [next_use, b]
-void RegisterAllocator::splitInterval(int iid, int start) {
+void RegisterAllocator::splitInterval(int iid, int start, int reg) {
     Interval* interval = all_intervals[iid];
     // std::cout << "interval():" << iid << std::endl;
     int next_use;
@@ -225,11 +225,20 @@ void RegisterAllocator::splitInterval(int iid, int start) {
    // std::cout << "find lr_id():" << std::endl;
     if (next_use == INT_MAX) {
         interval->liveranges[lr_id].endpoint = start;
+        interval->liveranges[lr_id].pos = reg;
         return ;
     }
     int tmp_endpoint = interval->liveranges[lr_id].endpoint;  // b
     interval->liveranges[lr_id].endpoint = start;
+    // insert an new holes
+    LiveRange hole (start, next_use);
+    stack.push_back(i);
+    hole.set_in_stack (stack.size()-1);
+    interval->holes.push_back(hole);
+
+    // insert an new live range
     LiveRange lr (next_use, tmp_endpoint);
+    lr.set_in_register(reg);
     // std::cout << "insert():" << std::endl;
     interval->liveranges.insert(interval->liveranges.begin()+lr_id+1, lr);
     return ;
@@ -277,7 +286,7 @@ void RegisterAllocator::linearScanSSA () {
                       << ", inactive_after: " << inactive.size()
                       << std::endl;
             // TODO: push to stack
-            // splitInterval(spill, cur_start);
+            // splitInterval(spill, cur_start, reg);
         } else {
             // look for one register to allocate
             std::cout << "tryAllocateFreeReg():"  << std::endl;
