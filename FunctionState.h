@@ -52,6 +52,7 @@ public:
 
     std::string GetFuncName() const { return function_name; }
     std::string GetMCRegAt(int index) const { 
+        // TODO: search where the current Value* and Inst
 #if 0
         std::cerr << "index: " << index << std::endl;
         std::cerr << "v2m size: " << virtual2machine.size() << std::endl;

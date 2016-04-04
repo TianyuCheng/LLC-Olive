@@ -68,8 +68,6 @@ public:
         // initialize register map
         for (int i = 0; i < NUM_REGS; i++) 
             register_map.insert(std::pair<int, int>(i, -1));
-        // all_intervals.insert(ai.begin(), ai.end()); 
-         // use_contexts.insert(uc.begin(), uc.end()); 
     }
 
     virtual ~RegisterAllocator() { }
@@ -95,6 +93,7 @@ public:
         return virtual2machine;
     }
 
+    /*
     void insert_intervals (Interval* interval) {
         all_intervals.push_back(interval);
         for (int i = all_intervals.size()-1; i > 0 ; i --) {
@@ -108,13 +107,30 @@ public:
             }
         }
     }
-
+    */
+    void insert_intervals (int iid, int start) {
+        iid_start_pairs.push_back(std::make_pair(iid, start));
+        for (int i = iid_start_pairs.size()-1; i > 0 ; i --) {
+            int cur_startpoint = iid_start_pairs[i].second;
+            int prev_startpoint = iid_start_pairs[i-1].second;
+            if ( prev_startpoint <= cur_startpoint ) break;
+            else {
+                int tmp_iid = iid_start_pairs[i].first;
+                int tmp_start = iid_start_pairs[i].second;
+                iid_start_pairs[i].first = iid_start_pairs[i-1].first;
+                iid_start_pairs[i].second = iid_start_pairs[i-1].second;
+                iid_start_pairs[i-1].first = tmp_iid;
+                iid_start_pairs[i-1].second = tmp_start;
+            }
+        }
+    }
     void set_all_intervals(std::map<int, Interval*> &ai) {
         std::cout << "Startpoint of Built intervals" << std::endl;
         for (auto it=ai.rbegin(); it!=ai.rend(); it++) {
-            insert_intervals (it->second);
-            // std::cout << it->second->liveranges.size() << std::endl;
+            int start = it->second->liveranges[0].startpoint;
             std::cout << it->second->liveranges[0].startpoint << " ";
+            insert_intervals (it->first, start);
+            // std::cout << it->second->liveranges.size() << std::endl;
         }
         std::cout << std::endl << "After Sort: " << std::endl;
         for (Interval* inter : all_intervals) {
@@ -144,13 +160,15 @@ private:
     std::map<int, LiveRange*> register_map;
     */
     // input variables for register allocation
-    std::vector<Interval*> all_intervals;
+    // std::vector<Interval*> all_intervals;
+    std::map<int, Interval*> all_intervals;
     std::map<int, std::vector<int>*> use_contexts;
     // register allocation process state variables
     std::set<int> active;
     std::set<int> inactive;
     std::set<int> handled;
     std::set<int> unhandled;
+    std::vector<std::pair<int, int>> iid_start_pairs; // <iid, start>s for splitted intervals
     std::map<int, int> register_map; // physical register 2 virtual
 
     std::vector<int> stack;

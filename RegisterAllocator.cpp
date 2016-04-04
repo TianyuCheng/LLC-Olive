@@ -251,16 +251,19 @@ void RegisterAllocator::linearScanSSA () {
     inactive.clear();
     handled.clear();
     unhandled.clear();
-    for (int i = 0; i < all_intervals.size(); i ++) unhandled.insert(i);
+    for (int i = 0; i < iid_start_pairs.size(); i ++) 
+        unhandled.insert(iid_start_pairs[i].first);
     // start linear scan algorithm
     std::cout << "Total number of intervals:" << all_intervals.size() << std::endl;
-    for (int i = 0; i < all_intervals.size(); i ++) {
+    for (int i = 0; i < iid_start_pairs.size(); i ++) {
+        int cur_iid = iid_start_pairs[i].first;
+        int cur_start = iid_start_pairs[i].second;
 
         std::cout << "-------------------------------" << std::endl;
-        std::cout << "Interval: " << i << std::endl;
+        std::cout << "Interval: " << iid << std::endl;
         std::cout << "updateRAState(): " << std::endl;
 
-        updateRAState(i); // update Register Allocation State
+        updateRAState(cur_iid); // update Register Allocation State
 
         std::cout << "active_set_size: "   << active.size() << ", "
                   << "inactive_set_size: " << inactive.size() 
@@ -272,12 +275,11 @@ void RegisterAllocator::linearScanSSA () {
         for (int iid : inactive) std::cout << iid << " ";
         std::cout <<  std::endl;
         
-        int cur_start = all_intervals[i]->liveranges[0].startpoint;
         int reg;
         if (active.size() == NUM_REGS) {
             // look for one occupied register to allocate
             std::cout << "allocateBlockedReg():" << std::endl;
-            reg = allocateBlockedReg(i);
+            reg = allocateBlockedReg(cur_iid);
             int spill = register_map[reg];
             active.erase(spill);
             inactive.insert(spill);
@@ -286,17 +288,16 @@ void RegisterAllocator::linearScanSSA () {
                       << ", inactive_after: " << inactive.size()
                       << std::endl;
             // TODO: push to stack
-            // splitInterval(spill, cur_start, reg);
+            splitInterval(spill, cur_start, reg);
         } else {
             // look for one register to allocate
             std::cout << "tryAllocateFreeReg():"  << std::endl;
-            reg = tryAllocateFreeReg(i); 
+            reg = tryAllocateFreeReg(cur_iid); 
         }
         std::cout << "register assigned = " << reg << std::endl;
-        register_map[reg] = i;
-        virtual2machine[i] = reg;
-        active.insert(i);
-        unhandled.erase(i);
+        register_map[reg] = cur_iid;
+        active.insert(cur_iid);
+        unhandled.erase(cur_iid);
     }
     // print virtual2machine
     std::cout << "------------virtual2machine---BEGIN-------" << std::endl;
