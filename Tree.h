@@ -75,7 +75,7 @@ public:
         return dyn_cast<llvm::Instruction>(llvmValue); 
     }
 
-    void SetLLVMValue(llvm::Value *value) { this->llvmValue = llvmValue; }
+    void SetLLVMValue(llvm::Value *value) { this->llvmValue = value; }
     llvm::Value *GetLLVMValue() { return llvmValue; }
 
     void SetLevel(int level) { this->level = level; }

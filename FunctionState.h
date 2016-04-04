@@ -188,6 +188,8 @@ public:
     }
 
     OP_TYPE GetType() const { return type; }
+    bool IsVirtualReg() const { return type == OP_TYPE::X86Reg && !explicit_reg; }
+    int GetVirtualReg() const { assert(IsVirtualReg()); return val.AsVirtualReg(); }
 
 private:
     FUNCTION_STATE fstate;
