@@ -49,14 +49,21 @@ class Interval {
     }
     void addRange(int start, int end) {
         // 1. look for those live ranges where start and end reside
-        int start_lr_idx = -1, end_lr_idx = -1;
+        int start_lr_idx = -1, end_lr_idx = -2;
         int num_live_ranges = liveranges.size();
         for (int i = 0; i < num_live_ranges; i++) 
-            if (liveranges[i].startpoint <= start && start < liveranges[i].endpoint) 
+            if (liveranges[i].startpoint <= start && start <= liveranges[i].endpoint) 
                 start_lr_idx = i;
         for (int i = 0; i < num_live_ranges; i++) 
-            if (liveranges[i].endpoint < end && end <= liveranges[i].endpoint)
+            if (liveranges[i].startpoint <= end && end <= liveranges[i].endpoint)
                 end_lr_idx = i;
+        /*
+        if (start == 0 && end == 14) {
+            std::cout << start_lr_idx << ":::" << end_lr_idx << std::endl;
+        }
+        */
+        if (start_lr_idx == end_lr_idx) return ;
+
 
         // 2. compute updated startpoint and endpoint
         int updated_startpoint, updated_endpoint;
@@ -90,7 +97,7 @@ class Interval {
 
     void setFrom(int from, int end_block) {
         LiveRange* lr = &(liveranges[0]);
-        std::cout << "lr: " << lr->startpoint << "," << lr->endpoint << std::endl;
+        // std::cout << "setFrom: " << lr->startpoint << "," << lr->endpoint << std::endl;
         // look for the live range where from resides
         if ( lr->startpoint < from && from < lr->endpoint ) {
             // case 1: shorten point is within the endpoint

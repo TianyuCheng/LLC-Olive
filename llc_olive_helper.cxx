@@ -179,14 +179,14 @@ void BuildIntervals (Function &func, std::map<int, Interval*> &all_intervals, st
     for (auto bb = basic_blocks.rbegin(); bb != basic_blocks.rend(); bb++) {
         std::set<int> live;
         BasicBlock *block = &(*bb);
-        std::cout << "block:" << bb_opr_counter[block].first << ", " << bb_opr_counter[block].second << std::endl;
+       // std::cout << "block:" << bb_opr_counter[block].first << ", " << bb_opr_counter[block].second << std::endl;
         // 1. get union of successor.livein FOR EACH successor
-        std::cout << "Now step 2" << std::endl; 
+      //  std::cout << "Now step 2" << std::endl; 
         TerminatorInst* termInst = bb->getTerminator();
         int numSuccessors = termInst->getNumSuccessors();
         for (int i = 0; i < numSuccessors; i++) {
             BasicBlock* succ = termInst->getSuccessor(i);
-            std::cout << "succ:" << bb_opr_counter[succ].first << ", " << bb_opr_counter[succ].second << std::endl;
+         //   std::cout << "succ:" << bb_opr_counter[succ].first << ", " << bb_opr_counter[succ].second << std::endl;
             if (livein.find(succ) == livein.end()) { ;
                // std::cout << "it is succ not processed yet. so insert empty. " << std::endl;
             } else {
@@ -196,7 +196,7 @@ void BuildIntervals (Function &func, std::map<int, Interval*> &all_intervals, st
             }
         }
         // 2. FOR EACH PHI function of 
-      std::cout << "Now step 2" << std::endl; 
+     // std::cout << "Now step 2" << std::endl; 
         for (int i = 0; i < numSuccessors; i++) {
             BasicBlock* succ = termInst->getSuccessor(i);
             for (auto inst=succ->begin(); inst!=succ->end(); inst++) {
@@ -215,7 +215,7 @@ void BuildIntervals (Function &func, std::map<int, Interval*> &all_intervals, st
             }
         }
         // 3. add ranges FOR EACH opd (virtual register) in live
-       std::cout << "Now step 3" << std::endl; 
+      // std::cout << "Now step 3" << std::endl; 
         std::pair<int,int> opr_pair;
         if (bb_opr_counter.find(block) == bb_opr_counter.end())
             assert(false && "BasicBlock not found in bb_opr_counter!");
@@ -227,11 +227,12 @@ void BuildIntervals (Function &func, std::map<int, Interval*> &all_intervals, st
                 Interval* new_interval = new Interval (bb_from, bb_to);
                 all_intervals.insert(std::make_pair(opd, new_interval)); 
             } else {
+          //      std::cout << opd << " addRange(" << bb_from << "," << bb_to << ")" << std::endl;
                 all_intervals[opd]->addRange(bb_from, bb_to);
             }
         }
         // 4. 
-       std::cout << "Now step 4" << std::endl; 
+     //  std::cout << "Now step 4" << std::endl; 
         for (auto it=bb->rbegin(); it!=bb->rend(); it++) {
             Instruction* inst = &(*it);
             unsigned opcode = inst->getOpcode();
@@ -274,6 +275,7 @@ void BuildIntervals (Function &func, std::map<int, Interval*> &all_intervals, st
                   //  std::cout << "addRange: " << bb_from << ", " << opid << std::endl; 
                    // std::cout << "prev_lr: " << all_intervals[v_opd]->liveranges[0].startpoint << ", "
                   //      << all_intervals[v_opd]->liveranges[0].endpoint << std::endl; 
+            //    std::cout << v_opd << " addRange(" << bb_from << "," << opid << ")" << std::endl;
                     all_intervals[v_opd]->addRange(bb_from, opid);
                 }
                //  std::cout << "CCCCCCCCC: " << std::endl; 
@@ -297,7 +299,7 @@ void BuildIntervals (Function &func, std::map<int, Interval*> &all_intervals, st
             }
         }
         // 5. 
-       std::cout << "Now step 5" << std::endl; 
+      // std::cout << "Now step 5" << std::endl; 
         for (auto inst=bb->begin(); inst!=bb->end(); inst++) {
             unsigned opcode = inst->getOpcode();
             if (opcode != PHI) continue;
@@ -437,29 +439,42 @@ int main(int argc, char *argv[])
     // obtain a function list in module, and iterate over function
     Module::FunctionListType &function_list = module->getFunctionList();
     for (Function &func : function_list) {
-        std::cout << "Start build intervals.." << std::endl;
+        std::cout << "#################################################" << std::endl;
+        std::cout << "Start build lifetime intervals.." << std::endl;
+        std::cout << "#################################################" << std::endl;
         std::map<int, Interval*> all_intervals;
         std::map<int, std::vector<int>*> use_contexts;
         BuildIntervals(func, all_intervals, use_contexts);
-        // TODO: linear scan algorithm
-        // RegisterAllocator ra (NUM_REGS, all_intervals, use_contexts);
-        std::cout << "Start Linear Scan Allocation.." << std::endl;
-        std::cout << "............................" << std::endl;
-        for (auto it=all_intervals.begin(); it!=all_intervals.end(); it++) 
-            std::cout << it->first << ":" << it->second->liveranges[0].startpoint
-                << ","  << it->second->liveranges[0].endpoint << std::endl;
-        /*
-        std::cout << "............................" << std::endl;
-        for (auto it=use_contexts.begin(); it!=use_contexts.end(); it++) {
-            std::cout << it->first << ":" << std::endl;
+        for (auto it=all_intervals.begin(); it!=all_intervals.end(); it++) {
+            std::cout << it->first << ":" 
+                << "start=" << it->second->liveranges[0].startpoint
+                << ", end="  << it->second->liveranges.rbegin()->endpoint 
+                << ", size=" << it->second->liveranges.size()
+                << ", liveranges:";
+            for (auto x = it->second->liveranges.begin(); x != it->second->liveranges.end(); x++) {
+                std::cout  << " (" << x->startpoint << "," << x->endpoint << ") " ;
+            }
+            std::cout << std::endl;
         }
-        std::cout << "............................" << std::endl;
-        */
+        std::cout << "------------------use_contexts----------------------" << std::endl;
+
+        for (auto it=use_contexts.begin(); it!=use_contexts.end(); it++) {
+            std::cout << "virReg=" << it->first << ", freq=" << it->second->size() << ", use at:";
+            for (int x : (*(it->second))) {
+                std::cout  << " " << x;
+            }
+            std::cout << std::endl;
+        }
+        std::cout << "#################################################" << std::endl;
+        std::cout << "Start Linear Scan Allocation.." << std::endl;
+        std::cout << "#################################################" << std::endl;
         RegisterAllocator ra (NumRegs);
         ra.set_all_intervals(all_intervals);
         ra.set_use_contexts(use_contexts);
         ra.linearScanSSA();
+        std::cout << "#################################################" << std::endl;
         std::cout << "Start Generate Assembly Code.." << std::endl;
+        std::cout << "#################################################" << std::endl;
         MakeAssembly(func, ra);
     }
 

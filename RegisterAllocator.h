@@ -28,35 +28,6 @@ static const char* registers[] = {
 };
 // static int NUM_REGS = 16;
 
-/*
-// use naive linear search to insert elem 
-static void insert_active_set (std::vector<LiveRange*>& vec, LiveRange* elem) {
-    vec.push_back(elem);
-    for (int i = vec.size()-1; i >= 0 ; i --) {
-        if (vec[i]->endpoint <= elem->endpoint) break;
-        else {
-            LiveRange* tmp = vec[i];
-            vec[i] = vec[i+1];
-            vec[i+1] = tmp;
-        }
-    }
-}
-
-// use naive linear search to insert elem 
-static void insert_intervals (std::vector<LiveRange*>& vec, LiveRange* elem) {
-    vec.push_back(elem);
-    for (int i = vec.size()-1; i >= 0 ; i --) {
-        if (vec[i]->startpoint <= elem->startpoint) break;
-        else {
-            LiveRange* tmp = vec[i];
-            vec[i] = vec[i+1];
-            vec[i+1] = tmp;
-        }
-    }
-}
-*/
-
-
 /**
  * Register Allocator
  * */
@@ -93,21 +64,6 @@ public:
         return virtual2machine;
     }
 
-    /*
-    void insert_intervals (Interval* interval) {
-        all_intervals.push_back(interval);
-        for (int i = all_intervals.size()-1; i > 0 ; i --) {
-            int cur_startpoint = all_intervals[i]->liveranges[0].startpoint;
-            int prev_startpoint = all_intervals[i-1]->liveranges[0].startpoint;
-            if ( prev_startpoint <= cur_startpoint ) break;
-            else {
-                Interval* tmp = all_intervals[i];
-                all_intervals[i] = all_intervals[i-1];
-                all_intervals[i-1] = tmp;
-            }
-        }
-    }
-    */
     void insert_intervals (int iid, int start) {
         iid_start_pairs.push_back(std::make_pair(iid, start));
         for (int i = iid_start_pairs.size()-1; i > 0 ; i --) {
@@ -145,21 +101,10 @@ public:
     void set_use_contexts(std::map<int, std::vector<int>*> &uc) {
         std::cout << "size_use_contexts:" << uc.size() << std::endl;
         use_contexts.insert(uc.begin(), uc.end());
-        for (auto it=use_contexts.begin(); it!=use_contexts.end(); it++) {
-            std::cout << it->first << ":" << it->second->size() << std::endl;
-        }
     }
 
 private:
     int NUM_REGS;
-    /*
-    // restore active_set set of live interval in increasing order of endpoint
-    std::vector<LiveRange*> active_set;
-    // restore live all_intervals of all variables
-    std::vector<LiveRange*> all_intervals;
-    // restore the free registers
-    std::map<int, LiveRange*> register_map;
-    */
     // input variables for register allocation
     // std::vector<Interval*> all_intervals;
     std::map<int, Interval*> all_intervals;
