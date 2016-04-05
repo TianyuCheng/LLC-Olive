@@ -314,18 +314,26 @@ stmt:   Br(cond, label, label)   { $cost[0].cost = $cost[2].cost + $cost[3].cost
         };
 reg:    Call(args)               { $cost[0].cost = $cost[2].cost + 5; } = {
             $action[2](fstate, 0);
-            // preserve scratch registers
-            // for (int i = 0; i < 9; i++) {
-            //     fstate->GeneratePushStmt(scratch_regs[i]);
-            // }
+            // preserve caller-saved registers
+            for (int i = 0; i < 9; i++) {
+                fstate->GeneratePushStmt(caller_saved_regs[i]);
+            }
             std::stringstream ss;
             ss << "call\t" << $0->GetFuncName();
             std::string s = ss.str();
             fstate->AddInst(new X86Inst(s.c_str()));
-            // for (int i = 8; i >= 1; i++) {
-            //     fstate->GeneratePopStmt(scratch_regs[i]);       // no need to restore rax
-            // }
+
             fstate->CreatePhysicalReg($0, RAX);
+            fstate->CreateVirtualReg($0);
+            fstate->AddInst(new X86Inst("movq",
+                new X86Operand(fstate, OP_TYPE::X86Reg, $0->val),
+                new X86Operand(fstate, RAX)
+            ));
+
+            // restore caller-saved registers, except for %rax
+            for (int i = 8; i >= 0; i--) {
+                fstate->GeneratePopStmt(caller_saved_regs[i]);       // no need to restore rax
+            }
         };
 args:   NOARGS                  { $cost[0].cost = 0;                  } = {
             // for args tree termination

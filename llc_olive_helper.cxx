@@ -344,7 +344,7 @@ void BuildIntervals (Function &func, std::map<int, Interval*> &all_intervals, st
 /**
  * Generate assembly for a single function
  * */
-void MakeAssembly(Function &func, RegisterAllocator &ra) {
+void MakeAssembly(Function &func, RegisterAllocator &ra, std::ostream &out) {
 
     // prepare a function state container
     // to store function information, such as
@@ -418,7 +418,7 @@ void MakeAssembly(Function &func, RegisterAllocator &ra) {
     // ------------------------------------------------------------------------
 
     // === Third Pass: analyze virtual register live range, allocate machine register and output assembly file
-    fstate.PrintAssembly(std::cerr, ra);
+    fstate.PrintAssembly(out, ra);
 
     // clean up
     // for (Tree *t : treeList) delete t;
@@ -436,8 +436,18 @@ int main(int argc, char *argv[])
 
     errs() << "Num-Regs: " << NumRegs << "\n";
 
+    std::ofstream assemblyOut;
+    assemblyOut.open(OutputFilename.c_str());
+    assert(assemblyOut.good());
+
     // obtain a function list in module, and iterate over function
     Module::FunctionListType &function_list = module->getFunctionList();
+    for (Function &func : function_list) {
+        std::string fname = func.getName().str();
+        if (fname == std::string("main"))
+            assemblyOut << "\t.globl main" << std::endl << std::endl;
+    }
+
     for (Function &func : function_list) {
         std::cout << "#################################################" << std::endl;
         std::cout << "Start build lifetime intervals.." << std::endl;
@@ -475,7 +485,9 @@ int main(int argc, char *argv[])
         std::cout << "#################################################" << std::endl;
         std::cout << "Start Generate Assembly Code.." << std::endl;
         std::cout << "#################################################" << std::endl;
-        MakeAssembly(func, ra);
+
+        MakeAssembly(func, ra, assemblyOut);
+        assemblyOut << std::endl;   // separator line
     }
 
     return 0;

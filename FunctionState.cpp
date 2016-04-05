@@ -6,9 +6,11 @@ FunctionState::FunctionState(std::string name, int n, int l)
     // initialize function state here
     // local_bytes is initiated to 8 for saved rip
 
-    // // preserve registers
-    // for (int i = 0; i < 7; i++)
-    //     GeneratePushStmt(preserve_regs[i]);
+    // preserve callee saved registers
+    for (int i = 0; i < 7; i++)
+        GeneratePushStmt(callee_saved_regs[i]);
+
+    local_bytes = 7 * 8;    // space for 8 callee_saved registers
 }
 
 FunctionState::~FunctionState() {
@@ -47,15 +49,15 @@ void FunctionState::PrintAssembly(std::ostream &out, RegisterAllocator &ra) {
     out << "\tpushq\t%rbp" << std::endl;
     out << "\tsubq\t%rsp, $" << local_bytes << std::endl;
 
-    // // restore registers
-    // for (int i = 6; i >= 0; i++)
-    //     GeneratePopStmt(preserve_regs[i]);
 
     // epilog
     std::stringstream ss;
     ss << "." << function_name << "End";
     std::string s = ss.str();
     GenerateLabelStmt(s.c_str());
+    // restore registers
+    for (int i = 6; i >= 0; i--)
+        GeneratePopStmt(callee_saved_regs[i]);
     RestoreStack();
     AddInst(new X86Inst("leave"));
     AddInst(new X86Inst("ret"));
