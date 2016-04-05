@@ -25,6 +25,7 @@ class LiveRange {
         this->is_in_register = false;
         this->is_in_stack = true;
     }
+
     LiveRange(int start) {
         startpoint = start;
         endpoint = -1;
@@ -47,6 +48,7 @@ class Interval {
         LiveRange lr (start, stop);
         liveranges.push_back(lr);
     }
+
     void addRange(int start, int end) {
         // 1. look for those live ranges where start and end reside
         int start_lr_idx = -1, end_lr_idx = -2;
@@ -57,13 +59,13 @@ class Interval {
         for (int i = 0; i < num_live_ranges; i++) 
             if (liveranges[i].startpoint <= end && end <= liveranges[i].endpoint)
                 end_lr_idx = i;
-        /*
+#if 0
         if (start == 0 && end == 14) {
             std::cout << start_lr_idx << ":::" << end_lr_idx << std::endl;
         }
-        */
+#endif
+        // get merged
         if (start_lr_idx == end_lr_idx) return ;
-
 
         // 2. compute updated startpoint and endpoint
         int updated_startpoint, updated_endpoint;

@@ -51,7 +51,7 @@ public:
     bool isIntersect (Interval* ia, Interval* ib);
     int findNextIntersect (int pos, Interval* cur_itv, Interval* itv);
     int findNextUseHelper(std::vector<int>& use_vec, int after);
-    int findNextUse (int cur_iid, int iid);
+    int findNextUse (int cur_iid, int iid, int cur_start);
     void splitInterval(int iid, int start, int reg);
 
     void updateRAState(int cur_iid);
@@ -115,10 +115,12 @@ private:
     std::set<int> handled;
     std::set<int> unhandled;
     std::vector<std::pair<int, int>> iid_start_pairs; // <iid, start>s for splitted intervals
-    std::map<int, int> register_map; // physical register 2 virtual
+    std::map<int, int> register_map; // physical register 2 interval id (virtual) 
+
+    std::vector<std::map<int, int>> transitions;
 
     std::vector<int> stack;
-    // output variable: gloally restore ssa form mapping
+    // output variable:  restore mapping from virtual to physical
     std::vector<int> virtual2machine;
 };
 
