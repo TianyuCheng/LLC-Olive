@@ -317,6 +317,7 @@ void RegisterAllocator::linearScanSSA () {
             reg = tryAllocateFreeReg(i); 
         }
         std::cout << "register assigned = " << reg << std::endl;
+        assigned_registers.push_back(reg);
         register_map[reg] = cur_iid;
         virtual2machine[cur_iid] = reg;
         if (!expire_after_processed && active.find(cur_iid)==active.end()) 
@@ -328,7 +329,27 @@ void RegisterAllocator::linearScanSSA () {
         std::cout << std::endl;
         transitions.push_back(register_map);
     }
-    // print virtual2machine
+
+    //###########################################################
+    // Assign register to live ranges
+    //###########################################################
+    assert(assigned_registers.size() == iid_start_pairs.size() 
+            && "size equality constraint fails");
+    for (int i = 0; i < iid_start_pairs.size(); i ++) {
+        int cur_iid = iid_start_pairs[i].first;
+        int cur_start = iid_start_pairs[i].second;
+        Interval* itv = all_intervals[cur_iid];
+        for (int j = 0; j < itv->liveranges.size(); j ++) {
+            if (itv->liveranges[j].isInRange(cur_start)) {
+                itv->liveranges[j].pos = assigned_registers[i];
+                break;
+            }
+        }
+    }
+
+    //###########################################################
+    // Print Physical Register Status Transition
+    //###########################################################
     std::cout << "------------RegisterTransition---BEGIN-------" << std::endl;
     for (int i = 0; i < transitions.size(); i ++) {
         for (auto it=transitions[i].begin(); it!=transitions[i].end(); it++)  {

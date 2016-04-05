@@ -82,11 +82,13 @@ public:
     }
     void set_all_intervals(std::map<int, Interval*> &ai) {
         std::cout << "Startpoint of Built intervals" << std::endl;
+        all_intervals.insert(ai.begin(), ai.end());
         for (auto it=ai.rbegin(); it!=ai.rend(); it++) {
-            int start = it->second->liveranges[0].startpoint;
-            std::cout << it->second->liveranges[0].startpoint << " ";
-            all_intervals.insert(ai.begin(), ai.end());
-            insert_intervals (it->first, start);
+            for (int i = 0; i < it->second->liveranges.size(); i ++) {
+                int start = it->second->liveranges[i].startpoint;
+                std::cout << it->second->liveranges[i].startpoint << " ";
+                insert_intervals (it->first, start);
+            }
             // std::cout << it->second->liveranges.size() << std::endl;
         }
         std::cout << std::endl << "After Sort: " << std::endl;
@@ -116,10 +118,11 @@ private:
     std::set<int> unhandled;
     std::vector<std::pair<int, int>> iid_start_pairs; // <iid, start>s for splitted intervals
     std::map<int, int> register_map; // physical register 2 interval id (virtual) 
+    std::vector<int> stack;
 
+    std::vector<int> assigned_registers;
     std::vector<std::map<int, int>> transitions;
 
-    std::vector<int> stack;
     // output variable:  restore mapping from virtual to physical
     std::vector<int> virtual2machine;
 };

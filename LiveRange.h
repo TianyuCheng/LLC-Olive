@@ -25,6 +25,9 @@ class LiveRange {
         this->is_in_register = false;
         this->is_in_stack = true;
     }
+    bool isInRange (int pos) {
+        return startpoint <= pos && pos <= endpoint;
+    }
 
     LiveRange(int start) {
         startpoint = start;
