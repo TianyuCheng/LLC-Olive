@@ -23,25 +23,25 @@ check: $(EXE) $(bitcodes)
 	valgrind $(EXE) --num_regs=$(NUM_REGS) ./testcases/max.bc -o ./testcases/max.s > max.log
 
 array: $(EXE) $(bitcodes)
-	$(EXE) --num_regs=$(NUM_REGS) ./testcases/array.bc -o ./testcases/array.s
+	$(EXE) --num_regs=$(NUM_REGS) ./testcases/array.bc -o ./testcases/array.s > max.log
 
 simpleSum: $(EXE) $(bitcodes)
-	$(EXE) --num_regs=$(NUM_REGS) ./testcases/simpleSum.bc -o ./testcases/simpleSum.s
+	$(EXE) --num_regs=$(NUM_REGS) ./testcases/simpleSum.bc -o ./testcases/simpleSum.s > max.log
 
 calculation:
-	$(EXE) --num_regs=$(NUM_REGS) ./testcases/calculation.bc -o ./testcases/calculation.s
+	$(EXE) --num_regs=$(NUM_REGS) ./testcases/calculation.bc -o ./testcases/calculation.s > max.log
 
 condition: $(EXE) $(bitcodes)
-	$(EXE) --num_regs=$(NUM_REGS) ./testcases/condition.bc -o ./testcases/condition.s
+	$(EXE) --num_regs=$(NUM_REGS) ./testcases/condition.bc -o ./testcases/condition.s > max.log
 
 for: $(EXE) $(bitcodes)
-	$(EXE) --num_regs=$(NUM_REGS) ./testcases/forloop.bc -o ./testcases/forloop.s
+	$(EXE) --num_regs=$(NUM_REGS) ./testcases/forloop.bc -o ./testcases/forloop.s > max.log
 
 while: $(EXE) $(bitcodes)
-	$(EXE) --num_regs=$(NUM_REGS) ./testcases/while.bc -o ./testcases/while.s
+	$(EXE) --num_regs=$(NUM_REGS) ./testcases/while.bc -o ./testcases/while.s > max.log
 
 function: $(EXE) $(bitcodes)
-	$(EXE) --num_regs=$(NUM_REGS) ./testcases/function.bc -o ./testcases/function.s
+	$(EXE) --num_regs=$(NUM_REGS) ./testcases/function.bc -o ./testcases/function.s > max.log
 
 $(EXE): llc_olive.cpp llc_olive.brg
 	(cd $(TOOL_ROOT); make -j6)
@@ -59,6 +59,7 @@ test: clean $(EXE) $(bitcodes) $(assembly)
 
 clean:
 	@rm -rf $(EXE)
+	@rm -rf $(TEST_DIR)/*.s
 	@rm -rf $(TEST_DIR)/*.log
 	@rm -rf $(TEST_DIR)/.*.swp
 	@rm -rf ./llc_olive.h ./llc_olive.cpp
