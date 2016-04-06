@@ -69,6 +69,9 @@ void FunctionState::PrintAssembly(std::ostream &out, RegisterAllocator &ra) {
         if (dst && dst->IsVirtualReg()) {
             llvm::Value *v = virtual2value[dst->GetVirtualReg()];
             // call allocator, print spill if needed
+            if (llvm::Instruction *inst = dyn_cast<Instruction>(v)) {
+                ;
+            }
         }
         if (src && src->IsVirtualReg()) {
             llvm::Value *v = virtual2value[src->GetVirtualReg()];
