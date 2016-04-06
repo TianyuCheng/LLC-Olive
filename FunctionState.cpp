@@ -40,9 +40,6 @@ void FunctionState::PrintAssembly(std::ostream &out, RegisterAllocator &ra) {
     // virtual2value = ra.get_virtual2value();
 
     // print function entrance
-    // TODO: make these a part of the assembly code
-    if (std::string(function_name) == std::string("main"))
-        out << "\t.globl" << std::endl;
 
     // prolog
     out << function_name  << ":" << std::endl;
