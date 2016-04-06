@@ -14,27 +14,14 @@ Authors
     + EID: xl5224
     + Email: jimmylin@utexas.edu
 
-Questions
----------
+Usage
+-----
 
-- Instruction Selection
-    - Expression Tree Construction
-        - How can we use dataflow graph in the SSA form to build expression trees?
-        - What should be the root of the expression tree?
-        - Can two expression trees have overlapping nodes (Overlapping nodes would be recomputed)?
-        - How do these choices affect register allocation?
-    - Execution Time Reduction
-        - Options to reduce by
-            - generating fewer instructions
-            - generating instructions with fewer memory accesses
-            - generating simpler instructions, etc
-        - How to assign cost?
-            - At current we do not know, so mostly by experimentation (using tools like OpenTuner)
-            - Possible to apply machine learning algorithm to pick values
+To compile our code, type
 
-- Register Allocation
-    - linear scan
-    - graph coloring
+```
+    make
+```
 
 References
 --------
