@@ -64,6 +64,7 @@ void FunctionState::PrintAssembly(std::ostream &out, RegisterAllocator &ra) {
 
     // TODO: remember to print function begin and ends
     for (X86Inst *inst : assembly) {
+#if 0
         X86Operand *dst = inst->GetDst();
         X86Operand *src = inst->GetSrc();
         if (dst && dst->IsVirtualReg()) {
@@ -77,6 +78,7 @@ void FunctionState::PrintAssembly(std::ostream &out, RegisterAllocator &ra) {
             llvm::Value *v = virtual2value[src->GetVirtualReg()];
             // call allocator, print spill if needed
         }
+#endif
         out << *inst;
     }
 

@@ -27,7 +27,7 @@ tar:
 		Tree.h Tree.cpp \
 		FunctionState.h FunctionState.cpp \
 		RegisterAllocator.h RegisterAllocator.cpp \
-		llc_olive_helper.h llc_olive_helper.cxx llc_olive.brg
+		llc_olive_helper.h llc_olive_helper.cxx llc_olive.brg report.pdf
 
 array: $(EXE) $(bitcodes)
 	$(EXE) --num_regs=$(NUM_REGS) ./testcases/array.bc -o ./testcases/array.s
@@ -38,8 +38,6 @@ simpleSum: $(EXE) $(bitcodes)
 calculation:
 	$(EXE) --num_regs=$(NUM_REGS) ./testcases/calculation.bc -o ./testcases/calculation.s
 
-condition: $(EXE) $(bitcodes)
-	$(EXE) --num_regs=$(NUM_REGS) ./testcases/condition.bc -o ./testcases/condition.s
 
 for: $(EXE) $(bitcodes)
 	$(EXE) --num_regs=$(NUM_REGS) ./testcases/forloop.bc -o ./testcases/forloop.s
