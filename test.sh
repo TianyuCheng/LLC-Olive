@@ -4,10 +4,10 @@ RED=`tput setaf 1`
 GREEN=`tput setaf 2`
 RESET=`tput sgr0`
 
-./testcases/$1 > /tmp/actual
+./testcases/$1.actual > /tmp/actual
 code1=$?
 
-./testcases/$1-expected > /tmp/expected
+./testcases/$1.expected > /tmp/expected
 code2=$?
 
 success=1

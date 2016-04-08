@@ -25,8 +25,8 @@ tar:
 
 %: $(EXE) ./testcases/%.s
 	@echo -ne "${GREEN}[ ] TESTING $@ ... ${RESET}"
-	@$(CC) ./testcases/$@.s -o ./testcases/$@ > /tmp/$@.compile
-	@$(CC) ./testcases/$@.bc -o ./testcases/$@-expected >/dev/null 2>/dev/null
+	@$(CC) ./testcases/$@.s -o ./testcases/$@.actual > /tmp/$@.compile
+	@$(CC) ./testcases/$@.bc -o ./testcases/$@.expected >/dev/null 2>/dev/null
 	@./test.sh $@
 
 llc_olive.cpp: llc_olive.brg
@@ -42,7 +42,8 @@ test: clean $(EXE) $(bitcodes) $(assembly) $(executables)
 
 clean:
 	@rm -rf $(EXE)
-	@rm -rf $(executables)
+	@rm -rf $(TEST_DIR)/*.actual
+	@rm -rf $(TEST_DIR)/*.expected
 	@rm -rf $(TEST_DIR)/*.s
 	@rm -rf $(TEST_DIR)/*.log
 	@rm -rf $(TEST_DIR)/.*.swp
