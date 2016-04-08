@@ -1,7 +1,7 @@
 #include "FunctionState.h"
 
-FunctionState::FunctionState(std::string name, int n, int l)
-    : function_name(name), label(l), local_bytes(8), num_args(0), allocator(n), current_line(0)
+FunctionState::FunctionState(std::string name, int n, int f, int l)
+    : function_name(name), function_id(f), label_id(l), local_bytes(8), num_args(0), allocator(n), current_line(0)
 {
     // initialize function state here
     // local_bytes is initiated to 8 for saved rip
@@ -37,7 +37,7 @@ void FunctionState::PrintAssembly(std::ostream &out/*, RegisterAllocator &ra*/) 
     // virtual2machine = ra.get_virtual2machine();
 
     // print function entrance
-    out << "\t.globl " << function_name << std::endl << std::endl;
+    out << "\t.globl " << function_name << std::endl;
     out << "\t.type " << function_name  << ", @function"<< std::endl;
 
     // prolog
@@ -60,10 +60,7 @@ void FunctionState::PrintAssembly(std::ostream &out/*, RegisterAllocator &ra*/) 
     }
 
     // epilog
-    std::stringstream ss;
-    ss << "." << function_name << "End";
-    std::string s = ss.str();
-    GenerateLabelStmt(s.c_str());
+    out << ".LFE" << function_id << ":" << std::endl;
 #if 0
     // restore registers
     for (int i = 6; i >= 0; i--)
@@ -95,7 +92,7 @@ Tree* FunctionState::CreateLabel(llvm::BasicBlock *bb) {
     // this basic block has never been seen,
     // assign a new label, add it to the label map
     Tree *treeLabel = new Tree(LABEL);
-    treeLabel->SetValue(label++);
+    treeLabel->SetValue(label_id++);
     labelMap.insert(std::pair<llvm::BasicBlock*, Tree*>(bb, treeLabel));
     return treeLabel;
 }
@@ -227,14 +224,14 @@ void FunctionState::GenerateMovStmt(Tree *dst, Tree *src) {
     // be using movb, movw, movl, movq according to the
     // operands
     if (src->GetOpCode() == IMM)
-        GenerateBinaryStmt("movabs", dst, src);
+        GenerateBinaryStmt("mov", dst, src);
     else
         GenerateBinaryStmt("mov", dst, src);
 }
 
 void FunctionState::GenerateMovStmt(X86Operand *dst, X86Operand *src) {
     if (src->GetType() == OP_TYPE::X86Imm)
-        GenerateBinaryStmt("movabs", dst, src);
+        GenerateBinaryStmt("mov", dst, src);
     else
         GenerateBinaryStmt("mov", dst, src);
 }

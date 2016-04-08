@@ -54,7 +54,7 @@ stmt:   Ret(imm)            { $cost[0].cost = $cost[2].cost + 1;                
             // if the input is a register, and the register dies
             fstate->RecordLiveness($2);
             std::stringstream ss;
-            ss << "jmp\t." << fstate->GetFuncName() << "End";
+            ss << "jmp\t.LFE" << fstate->GetFunctionID();
             std::string s = ss.str();
             fstate->AddInst(new X86Inst(s.c_str()));
         };
@@ -70,7 +70,7 @@ stmt:   Ret(reg)            { $cost[0].cost = $cost[2].cost + 1;                
             // if the input is a register, and the register dies
             fstate->RecordLiveness($2);
             std::stringstream ss;
-            ss << "jmp\t." << fstate->GetFuncName() << "End";
+            ss << "jmp\t.LFE" << fstate->GetFunctionID();
             std::string s = ss.str();
             fstate->AddInst(new X86Inst(s.c_str()));
         };

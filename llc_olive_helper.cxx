@@ -1,6 +1,11 @@
 #define VERBOSE  0
 #define DEBUG    0
 
+// global variables
+
+static int labelID = 0;
+static int functionID = 0;
+
 using namespace llvm;
 
 static cl::opt<std::string>
@@ -350,7 +355,7 @@ void MakeAssembly(Function &func, /*RegisterAllocator &ra,*/ std::ostream &out) 
     // prepare a function state container
     // to store function information, such as
     // local variables, free registers, etc
-    FunctionState fstate(func.getName(), NumRegs);
+    FunctionState fstate(func.getName(), NumRegs, functionID, labelID);
 
     // pass in arguments
     Function::ArgumentListType &arguments = func.getArgumentList();
@@ -423,6 +428,9 @@ void MakeAssembly(Function &func, /*RegisterAllocator &ra,*/ std::ostream &out) 
 
     // clean up
     // for (Tree *t : treeList) delete t;
+
+    functionID = fstate.GetFunctionID() + 1;
+    labelID = fstate.GetLabelID() + 1;
 }
 
 int main(int argc, char *argv[])

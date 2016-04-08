@@ -26,7 +26,7 @@ class RegisterAllocator;
 class FunctionState
 {
 public:
-    FunctionState(std::string name, int num_regs, int label = 0);
+    FunctionState(std::string name, int num_regs, int function_id = 0, int label_id = 0);
     virtual ~FunctionState();
 
     Tree* FindLabel(llvm::BasicBlock *bb);
@@ -95,10 +95,14 @@ public:
         allocator.Allocate(this, out, v.AsVirtualReg(), current_line);
     }
 
+    int GetLabelID() const { return label_id; }
+    int GetFunctionID() const { return function_id; }
 private:
     // information about the function
     std::string function_name;
-    int label;
+    int label_id;
+    int function_id;
+
     int local_bytes;
     int num_args;
     int current_line;
@@ -247,8 +251,8 @@ public:
     friend std::ostream& operator<<(std::ostream& out, X86Inst &inst) {
         if (!inst.isLabel) {
             out << "\t" << inst.opname;
-            if (inst.dst) out << "\t" << *(inst.dst);
-            if (inst.src) out << ", " << *(inst.src);
+            if (inst.src) out << "\t" << *(inst.src);
+            if (inst.dst) out << ", " << *(inst.dst);
         } else {
             out << inst.opname << ":";
         }
