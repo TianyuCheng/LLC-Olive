@@ -1,4 +1,5 @@
 #include "FunctionState.h"
+#define DEBUG 0
 
 FunctionState::FunctionState(std::string name, int n, int f, int l)
     : function_name(name), function_id(f), label_id(l), local_bytes(8), num_args(0), allocator(n), current_line(0)
@@ -25,7 +26,7 @@ FunctionState::~FunctionState() {
 
 void FunctionState::PrintAssembly(std::ostream &out/*, RegisterAllocator &ra*/) {
 #if DEBUG
-    allocator.PrintLiveness(out);
+    allocator.PrintLiveness(std::cerr);
 #endif
     // print assembly to file
     
@@ -155,8 +156,7 @@ void FunctionState::CreateArgument(llvm::Argument *arg) {
             new X86Operand(this, RBP),                     // base_address, should be rbp
             new X86Operand(this, OP_TYPE::X86Imm, 0),      // displacement
             0,                                             // multiplier    
-            8 * (num_args - 6 + 1));                       // offset
-        // std::cerr << "Arg offset: " << 8 * (num_args - 6 + 1) << std::endl;
+            8 * (num_args - 6 + 2));                       // offset
         locals.insert(std::pair<Tree*, X86Operand*>(t, op));
     }
     argsMap.insert(std::pair<llvm::Argument*, Tree*>(arg, t));
@@ -303,27 +303,25 @@ void FunctionState::RecordLiveness(Tree *t) {
 
     if (!t->IsVirtualReg()) return;      // we only care about registers' references
 
-#if 0
+#if DEBUG
     std::cerr << "Virtual REG stop : " << t->GetValue().AsVirtualReg() << "\tRefCnt: " << t->GetRefCount() 
               << "\tLineNo: " << (assembly.size() - 1)<< std::endl;
 #endif
 
     int reg = t->val.AsVirtualReg();
-    if (t->GetRefCount() == 0) {
-        // this register is dead now, we should set the endLine
-        int endLine = assembly.size();    // ending at current size
-        allocator.RecordLiveStop(reg, endLine);
-    }
+    // record every point where this register is referenced
+    int endLine = assembly.size();    // ending at current size
+    allocator.RecordLiveStop(reg, endLine);
     // else this register is still live now, do not do anything
 }
 
 void FunctionState::RecordLiveStart(Tree *t) {
-#if 0
+#if DEBUG
     if (t->IsVirtualReg())
         std::cerr << "Virtual REG start: " << t->GetValue().AsVirtualReg() << "\tRefCnt: " << t->GetRefCount() 
                   << "\tLineNo: " << (assembly.size() - 1)<< std::endl;
 #endif
-    if (/*t->IsPhysicalReg() || */(t->IsVirtualReg() && t->GetRefCount() > 0)) {
+    if (!t->IsPhysicalReg() && (t->IsVirtualReg() && t->GetRefCount() > 0)) {
         int reg = t->val.AsVirtualReg();
         int startLine = assembly.size();
         allocator.RecordLiveStart(reg, startLine);

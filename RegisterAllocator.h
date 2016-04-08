@@ -69,10 +69,10 @@ public:
         liveness[reg]->AddInnerPoint(endline);
     }
     void PrintLiveness(std::ostream &out) {
-        out << "; ####################################################" << std::endl;
+        out << "####################################################" << std::endl;
         for (auto it = liveness.begin(); it != liveness.end(); ++it) {
             LiveRange *range = it->second;
-            out << "; Virtual Register " << it->first << ":\t" 
+            out << "Virtual Register " << it->first << ":\t" 
                 << "start:\t" << range->startpoint << "\t"
                 << "end:\t"   << range->endpoint << "\t"
                 << "inner points: ";
@@ -81,9 +81,14 @@ public:
                 out << *iter << " ";
             out << std::endl;
         }
-        out << "; ####################################################" << std::endl;
+        out << "####################################################" << std::endl;
     }
     void Allocate(FunctionState *fstate, std::ostream &out, int reg, int line);
+    bool RegisterInUse(Register r) const {
+        auto it = register_status.find(r);
+        if (it == register_status.end()) return false;
+        return it->second >= 0;
+    }
 private:
     int num_regs;
     std::map<int, LiveRange*> liveness;

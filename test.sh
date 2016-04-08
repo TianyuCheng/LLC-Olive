@@ -17,11 +17,11 @@ if [ ${code1} -eq ${code2} ]; then
 else
     success=0
     echo -ne "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b"
-    echo -e "${RED}[\u2613] COMPILING $@ ... ${RESET}"
+    echo -e "${RED}[\u2613] TESTING $@ ... ${RESET}"
     echo -e "\tExpected: ${code2}\tActual: ${code1}"
 fi
 
 if [ ${success} -eq 1 ]; then
     echo -ne "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b"
-    echo -e "${GREEN}[\u2713] COMPILING $@ ... ${RESET}"
+    echo -e "${GREEN}[\u2713] TESTING $@ ... ${RESET}"
 fi

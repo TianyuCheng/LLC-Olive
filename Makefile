@@ -24,7 +24,7 @@ tar:
 	(cd ../; tar -zcvf ./assignment6.tar.gz llc-olive/*)
 
 %: $(EXE) ./testcases/%.s
-	@echo -ne "${GREEN}[ ] COMPILING $@ ... ${RESET}"
+	@echo -ne "${GREEN}[ ] TESTING $@ ... ${RESET}"
 	@$(CC) ./testcases/$@.s -o ./testcases/$@ > /tmp/$@.compile
 	@$(CC) ./testcases/$@.bc -o ./testcases/$@-expected >/dev/null 2>/dev/null
 	@./test.sh $@

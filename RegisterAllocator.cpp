@@ -73,6 +73,10 @@ int SimpleRegisterAllocator::GetFreeReg(std::ostream &out, FunctionState *fstate
 
         // if the virtual register that is assigned is not live anymore
         LiveRange *range = liveness[vir_reg];
+        if (!range) {
+            std::cerr << "virtual reg:  " << vir_reg << std::endl;
+            std::cerr << "current line: " << line << std::endl;
+        }
         if (line > range->endpoint) return phy_reg;
     }
 

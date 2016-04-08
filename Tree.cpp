@@ -154,10 +154,8 @@ X86Operand* Tree::AsX86Operand(FunctionState *fs) {
     if (operand) return operand;
     switch (otype) {
         case REG:
-            if (IsPhysicalReg()) {
-                // std::cerr << "IsPhysicalReg: " << IsPhysicalReg() << std::endl;
+            if (IsPhysicalReg())
                 operand = new X86Operand(fs, val.AsVirtualReg());
-            }
             else
                 operand = new X86Operand(fs, X86OperandType::X86Reg, val.AsVirtualReg());
             break;

@@ -138,9 +138,15 @@ stmt:   Store(reg, mem)      { $cost[0].cost = $cost[2].cost + $cost[3].cost;   
 stmt:   Store(mem, mem)      { $cost[0].cost = $cost[2].cost + $cost[3].cost;    } = {
             $action[2](fstate);
             $action[3](fstate);
-            fstate->CreateVirtualReg($0->GetTreeRef());
-            fstate->GenerateMovStmt($0, $2);
-            fstate->GenerateMovStmt($3, $0);
+
+            Tree *t1 = new Tree(REG);
+            t1->GetTreeRef();
+            fstate->CreateVirtualReg(t1);
+
+            fstate->GenerateMovStmt(t1, $2);
+            fstate->GenerateMovStmt($3, t1);
+
+            fstate->RecordLiveness(t1);
             fstate->RecordLiveness($2);
             fstate->RecordLiveness($3);
         };
@@ -317,31 +323,32 @@ stmt:   Br(cond, label, label)   { $cost[0].cost = $cost[2].cost + $cost[3].cost
             $action[3](fstate);
         };
 reg:    Call(args)               { $cost[0].cost = $cost[2].cost + 5; } = {
-            $action[2](fstate, 0);
-#if 0
-            // preserve caller-saved registers
-            for (int i = 0; i < 9; i++) {
-                fstate->GeneratePushStmt(caller_saved_regs[i]);
+            std::vector<Register> regs;
+
+            // we skip RAX, because this register will be used as special purpose register
+            for (int i = 1; i < 9; i++) {
+                bool used = fstate->RegisterInUse(caller_saved_regs[i]);
+                if (used) regs.push_back(caller_saved_regs[i]);
             }
-#endif
+
+            // preserve caller-saved registers
+            for (auto it = regs.begin(); it != regs.end(); it++)
+                fstate->GeneratePushStmt(*it);
+
+            $action[2](fstate, 0);
+
             std::stringstream ss;
             ss << "call\t" << $0->GetFuncName();
             std::string s = ss.str();
             fstate->AddInst(new X86Inst(s.c_str()));
 
             fstate->CreatePhysicalReg($0, RAX);
-            fstate->CreateVirtualReg($0);
-            fstate->AddInst(new X86Inst("movq",
-                new X86Operand(fstate, OP_TYPE::X86Reg, $0->val),
-                new X86Operand(fstate, RAX)
-            ));
+            $0->UseAsRegister();
 
-#if 0
-            // restore caller-saved registers, except for %rax
-            for (int i = 8; i >= 0; i--) {
-                fstate->GeneratePopStmt(caller_saved_regs[i]);       // no need to restore rax
-            }
-#endif
+            // restore caller-saved registers
+            for (auto it = regs.rbegin(); it != regs.rend(); it++)
+                fstate->GeneratePopStmt(*it);
+
         };
 args:   NOARGS                  { $cost[0].cost = 0;                  } = {
             // for args tree termination
@@ -364,6 +371,13 @@ reg:    Trunc(reg)              { $cost[0].cost = $cost[2].cost + 3;            
             fstate->CreateVirtualReg($0);
             fstate->LoadFromReg($0, $2);
             fstate->RecordLiveness($2);
+        };
+reg:    BitCast(rm)             { $cost[0].cost = $cost[2].cost + 1; } = {
+            $action[2](fstate);
+            fstate->AssignVirtualReg($0, $2);    // assign a virtual register to the inst
+            fstate->LoadFromReg($0, $2);
+            fstate->RecordLiveness($2);
+            $0->UseAsRegister();
         };
 mem:    GetElementPtr(ri, ri, imm)    { $cost[0].cost = $cost[2].cost + $cost[3].cost + $cost[4].cost + 5; } = {
             $action[2](fstate);
@@ -437,11 +451,6 @@ mem:    GetElementPtr(mem, ri, reg)    { $cost[0].cost = $cost[2].cost + $cost[3
             fstate->RecordLiveness($2);
             fstate->RecordLiveness($3);
             fstate->RecordLiveness($4);
-        };
-reg:    BitCast(rm)             { $cost[0].cost = $cost[2].cost + 1; } = {
-            $action[2](fstate);
-            fstate->LoadFromReg($0, $2);
-            fstate->RecordLiveness($2);
         };
 %%
 #include "llc_olive_helper.cxx"

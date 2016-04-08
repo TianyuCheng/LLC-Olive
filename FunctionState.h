@@ -95,6 +95,8 @@ public:
         allocator.Allocate(this, out, v.AsVirtualReg(), current_line);
     }
 
+    bool RegisterInUse(Register r) const { return allocator.RegisterInUse(r); }
+
     int GetLabelID() const { return label_id; }
     int GetFunctionID() const { return function_id; }
 private:
@@ -197,6 +199,8 @@ public:
                 if (!explicit_reg) fstate->Allocate(val, out);
                 break;
             case OP_TYPE::X86Mem:
+                if (base_address) base_address->ResolveRegs(fstate, out);
+                if (displacement) displacement->ResolveRegs(fstate, out);
                 break;
             default:
                 break;
