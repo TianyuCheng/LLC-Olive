@@ -10,8 +10,8 @@ entry:
   %b = alloca i64, align 8
   %ret = alloca i64, align 8
   store i32 0, i32* %retval, align 4
-  store i64 1, i64* %a, align 8
-  store i64 2, i64* %b, align 8
+  store i64 2, i64* %a, align 8
+  store i64 1, i64* %b, align 8
   %0 = load i64, i64* %a, align 8
   %1 = load i64, i64* %b, align 8
   %add = add nsw i64 %0, %1
@@ -25,8 +25,8 @@ entry:
   ret i32 %conv
 }
 
-attributes #0 = { nounwind uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { nounwind uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2" "unsafe-fp-math"="false" "use-soft-float"="false" }
 
 !llvm.ident = !{!0}
 
-!0 = !{!"clang version 3.9.0 (trunk 264590)"}
+!0 = !{!"clang version 3.9.0 (trunk 260653)"}
