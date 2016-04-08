@@ -17,6 +17,9 @@ set(LLVM_LINK_COMPONENTS
 # Support plugins.
 set(LLVM_NO_DEAD_STRIP 1)
 
+add_definitions(-fmax-errors=5)
+add_definitions(-w)
+
 add_llvm_tool(llc-olive
   llc_olive.h
   llc_olive.cpp

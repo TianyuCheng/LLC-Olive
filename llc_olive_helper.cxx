@@ -1,4 +1,5 @@
 #define VERBOSE  0
+#define DEBUG    0
 
 using namespace llvm;
 
@@ -439,16 +440,13 @@ int main(int argc, char *argv[])
     std::ofstream assemblyOut;
     assemblyOut.open(OutputFilename.c_str());
     assert(assemblyOut.good());
+    assemblyOut << "\t.file\t\"" << InputFilename.c_str() << "\"" << std::endl;
+    assemblyOut << "\t.text" << std::endl;
 
     // obtain a function list in module, and iterate over function
 
     // check if this bitcode file contains a main function or not
     Module::FunctionListType &function_list = module->getFunctionList();
-    for (Function &func : function_list) {
-        std::string fname = func.getName().str();
-        if (fname == std::string("main"))
-            assemblyOut << "\t.globl main" << std::endl << std::endl;
-    }
 
     // iterate through all functions to generate code for each function
     for (Function &func : function_list) {
@@ -490,8 +488,14 @@ int main(int argc, char *argv[])
         std::cout << "Start Generate Assembly Code.." << std::endl;
         std::cout << "#################################################" << std::endl;
 #endif
+
+#if DEBUG
         MakeAssembly(func, /*ra,*/ std::cerr);
+        std::cerr << std::endl;               // separator line
+#else
+        MakeAssembly(func, /*ra,*/ assemblyOut);
         assemblyOut << std::endl;               // separator line
+#endif
     }
 
     return 0;

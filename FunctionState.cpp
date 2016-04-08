@@ -24,7 +24,9 @@ FunctionState::~FunctionState() {
 }
 
 void FunctionState::PrintAssembly(std::ostream &out/*, RegisterAllocator &ra*/) {
+#if DEBUG
     allocator.PrintLiveness(out);
+#endif
     // print assembly to file
     
     // pass liveness analysis to register allocator
@@ -35,12 +37,27 @@ void FunctionState::PrintAssembly(std::ostream &out/*, RegisterAllocator &ra*/) 
     // virtual2machine = ra.get_virtual2machine();
 
     // print function entrance
+    out << "\t.globl " << function_name << std::endl << std::endl;
+    out << "\t.type " << function_name  << ", @function"<< std::endl;
 
     // prolog
     out << function_name  << ":" << std::endl;
     out << "\tpushq\t%rbp" << std::endl;
-    out << "\tsubq\t%rsp, $" << local_bytes << std::endl;
+    out << "\tmovq\t%rsp,\t%rbp" << std::endl;
+    // out << "\tsubq\t%rsp, $" << local_bytes << std::endl;
 
+    int lineNo = 0;
+
+    // TODO: remember to print function begin and ends
+    for (X86Inst *inst : assembly) {
+        inst->ResolveRegs(this, out);
+        out << *inst;
+#if DEBUG
+        out << "\t; line " << lineNo++;
+#endif
+        out << std::endl;
+        current_line++;
+    }
 
     // epilog
     std::stringstream ss;
@@ -52,18 +69,9 @@ void FunctionState::PrintAssembly(std::ostream &out/*, RegisterAllocator &ra*/) 
     for (int i = 6; i >= 0; i--)
         GeneratePopStmt(callee_saved_regs[i]);
 #endif
-    RestoreStack();
-    AddInst(new X86Inst("leave"));
-    AddInst(new X86Inst("ret"));
-
-    int lineNo = 0;
-
-    // TODO: remember to print function begin and ends
-    for (X86Inst *inst : assembly) {
-        inst->ResolveRegs(this, out);
-        out << *inst << "\t; line " << lineNo++ << std::endl;
-        current_line++;
-    }
+    out << "\tmovq\t%rbp,\t%rsp" << std::endl;
+    out << "\tleave" << std::endl;
+    out << "\tret" << std::endl;
 
     for(auto it = locals.begin(); it != locals.end(); ++it ) {
         delete it->second;
@@ -124,13 +132,13 @@ X86Operand* FunctionState::GetLocalMemoryAddress(int offset) {
     return local;
 }
 
-void FunctionState::RestoreStack() {
-    if (local_bytes > 0)
-        assembly.push_back(new X86Inst("addq",
-                new X86Operand(this, RSP),   // should be rsp
-                new X86Operand(this, OP_TYPE::X86Imm, local_bytes)
-        ));
-}
+// void FunctionState::RestoreStack() {
+//     if (local_bytes > 0)
+//         assembly.push_back(new X86Inst("addq",
+//                 new X86Operand(this, RSP),   // should be rsp
+//                 new X86Operand(this, OP_TYPE::X86Imm, local_bytes)
+//         ));
+// }
 
 void FunctionState::CreateArgument(llvm::Argument *arg) {
     Tree *t = nullptr;
@@ -218,11 +226,17 @@ void FunctionState::GenerateMovStmt(Tree *dst, Tree *src) {
     // to migrate to different operand sizes, so we will
     // be using movb, movw, movl, movq according to the
     // operands
-    GenerateBinaryStmt("mov", dst, src);
+    if (src->GetOpCode() == IMM)
+        GenerateBinaryStmt("movabs", dst, src);
+    else
+        GenerateBinaryStmt("mov", dst, src);
 }
 
 void FunctionState::GenerateMovStmt(X86Operand *dst, X86Operand *src) {
-    GenerateBinaryStmt("mov", dst, src);
+    if (src->GetType() == OP_TYPE::X86Imm)
+        GenerateBinaryStmt("movabs", dst, src);
+    else
+        GenerateBinaryStmt("mov", dst, src);
 }
 
 void FunctionState::GenerateBinaryStmt(const char *op_raw, Tree *dst, Tree *src, bool suffix) {

@@ -67,7 +67,7 @@ public:
     }
 
     void AddInst(X86Inst *inst) { assembly.push_back(inst); }
-    void RestoreStack();
+    // void RestoreStack();
 
     // TreeMap management
     void AddToTreeMap(llvm::Instruction *instruction, Tree *t) {
