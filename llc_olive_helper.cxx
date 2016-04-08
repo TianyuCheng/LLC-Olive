@@ -443,7 +443,9 @@ int main(int argc, char *argv[])
     SMDiagnostic error;
     std::unique_ptr<Module> module = parseIRFile(StringRef(InputFilename.c_str()), error, context);
 
+#if VERBOSE
     errs() << "Num-Regs: " << NumRegs << "\n";
+#endif
 
     std::ofstream assemblyOut;
     assemblyOut.open(OutputFilename.c_str());
