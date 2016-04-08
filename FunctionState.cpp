@@ -6,12 +6,7 @@ FunctionState::FunctionState(std::string name, int n, int f, int l)
 {
     // initialize function state here
     // local_bytes is initiated to 8 for saved rip
-#if 0
-    // preserve callee saved registers
-    for (int i = 0; i < 7; i++)
-        GeneratePushStmt(callee_saved_regs[i]);
-    local_bytes = 7 * 8;    // space for 8 callee_saved registers
-#endif
+    local_bytes = (7 - 3) * 8;    // space for 4 callee_saved registers
 }
 
 FunctionState::~FunctionState() {
@@ -45,7 +40,10 @@ void FunctionState::PrintAssembly(std::ostream &out/*, RegisterAllocator &ra*/) 
     out << function_name  << ":" << std::endl;
     out << "\tpushq\t%rbp" << std::endl;
     out << "\tmovq\t%rsp,\t%rbp" << std::endl;
-    // out << "\tsubq\t%rsp, $" << local_bytes << std::endl;
+    // save registers
+    for (int i = 3; i < 7; i++)
+        out << "\tpushq\t%" << registers[callee_saved_regs[i]] << std::endl;
+    out << "\tsubq\t$" << (local_bytes - 4 * 8) << ",\t%rsp" << std::endl;
 
     int lineNo = 0;
 
@@ -62,11 +60,10 @@ void FunctionState::PrintAssembly(std::ostream &out/*, RegisterAllocator &ra*/) 
 
     // epilog
     out << ".LFE" << function_id << ":" << std::endl;
-#if 0
     // restore registers
-    for (int i = 6; i >= 0; i--)
-        GeneratePopStmt(callee_saved_regs[i]);
-#endif
+    for (int i = 6; i >= 3; i--)
+        out << "\tpopq\t%" << registers[callee_saved_regs[i]] << std::endl;
+    out << "\taddq\t$" << (local_bytes - 4 * 8) << ",\t%rsp" << std::endl;
     out << "\tmovq\t%rbp,\t%rsp" << std::endl;
     out << "\tleave" << std::endl;
     out << "\tret" << std::endl;
