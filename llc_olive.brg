@@ -221,7 +221,7 @@ cond:   ICmp(imm, imm)       { $cost[0].cost = $cost[2].cost + $cost[3].cost;   
             $action[3](fstate);
             fstate->CreateVirtualReg($0);
             fstate->GenerateMovStmt($0, $2);
-            fstate->GenerateBinaryStmt("cmp", $0, $3, false);
+            fstate->GenerateBinaryStmt("cmp", $0, $3);
             // this will record the ending in liveness range for a register
             // if the input is a register, and the register dies
             fstate->RecordLiveness($2);
@@ -231,7 +231,7 @@ cond:   ICmp(reg, imm)       { $cost[0].cost = $cost[2].cost + $cost[3].cost;   
             $action[2](fstate);
             $action[3](fstate);
             fstate->AssignVirtualReg($0, $2);    // assign a virtual register to the inst
-            fstate->GenerateBinaryStmt("cmp", $0, $3, false);
+            fstate->GenerateBinaryStmt("cmp", $0, $3);
             // this will record the ending in liveness range for a register
             // if the input is a register, and the register dies
             fstate->RecordLiveness($2);
@@ -241,7 +241,7 @@ cond:   ICmp(reg, reg)       { $cost[0].cost = $cost[2].cost + $cost[3].cost;   
             $action[2](fstate);
             $action[3](fstate);
             fstate->AssignVirtualReg($0, $2);    // assign a virtual register to the inst
-            fstate->GenerateBinaryStmt("cmp", $0, $3, false);
+            fstate->GenerateBinaryStmt("cmp", $0, $3);
             // this will record the ending in liveness range for a register
             // if the input is a register, and the register dies
             fstate->RecordLiveness($2);
@@ -260,6 +260,9 @@ stmt:   Br(cond, label, label)   { $cost[0].cost = $cost[2].cost + $cost[3].cost
             CmpInst *inst = dyn_cast<CmpInst>($2->GetInst());
             assert(inst && "cond node must have instruction attached");
 
+            /**
+             * As our comparison is reversed, we need to reverse the comparison predicate
+             * */
             std::string op;
             CmpInst::Predicate pred = inst->getPredicate();
             switch (pred) {
@@ -273,35 +276,35 @@ stmt:   Br(cond, label, label)   { $cost[0].cost = $cost[2].cost + $cost[3].cost
                     break;
                 case CmpInst::Predicate::ICMP_UGT:
                     // unsigned greater than
-                    op = "ja";
+                    op = "jb";
                     break;
                 case CmpInst::Predicate::ICMP_UGE:
                     // unsigned greater or equal
-                    op = "jae";
+                    op = "jbe";
                     break;
                 case CmpInst::Predicate::ICMP_ULT:
                     // unsigned less than
-                    op = "jb";
+                    op = "ja";
                     break;
                 case CmpInst::Predicate::ICMP_ULE:
                     // unsigned less or equal
-                    op = "jbe";
+                    op = "jae";
                     break;
                 case CmpInst::Predicate::ICMP_SGT:
                     // signed greater than
-                    op = "jg";
+                    op = "jl";
                     break;
                 case CmpInst::Predicate::ICMP_SGE:
                     // signed greater or equal
-                    op = "jge";
+                    op = "jle";
                     break;
                 case CmpInst::Predicate::ICMP_SLT:
                     // signed less than
-                    op = "jl";
+                    op = "jg";
                     break;
                 case CmpInst::Predicate::ICMP_SLE:
                     // signed less or equal
-                    op = "jle";
+                    op = "jge";
                     break;
                 default:
                     assert(false && "FP TYPES NOT SUPPORTED!");

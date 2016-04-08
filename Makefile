@@ -16,7 +16,7 @@ assembly:=$(patsubst %.c,%.s,$(wildcard $(TEST_DIR)/*.c))
 bitcodes:=$(patsubst %.c,%.bc,$(wildcard $(TEST_DIR)/*.c))
 executables:=$(patsubst %.c,%,$(wildcard $(TEST_DIR)/*.c))
 
-$(EXE): llc_olive.cpp llc_olive.brg
+$(EXE): llc_olive.brg llc_olive.cpp FunctionState.cpp Tree.cpp RegisterAllocator.cpp
 	(cd $(TOOL_ROOT); make -j6)
 
 tar:
@@ -25,7 +25,7 @@ tar:
 %: $(EXE) ./testcases/%.s
 	$(CC) ./testcases/$@.s -o ./testcases/$@
 
-llc_olive.cpp: llc_olive.brg llc_olive_helper.cxx llc_olive_helper.h
+llc_olive.cpp: llc_olive.brg
 	$(OLIVE) $<
 
 test: clean $(EXE) $(bitcodes) $(assembly) $(executables)

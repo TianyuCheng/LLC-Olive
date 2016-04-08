@@ -251,8 +251,8 @@ public:
     friend std::ostream& operator<<(std::ostream& out, X86Inst &inst) {
         if (!inst.isLabel) {
             out << "\t" << inst.opname;
-            if (inst.src) out << "\t" << *(inst.src);
-            if (inst.dst) out << ", " << *(inst.dst);
+            if (inst.src) out << "\t" << *(inst.src) << ",";
+            if (inst.dst) out << "\t" << *(inst.dst);
         } else {
             out << inst.opname << ":";
         }
