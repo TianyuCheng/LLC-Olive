@@ -8,17 +8,19 @@
 #include "assert.h"
 #include "LiveRange.h"
 
+class FunctionState;
+
 enum Register {
     RAX, RBX, RCX, RDX,
     RSI, RDI, RBP, RSP,
-    R8, R9, R10, R11,
+    R8,  R9,  R10, R11,
     R12, R13, R14, R15
 };
 
 // System V X86_64 's calling convention
 static Register caller_saved_regs [] = { RAX, RDI, RSI, RDX, RCX, R8, R9, R10, R11 };
 static Register callee_saved_regs [] = { RBX, RSP, RBP, R12, R13, R14, R15 };
-static Register params_regs  [] = { RDI, RSI, RDX, RCX, R8, R9 };
+static Register params_regs [] = { RDI, RSI, RDX, RCX, R8, R9 };
 
 static const char* registers[] = {
     "rax", "rbx", "rcx", "rdx",
@@ -26,7 +28,69 @@ static const char* registers[] = {
     "r8", "r9", "r10", "r11", 
     "r12", "r13", "r14", "r15", 
 };
-// static int NUM_REGS = 16;
+static int MAX_REGS = 16;
+static int REGS_OFFSET = 10;        // we start using registers from REGS_OFFSET
+
+
+class SimpleRegisterAllocator {
+public:
+    SimpleRegisterAllocator(int n) : num_regs(n) {
+        // num_regs represents number of GENERAL PURPOSE REGISTERS:
+        // r10, r11, r12, r13, r14, r15, r16
+        for (int i = REGS_OFFSET; i < MAX_REGS; i++)
+            register_status[i] = -1;      // not used
+    }
+    virtual ~SimpleRegisterAllocator() {
+        for (auto it = liveness.begin(); it != liveness.end(); ++it)
+            delete it->second;
+    }
+    std::string GetMCRegAt(int reg) {
+        assert(reg >= 0 && reg < virtual2machine.size());
+        assert(virtual2machine[reg] >= 0 && virtual2machine[reg] < MAX_REGS);
+        return std::string(registers[virtual2machine[reg]]);
+    }
+    int CreateVirtualReg(int reg = -1) {       // -1 for not allocated
+        int v = virtual2machine.size();
+        virtual2machine.push_back(reg);
+        return v;
+    }
+    int GetRegToSpill(std::ostream &, FunctionState *fstate, int line);
+    int GetFreeReg(std::ostream &, FunctionState *fstate, int line);
+    void RecordLiveStart(int reg, int startline) {
+        auto it = liveness.find(reg);
+        if (it == liveness.end()) {
+            // register not have a starting point
+            liveness[reg] = new LiveRange(startline);
+        }
+    }
+    void RecordLiveStop(int reg, int endline) {
+        auto it = liveness.find(reg);
+        assert(it != liveness.end());
+        liveness[reg]->AddInnerPoint(endline);
+    }
+    void PrintLiveness(std::ostream &out) {
+        out << "; ####################################################" << std::endl;
+        for (auto it = liveness.begin(); it != liveness.end(); ++it) {
+            LiveRange *range = it->second;
+            out << "; Virtual Register " << it->first << ":\t" 
+                << "start:\t" << range->startpoint << "\t"
+                << "end:\t"   << range->endpoint << "\t"
+                << "inner points: ";
+            for (auto iter = it->second->innerpoints.begin();
+                    iter != it->second->innerpoints.end(); ++iter)
+                out << *iter << " ";
+            out << std::endl;
+        }
+        out << "; ####################################################" << std::endl;
+    }
+    void Allocate(FunctionState *fstate, std::ostream &out, int reg, int line);
+private:
+    int num_regs;
+    std::map<int, LiveRange*> liveness;
+    std::map<int, int> register_status;
+    std::vector<int> virtual2machine;   // map to value > 0 (good registers), value < 0 (memory), value = -1 (not allocated)
+};
+
 
 /**
  * Register Allocator

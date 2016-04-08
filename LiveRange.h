@@ -7,10 +7,13 @@
 #include "assert.h"
 
 class LiveRange {
-    public:
+public:
+    // these used by simple register allocator
     int startpoint;
     int endpoint;
+    std::vector<int> innerpoints;
 
+    // these below used by register allocator
     int pos; // register_id or stack_pos
     bool is_in_register = false;
     bool is_in_stack = false;
@@ -32,10 +35,16 @@ class LiveRange {
     LiveRange(int start) {
         startpoint = start;
         endpoint = -1;
+        innerpoints.push_back(start);
     }
     LiveRange(int start, int stop) {
         startpoint = start;
         endpoint = stop;
+        innerpoints.push_back(start);
+    }
+    void AddInnerPoint(int p) {
+        innerpoints.push_back(p);
+        if (p > endpoint) endpoint = p;
     }
 };
 

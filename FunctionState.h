@@ -33,6 +33,7 @@ public:
     Tree* CreateLabel(llvm::BasicBlock *bb);
     void CreateLocal(Tree *t, int bytes = 8);
     X86Operand* GetLocalMemoryAddress(Tree *t);
+    X86Operand* GetLocalMemoryAddress(int offset);
     void CreateArgument(llvm::Argument *arg);
     void CreateVirtualReg(Tree *t);
     void CreatePhysicalReg(Tree *t, Register r);
@@ -50,24 +51,20 @@ public:
     void GeneratePopStmt(Tree *t);
     void GeneratePopStmt(Register r);
 
+    // register allocation
+    int  CreateSpill(std::ostream &out, int reg_idx);
+    void RestoreSpill(std::ostream &out, int reg_idx, int offset);
+
     std::string GetFuncName() const { return function_name; }
-    std::string GetMCRegAt(int index) const { 
-        // TODO: search where the current Value* and Inst
-#if 0
-        std::cerr << "index: " << index << std::endl;
-        std::cerr << "v2m size: " << virtual2value.size() << std::endl;
-#endif
-        // assert ((index >= 0 && index < virtual2value.size()) && "virtual register index not in range");
-        // return std::string(registers[virtual2value[index]]);
-        return std::string("%rax");
+    std::string GetMCRegAt(int index) { 
+        return allocator.GetMCRegAt(index);
     }
-    void PrintAssembly(std::ostream &out, RegisterAllocator &ra);
+    void PrintAssembly(std::ostream &out/*, RegisterAllocator &ra*/);
 
     std::vector<LiveRange> GetRangeAnalysis() {
         assert(false && "get live range analysis not implemented yet");
         return std::vector<LiveRange>();        // NOT IMPLEMENTED
     }
-
 
     void AddInst(X86Inst *inst) { assembly.push_back(inst); }
     void RestoreStack();
@@ -93,13 +90,10 @@ public:
     }
 
     void RecordLiveness(Tree *t);
-    void PrintLiveness(std::ostream &out);
-    const std::map<int, LiveRange*> &GetLivenessAnalysis() const {
-        return liveness;
-    }
-
-private:
     void RecordLiveStart(Tree *t);
+    void Allocate(VALUE &v, std::ostream &out) {
+        allocator.Allocate(this, out, v.AsVirtualReg(), current_line);
+    }
 
 private:
     // information about the function
@@ -107,12 +101,12 @@ private:
     int label;
     int local_bytes;
     int num_args;
+    int current_line;
 
     // information about instruction and registers
-    RegisterAllocator allocator;
-    std::vector<llvm::Value*> virtual2value;
+    SimpleRegisterAllocator allocator;
     std::vector<X86Inst*> assembly;
-    std::map<int, LiveRange*> liveness;
+
     std::map<Tree*, X86Operand*> locals;
     std::map<llvm::BasicBlock*, Tree*> labelMap;
     std::map<llvm::Instruction*, Tree*> instMap;
@@ -160,7 +154,7 @@ public:
                 out << "%" << registers[op.val.AsVirtualReg()];
             }
             else {
-#if 0
+#if 1
                 out << "%" << op.fstate->GetMCRegAt(op.val.AsVirtualReg());
 #else
                 out << "%" << op.val.AsVirtualReg();
@@ -190,6 +184,20 @@ public:
     OP_TYPE GetType() const { return type; }
     bool IsVirtualReg() const { return type == OP_TYPE::X86Reg && !explicit_reg; }
     int GetVirtualReg() const { assert(IsVirtualReg()); return val.AsVirtualReg(); }
+
+    int GetOffset() const { return offset; }
+
+    void ResolveRegs(FunctionState *fstate, std::ostream &out) {
+        switch (type) {
+            case OP_TYPE::X86Reg:
+                if (!explicit_reg) fstate->Allocate(val, out);
+                break;
+            case OP_TYPE::X86Mem:
+                break;
+            default:
+                break;
+        }
+    }
 
 private:
     FUNCTION_STATE fstate;
@@ -231,14 +239,18 @@ public:
     X86Operand *GetDst() const { return dst; }
     X86Operand *GetSrc() const { return src; }
 
+    void ResolveRegs(FunctionState *fstate, std::ostream &out) {
+        if (dst) dst->ResolveRegs(fstate, out);
+        if (src) src->ResolveRegs(fstate, out);
+    }
+
     friend std::ostream& operator<<(std::ostream& out, X86Inst &inst) {
         if (!inst.isLabel) {
             out << "\t" << inst.opname;
             if (inst.dst) out << "\t" << *(inst.dst);
             if (inst.src) out << ", " << *(inst.src);
-            out << std::endl;
         } else {
-            out << inst.opname << ":" << std::endl;
+            out << inst.opname << ":";
         }
         return out;
     }

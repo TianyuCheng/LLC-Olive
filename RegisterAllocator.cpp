@@ -2,6 +2,84 @@
 #ifndef CLIMITS_H
 #include <climits>
 #endif
+#include "FunctionState.h"
+
+void SimpleRegisterAllocator::Allocate(FunctionState *fstate, std::ostream &out, int reg, int line) {
+    // std::cerr << "=========== ALLOCATE: ";
+    int reg_idx = virtual2machine[reg];
+    if (reg_idx == -1) {
+        // this register has never been assigned,
+        int free_reg_idx = GetFreeReg(out, fstate, line);    // index of a free physical register
+        // double mapping
+        virtual2machine[reg] = free_reg_idx;
+        register_status[free_reg_idx] = reg;
+        return;
+    }
+
+    if (reg_idx < -1) {
+        int offset = reg_idx;                           // negative numbers used as offset to RBP
+        int free_reg_idx = GetFreeReg(out, fstate, line);    // index of a free physical register
+        fstate->RestoreSpill(out, free_reg_idx, offset);
+        // double mapping
+        virtual2machine[reg] = free_reg_idx;
+        register_status[free_reg_idx] = reg;
+        return;
+    }
+
+    // else do nothing because this register is live, and have a valid mapping
+}
+
+int SimpleRegisterAllocator::GetRegToSpill(std::ostream &out, FunctionState *fstate, int line) {
+    int distance = -1;
+    int phy_reg_to_spill = -1;
+    for (auto it = register_status.begin(); it != register_status.end(); it++) {
+        int phy_reg = it->first;
+        int vir_reg = it->second;
+
+        LiveRange *range = liveness[vir_reg];
+        std::vector<int> &innerpoints = range->innerpoints;
+        int num_points = innerpoints.size();
+
+        // find out the virtual register that has the furtherest use in the future
+        for (int i = 0; i < num_points - 1; i++) {
+            if (innerpoints[i] <= line && innerpoints[i+1] >= line) {
+                int dist = innerpoints[i+1] - line;
+                if (dist >= distance) {
+                    distance = dist;
+                    phy_reg_to_spill = phy_reg;
+                    break;
+                }
+            }
+        }
+    }
+
+    assert(phy_reg_to_spill != -1);
+
+    // generate spill code
+    int vir_reg = register_status[phy_reg_to_spill];
+    virtual2machine[vir_reg] = fstate->CreateSpill(out, phy_reg_to_spill);
+
+    return phy_reg_to_spill;
+}
+
+int SimpleRegisterAllocator::GetFreeReg(std::ostream &out, FunctionState *fstate, int line) {
+    // first search through all registers to find free physical registers
+    for (auto it = register_status.begin(); it != register_status.end(); it++) {
+        int phy_reg = it->first;
+        int vir_reg = it->second;
+
+        // if this physical register is not assigned to some virtual register
+        if (vir_reg == -1) return phy_reg;
+
+        // if the virtual register that is assigned is not live anymore
+        LiveRange *range = liveness[vir_reg];
+        if (line > range->endpoint) return phy_reg;
+    }
+
+    // if we cannot find a free physical register, then we have to spill
+    int reg_to_spill = GetRegToSpill(out, fstate, line);
+    return reg_to_spill;
+}
 
 int maxIndexVector (std::vector<int>& vec) {
     int max_elem = -1, max_index = 0;

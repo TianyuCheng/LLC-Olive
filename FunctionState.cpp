@@ -1,16 +1,16 @@
 #include "FunctionState.h"
 
 FunctionState::FunctionState(std::string name, int n, int l)
-    : function_name(name), label(l), local_bytes(8), num_args(0), allocator(n)
+    : function_name(name), label(l), local_bytes(8), num_args(0), allocator(n), current_line(0)
 {
     // initialize function state here
     // local_bytes is initiated to 8 for saved rip
-
+#if 0
     // preserve callee saved registers
     for (int i = 0; i < 7; i++)
         GeneratePushStmt(callee_saved_regs[i]);
-
     local_bytes = 7 * 8;    // space for 8 callee_saved registers
+#endif
 }
 
 FunctionState::~FunctionState() {
@@ -19,17 +19,12 @@ FunctionState::~FunctionState() {
         delete inst;
     for (auto it = labelMap.begin(); it != labelMap.end(); ++it)
         delete it->second;
-    for (auto it = liveness.begin(); it != liveness.end(); ++it)
-        delete it->second;
-    for (auto operand : freeList) {
+    for (auto operand : freeList)
         delete operand;
-    }
 }
 
-void FunctionState::PrintAssembly(std::ostream &out, RegisterAllocator &ra) {
-    // out << "#####################################################" << std::endl;
-    // this->PrintLiveness(out);
-    // out << "#####################################################" << std::endl;
+void FunctionState::PrintAssembly(std::ostream &out/*, RegisterAllocator &ra*/) {
+    allocator.PrintLiveness(out);
     // print assembly to file
     
     // pass liveness analysis to register allocator
@@ -37,7 +32,7 @@ void FunctionState::PrintAssembly(std::ostream &out, RegisterAllocator &ra) {
        allocator.set_intervals(liveness);
     allocator.linearScanAllocate();
     */
-    // virtual2value = ra.get_virtual2value();
+    // virtual2machine = ra.get_virtual2machine();
 
     // print function entrance
 
@@ -52,36 +47,28 @@ void FunctionState::PrintAssembly(std::ostream &out, RegisterAllocator &ra) {
     ss << "." << function_name << "End";
     std::string s = ss.str();
     GenerateLabelStmt(s.c_str());
+#if 0
     // restore registers
     for (int i = 6; i >= 0; i--)
         GeneratePopStmt(callee_saved_regs[i]);
+#endif
     RestoreStack();
     AddInst(new X86Inst("leave"));
     AddInst(new X86Inst("ret"));
 
+    int lineNo = 0;
+
     // TODO: remember to print function begin and ends
     for (X86Inst *inst : assembly) {
-#if 0
-        X86Operand *dst = inst->GetDst();
-        X86Operand *src = inst->GetSrc();
-        if (dst && dst->IsVirtualReg()) {
-            llvm::Value *v = virtual2value[dst->GetVirtualReg()];
-            // call allocator, print spill if needed
-            if (llvm::Instruction *inst = dyn_cast<Instruction>(v)) {
-                ;
-            }
-        }
-        if (src && src->IsVirtualReg()) {
-            llvm::Value *v = virtual2value[src->GetVirtualReg()];
-            // call allocator, print spill if needed
-        }
-#endif
-        out << *inst;
+        inst->ResolveRegs(this, out);
+        out << *inst << "\t; line " << lineNo++ << std::endl;
+        current_line++;
     }
 
     for(auto it = locals.begin(); it != locals.end(); ++it ) {
         delete it->second;
     }
+    current_line = 0;
 }
 
 Tree* FunctionState::FindLabel(llvm::BasicBlock *bb) {
@@ -128,6 +115,15 @@ X86Operand* FunctionState::GetLocalMemoryAddress(Tree *t) {
     return it->second;
 }
 
+X86Operand* FunctionState::GetLocalMemoryAddress(int offset) {
+    X86Operand *local = new X86Operand(this, OP_TYPE::X86Mem, 
+            new X86Operand(this, RBP),                     // base_address, should be rbp
+            nullptr,
+            0,                                             // multiplier    
+            offset);
+    return local;
+}
+
 void FunctionState::RestoreStack() {
     if (local_bytes > 0)
         assembly.push_back(new X86Inst("addq",
@@ -146,7 +142,7 @@ void FunctionState::CreateArgument(llvm::Argument *arg) {
         CreatePhysicalReg(t, params_regs[num_args]);
         // insert into liveness: should be live from start
         int startLine = assembly.size();
-        liveness.insert(std::pair<int, LiveRange*>(t->GetValue().AsVirtualReg(), new LiveRange(startLine)));
+        allocator.RecordLiveStart(t->GetValue().AsVirtualReg(), startLine);
     } else {
         t = new Tree(MEM);
         t->SetLLVMValue(arg);
@@ -164,13 +160,9 @@ void FunctionState::CreateArgument(llvm::Argument *arg) {
 
 void FunctionState::CreateVirtualReg(Tree *t) {
     using namespace llvm;
-    int v = virtual2value.size();
-    llvm::Value *val = t->GetLLVMValue();
-    if (!val) {
-        std::cerr << "VIRTUAL REG NULL VALUE (OP): " << t->GetOpCode() << std::endl;
-    }
-    assert(val && "llvm value should not be null");
-    virtual2value.push_back(val);
+    int v = allocator.CreateVirtualReg();
+    // llvm::Value *val = t->GetLLVMValue();
+    // assert(val && "llvm value should not be null");
     t->val = v;
     t->UseAsVirtualRegister();
     RecordLiveStart(t);                 // newly allocated virtual register must be added to liveness
@@ -296,57 +288,52 @@ void FunctionState::GeneratePopStmt(Register r) {
 }
 
 void FunctionState::RecordLiveness(Tree *t) {
-    t->RemoveRef();                // decrease the reference counter
+    t->RemoveRef();                      // decrease the reference counter
+
+    if (!t->IsVirtualReg()) return;      // we only care about registers' references
 
 #if 0
-    if (!t->IsVirtualReg()) return;      // we only care about registers' references
+    std::cerr << "Virtual REG stop : " << t->GetValue().AsVirtualReg() << "\tRefCnt: " << t->GetRefCount() 
+              << "\tLineNo: " << (assembly.size() - 1)<< std::endl;
+#endif
 
     int reg = t->val.AsVirtualReg();
     if (t->GetRefCount() == 0) {
         // this register is dead now, we should set the endLine
-        auto it = liveness.find(reg);
-        if (it == liveness.end()) {
-            t->DisplayTree();
-        }
-        if (it == liveness.end())
-            this->PrintAssembly(std::cerr);
-        assert(it != liveness.end() && "a dead register should have already in the liveness analysis");
-
-        LiveRange *range = it->second;
-        int endLine = assembly.size() - 1;    // ending at current size
-        range->endpoint = endLine;
-        liveness.insert(std::pair<int, LiveRange*>(reg, range));
+        int endLine = assembly.size();    // ending at current size
+        allocator.RecordLiveStop(reg, endLine);
     }
     // else this register is still live now, do not do anything
-#endif
-}
-
-void FunctionState::PrintLiveness(std::ostream &out) {
-#if 0
-    for (auto it = liveness.begin(); it != liveness.end(); ++it) {
-        LiveRange *range = it->second;
-        out << "Virtual Register " << it->first << ":\t" 
-            << "start:\t" << range->startpoint << "\t"
-            << "end:\t"   << range->endpoint << std::endl;
-    }
-#endif
 }
 
 void FunctionState::RecordLiveStart(Tree *t) {
 #if 0
-    if (t->IsPhysicalReg() || (t->IsVirtualReg() && t->GetRefCount() > 0)) {
+    if (t->IsVirtualReg())
+        std::cerr << "Virtual REG start: " << t->GetValue().AsVirtualReg() << "\tRefCnt: " << t->GetRefCount() 
+                  << "\tLineNo: " << (assembly.size() - 1)<< std::endl;
+#endif
+    if (/*t->IsPhysicalReg() || */(t->IsVirtualReg() && t->GetRefCount() > 0)) {
         int reg = t->val.AsVirtualReg();
-        auto it = liveness.find(reg);
-        if (it == liveness.end()) {
-            // not found in liveness analysis, insert it
-            // this register's life starts from now
-            // we do not know when it ends yet
-            int startLine = assembly.size();
-            liveness.insert(std::pair<int, LiveRange*>(reg, new LiveRange(startLine)));
-        }
-        // if found, then it means this virtual register may be assigned from an about-to-die register
-        // in this case, we do not need to do anything in particular
+        int startLine = assembly.size();
+        allocator.RecordLiveStart(reg, startLine);
     }
     // this register is dead if refcnt == 0
-#endif
+}
+
+// ========================================================
+// register allocation
+int  FunctionState::CreateSpill(std::ostream &out, int reg_idx) {
+    X86Operand operand(this, reg_idx);
+    X86Inst inst("pushq", &operand);
+    out << inst << "\t; spill " << registers[reg_idx] << std::endl;
+    local_bytes += 8;
+    return -local_bytes;
+}
+
+void FunctionState::RestoreSpill(std::ostream &out, int reg_idx, int offset) {
+    X86Operand operand1(this, reg_idx);
+    X86Operand *operand2 = GetLocalMemoryAddress(offset);
+    X86Inst inst("movq", &operand1, operand2);
+    out << inst << "\t; restore " << registers[reg_idx] << std::endl;
+    delete operand2;
 }

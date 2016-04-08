@@ -141,7 +141,8 @@ stmt:   Store(mem, mem)      { $cost[0].cost = $cost[2].cost + $cost[3].cost;   
             fstate->CreateVirtualReg($0->GetTreeRef());
             fstate->GenerateMovStmt($0, $2);
             fstate->GenerateMovStmt($3, $0);
-            fstate->RecordLiveness($0);
+            fstate->RecordLiveness($2);
+            fstate->RecordLiveness($3);
         };
 reg:    Add(reg, reg)       { $cost[0].cost = $cost[2].cost + $cost[3].cost + 2;    } = {
             /*
@@ -214,7 +215,7 @@ reg:    Mul(reg, reg)       { $cost[0].cost = $cost[2].cost + $cost[3].cost + 4;
             $0->UseAsRegister();
         };
 
-stmt:   cond                 { $cost[0].cost = $cost[1].cost;                       } = { };
+stmt:   cond                 { $cost[0].cost = $cost[1].cost;                       } = { $action[1](fstate); };
 cond:   ICmp(imm, imm)       { $cost[0].cost = $cost[2].cost + $cost[3].cost;       } = { 
             $action[2](fstate);
             $action[3](fstate);
@@ -314,10 +315,12 @@ stmt:   Br(cond, label, label)   { $cost[0].cost = $cost[2].cost + $cost[3].cost
         };
 reg:    Call(args)               { $cost[0].cost = $cost[2].cost + 5; } = {
             $action[2](fstate, 0);
+#if 0
             // preserve caller-saved registers
             for (int i = 0; i < 9; i++) {
                 fstate->GeneratePushStmt(caller_saved_regs[i]);
             }
+#endif
             std::stringstream ss;
             ss << "call\t" << $0->GetFuncName();
             std::string s = ss.str();
@@ -330,10 +333,12 @@ reg:    Call(args)               { $cost[0].cost = $cost[2].cost + 5; } = {
                 new X86Operand(fstate, RAX)
             ));
 
+#if 0
             // restore caller-saved registers, except for %rax
             for (int i = 8; i >= 0; i--) {
                 fstate->GeneratePopStmt(caller_saved_regs[i]);       // no need to restore rax
             }
+#endif
         };
 args:   NOARGS                  { $cost[0].cost = 0;                  } = {
             // for args tree termination
@@ -349,11 +354,13 @@ args:   ARGS(value, args)        { $cost[0].cost = $cost[2].cost + $cost[3].cost
                 // more than 6 argments should be pushed on stack in reversed order
                 fstate->GeneratePushStmt($2);
             }
+            fstate->RecordLiveness($2);
         };
 reg:    Trunc(reg)              { $cost[0].cost = $cost[2].cost + 3;              } = {
             $action[2](fstate);
             fstate->CreateVirtualReg($0);
             fstate->LoadFromReg($0, $2);
+            fstate->RecordLiveness($2);
         };
 mem:    GetElementPtr(ri, ri, imm)    { $cost[0].cost = $cost[2].cost + $cost[3].cost + $cost[4].cost + 5; } = {
             $action[2](fstate);
@@ -366,6 +373,9 @@ mem:    GetElementPtr(ri, ri, imm)    { $cost[0].cost = $cost[2].cost + $cost[3]
                 8 * $4->GetValue().val.i64s           // offset
             );
             $0->SetX86Operand(ptr);
+            fstate->RecordLiveness($2);
+            fstate->RecordLiveness($3);
+            fstate->RecordLiveness($4);
         };
 mem:    GetElementPtr(mem, ri, imm)    { $cost[0].cost = $cost[2].cost + $cost[3].cost + $cost[4].cost + 5; } = {
             $action[2](fstate);
@@ -384,6 +394,9 @@ mem:    GetElementPtr(mem, ri, imm)    { $cost[0].cost = $cost[2].cost + $cost[3
                 8 * $4->GetValue().val.i64s           // offset
             );
             $0->SetX86Operand(ptr);
+            fstate->RecordLiveness($2);
+            fstate->RecordLiveness($3);
+            fstate->RecordLiveness($4);
         };
 mem:    GetElementPtr(ri, ri, reg)    { $cost[0].cost = $cost[2].cost + $cost[3].cost + $cost[4].cost + 5; } = {
             $action[2](fstate);
@@ -396,6 +409,9 @@ mem:    GetElementPtr(ri, ri, reg)    { $cost[0].cost = $cost[2].cost + $cost[3]
                 0
             );
             $0->SetX86Operand(ptr);
+            fstate->RecordLiveness($2);
+            fstate->RecordLiveness($3);
+            fstate->RecordLiveness($4);
         };
 mem:    GetElementPtr(mem, ri, reg)    { $cost[0].cost = $cost[2].cost + $cost[3].cost + $cost[4].cost + 5; } = {
             $action[2](fstate);
@@ -415,11 +431,14 @@ mem:    GetElementPtr(mem, ri, reg)    { $cost[0].cost = $cost[2].cost + $cost[3
                 0
             );
             $0->SetX86Operand(ptr);
+            fstate->RecordLiveness($2);
+            fstate->RecordLiveness($3);
+            fstate->RecordLiveness($4);
         };
 reg:    BitCast(rm)             { $cost[0].cost = $cost[2].cost + 1; } = {
             $action[2](fstate);
-            fstate->CreateVirtualReg($0);      // assign a virtual register to the inst
-            fstate->GenerateMovStmt($0, $2);
+            fstate->LoadFromReg($0, $2);
+            fstate->RecordLiveness($2);
         };
 %%
 #include "llc_olive_helper.cxx"

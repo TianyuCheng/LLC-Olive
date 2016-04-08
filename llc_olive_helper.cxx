@@ -344,7 +344,7 @@ void BuildIntervals (Function &func, std::map<int, Interval*> &all_intervals, st
 /**
  * Generate assembly for a single function
  * */
-void MakeAssembly(Function &func, RegisterAllocator &ra, std::ostream &out) {
+void MakeAssembly(Function &func, /*RegisterAllocator &ra,*/ std::ostream &out) {
 
     // prepare a function state container
     // to store function information, such as
@@ -418,7 +418,7 @@ void MakeAssembly(Function &func, RegisterAllocator &ra, std::ostream &out) {
     // ------------------------------------------------------------------------
 
     // === Third Pass: analyze virtual register live range, allocate machine register and output assembly file
-    fstate.PrintAssembly(out, ra);
+    fstate.PrintAssembly(out /*, ra*/);
 
     // clean up
     // for (Tree *t : treeList) delete t;
@@ -441,6 +441,8 @@ int main(int argc, char *argv[])
     assert(assemblyOut.good());
 
     // obtain a function list in module, and iterate over function
+
+    // check if this bitcode file contains a main function or not
     Module::FunctionListType &function_list = module->getFunctionList();
     for (Function &func : function_list) {
         std::string fname = func.getName().str();
@@ -448,7 +450,9 @@ int main(int argc, char *argv[])
             assemblyOut << "\t.globl main" << std::endl << std::endl;
     }
 
+    // iterate through all functions to generate code for each function
     for (Function &func : function_list) {
+#if 0
         std::cout << "#################################################" << std::endl;
         std::cout << "Start build lifetime intervals.." << std::endl;
         std::cout << "#################################################" << std::endl;
@@ -485,9 +489,9 @@ int main(int argc, char *argv[])
         std::cout << "#################################################" << std::endl;
         std::cout << "Start Generate Assembly Code.." << std::endl;
         std::cout << "#################################################" << std::endl;
-
-        MakeAssembly(func, ra, assemblyOut);
-        assemblyOut << std::endl;   // separator line
+#endif
+        MakeAssembly(func, /*ra,*/ std::cerr);
+        assemblyOut << std::endl;               // separator line
     }
 
     return 0;
