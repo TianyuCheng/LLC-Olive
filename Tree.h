@@ -25,15 +25,15 @@ class Tree
 {
 public:
     Tree(int opcode)
-        : op(opcode), val(0), refcnt(0), level(1), operand(nullptr), otype(-1), isReg(false), isPhysicalReg(false)
+        : op(opcode), val(0), refcnt(0), level(1), operand(nullptr), otype(-1), isReg(false), isPhysicalReg(false), computed(false)
     {
     }
     Tree(int opcode, VALUE v)
-        : op(opcode), val(v), refcnt(0), level(1), operand(nullptr), otype(-1), isReg(false), isPhysicalReg(false)
+        : op(opcode), val(v), refcnt(0), level(1), operand(nullptr), otype(-1), isReg(false), isPhysicalReg(false), computed(false)
     {
     }
     Tree(int opcode, Tree *l, Tree *r)
-        : op(opcode), val(0), refcnt(0), level(1), operand(nullptr), otype(-1), isReg(false), isPhysicalReg(false)
+        : op(opcode), val(0), refcnt(0), level(1), operand(nullptr), otype(-1), isReg(false), isPhysicalReg(false), computed(false)
     {
         AddChild(l);
         AddChild(r);

@@ -40,6 +40,7 @@ public:
     void AssignVirtualReg(Tree *lhs, Tree *rhs);
     void LoadFromReg(Tree *dst, Tree *src);
     void LoadFromImm(Tree *dst, Tree *src);
+    void LoadEffectiveAddress(Tree *dst, Tree *src);
     void GenerateLabelStmt(const char *label);
     void GenerateLabelStmt(Tree *v);
     void GenerateMovStmt(Tree *dst, Tree *src);
@@ -173,7 +174,10 @@ public:
             out << "(";
             if (op.base_address)    out << *op.base_address;
             else                    out << "0";
-            if (op.stride && op.displacement)    out << ", " << *op.displacement << ", " << op.stride;
+            if (op.stride && op.displacement) {
+                if (op.displacement->GetType() == OP_TYPE::X86Reg)
+                    out << ", " << *op.displacement << ", " << op.stride;
+            }
             out << ")";
         }
         else if (op.type == OP_TYPE::X86Label) {

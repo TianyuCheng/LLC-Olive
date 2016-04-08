@@ -107,7 +107,7 @@ void FunctionState::CreateLocal(Tree *t, int bytes) {
             new X86Operand(this, RBP),                     // base_address, should be rbp
             new X86Operand(this, OP_TYPE::X86Imm, 0),      // displacement
             0,                                             // multiplier    
-            -(local_bytes - bytes));                       // negate because locals are below rbp
+            -(local_bytes + bytes));                       // negate because locals are below rbp
     // save the local variable memory address for future use
     locals.insert(std::pair<Tree*, X86Operand*>(t, local));
 }
@@ -204,6 +204,10 @@ void FunctionState::LoadFromReg(Tree *dst, Tree *src) {
 
 void FunctionState::LoadFromImm(Tree *dst, Tree *src) {
     GenerateMovStmt(dst, src);
+}
+
+void FunctionState::LoadEffectiveAddress(Tree *dst, Tree *src) {
+    GenerateBinaryStmt("lea", dst, src);
 }
 
 void FunctionState::GenerateLabelStmt(const char *l) {

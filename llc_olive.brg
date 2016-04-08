@@ -15,10 +15,10 @@
 %declare<void> stmt     <FUNCTION_STATE fstate>;
 %declare<void> value    <FUNCTION_STATE fstate>;
 %declare<void> ri       <FUNCTION_STATE fstate>;
-%declare<void> rm       <FUNCTION_STATE fstate>;
 %declare<void> reg      <FUNCTION_STATE fstate>;
 %declare<void> imm      <FUNCTION_STATE fstate>;
 %declare<void> mem      <FUNCTION_STATE fstate>;
+%declare<void> ptr      <FUNCTION_STATE fstate>;
 %declare<void> cond     <FUNCTION_STATE fstate>;
 %declare<void> label    <FUNCTION_STATE fstate>;
 %declare<void> args     <FUNCTION_STATE fstate, int n>;
@@ -31,15 +31,15 @@ value:  reg                 { $cost[0].cost = $cost[1].cost;                    
 value:  imm                 { $cost[0].cost = $cost[1].cost;                    } = { $action[1](fstate); };
 value:  mem                 { $cost[0].cost = $cost[1].cost;                    } = { $action[1](fstate); };
 
-rm:     reg                 { $cost[0].cost = $cost[1].cost;                    } = { $action[1](fstate); };
-rm:     mem                 { $cost[0].cost = $cost[1].cost;                    } = { $action[1](fstate); };
 ri:     reg                 { $cost[0].cost = $cost[1].cost;                    } = { $action[1](fstate); };
 ri:     imm                 { $cost[0].cost = $cost[1].cost;                    } = { $action[1](fstate); };
+
 
 reg:    REG                 { $cost[0].cost = 1;                                } = { $0->UseAsRegister(); };
 imm:    Load(IMM)           { $cost[0].cost = 0;                                } = { $0->UseAsImmediate(); };
 imm:    IMM                 { $cost[0].cost = 0;                                } = { $0->UseAsImmediate(); };
 mem:    MEM                 { $cost[0].cost = 10;                               } = { $0->UseAsMemory(); };
+mem:    ptr                 { return 1;                                         } = { $action[1](fstate); $0->UseAsMemory(); };
 label:  LABEL               { $cost[0].cost = 1;                                } = { };
 
 stmt:   Ret(imm)            { $cost[0].cost = $cost[2].cost + 1;                } = {
@@ -75,12 +75,37 @@ stmt:   Ret(reg)            { $cost[0].cost = $cost[2].cost + 1;                
             fstate->AddInst(new X86Inst(s.c_str()));
         };
 mem:    Alloca(imm)         { $cost[0].cost = $cost[2].cost + 1;    } = {
+            if ($0->IsComputed()) return;
+            $0->SetComputed(true);
             /*
              * IR Alloca takes one arguments for allocation size
              * X86 does not have correspondence for Alloca, but only uses $esp - size
              */
+            using namespace llvm;
+            llvm::AllocaInst *inst = dyn_cast<llvm::AllocaInst>($1->GetInst());
+            assert(inst && "llvm inst must be alloca inst");
+
             $action[2](fstate);
-            fstate->CreateLocal($0, 8);
+
+            Type *type = inst->getAllocatedType();
+
+            if (inst->isArrayAllocation()) {
+                llvm::ConstantInt* array_size = dyn_cast<llvm::ConstantInt>(inst->getArraySize());
+                int elems = array_size->getZExtValue();
+                fstate->CreateLocal($0, 8 * elems);     // reserve the space for array elements
+            }
+            else if (type->isArrayTy()) {
+                ArrayType *arr_ty = dyn_cast<ArrayType>(type);
+                int elems = arr_ty->getNumElements();
+                fstate->CreateLocal($0, 8 * elems);     // reserve the space for array elements
+            }
+            else if (type->isStructTy()) {
+                assert(false && "struct not supported");
+            }
+            else {
+                fstate->CreateLocal($0, 8);
+            }
+
             // this will record the ending in liveness range for a register
             // if the input is a register, and the register dies
             fstate->RecordLiveness($2);
@@ -372,20 +397,36 @@ reg:    Trunc(reg)              { $cost[0].cost = $cost[2].cost + 3;            
             fstate->LoadFromReg($0, $2);
             fstate->RecordLiveness($2);
         };
-reg:    BitCast(rm)             { $cost[0].cost = $cost[2].cost + 1; } = {
+reg:    BitCast(reg)            { $cost[0].cost = $cost[2].cost + 1; } = {
+            if ($0->IsComputed()) return;
+            $0->SetComputed(true);
+
+            // std::cerr << "=============BitCast REG REF " << $0->GetRefCount() << std::endl;
             $action[2](fstate);
             fstate->AssignVirtualReg($0, $2);    // assign a virtual register to the inst
-            fstate->LoadFromReg($0, $2);
             fstate->RecordLiveness($2);
             $0->UseAsRegister();
         };
-mem:    GetElementPtr(ri, ri, imm)    { $cost[0].cost = $cost[2].cost + $cost[3].cost + $cost[4].cost + 5; } = {
+reg:    BitCast(mem)            { $cost[0].cost = $cost[2].cost + 1; } = {
+            if ($0->IsComputed()) return;
+            $0->SetComputed(true);
+
+            // std::cerr << "-------------BitCast REG REF " << $0->GetRefCount() << std::endl;
+            $action[2](fstate);
+            fstate->CreateVirtualReg($0);    // assign a virtual register to the inst
+            fstate->LoadEffectiveAddress($0, $2);
+            $0->UseAsRegister();
+        };
+ptr:    GetElementPtr(ri, ri, imm)    { $cost[0].cost = $cost[2].cost + $cost[3].cost + $cost[4].cost + 5; } = {
+            if ($0->IsComputed()) return;
+            $0->SetComputed(true);
+
             $action[2](fstate);
             $action[3](fstate);
             $action[4](fstate);
             X86Operand *ptr = new X86Operand(fstate, OP_TYPE::X86Mem,
                 $2->AsX86Operand(fstate),         // base
-                nullptr, // $3->AsX86Operand(fstate),         // displacement
+                $3->AsX86Operand(fstate),         // displacement
                 0,
                 8 * $4->GetValue().val.i64s           // offset
             );
@@ -394,60 +435,27 @@ mem:    GetElementPtr(ri, ri, imm)    { $cost[0].cost = $cost[2].cost + $cost[3]
             fstate->RecordLiveness($3);
             fstate->RecordLiveness($4);
         };
-mem:    GetElementPtr(mem, ri, imm)    { $cost[0].cost = $cost[2].cost + $cost[3].cost + $cost[4].cost + 5; } = {
+ptr:    GetElementPtr(mem, ri, imm)    { $cost[0].cost = $cost[2].cost + $cost[3].cost + $cost[4].cost + 5; } = {
+            if ($0->IsComputed()) return;
+            $0->SetComputed(true);
+
             $action[2](fstate);
             $action[3](fstate);
             $action[4](fstate);
 
             Tree *t1 = new Tree(REG);
-            t1->SetLLVMValue($0->GetLLVMValue());
-            assert($0->GetLLVMValue() && "GetElementPtr1");
+            t1->GetTreeRef();
             fstate->CreateVirtualReg(t1);
-
-            X86Operand *ptr = new X86Operand(fstate, OP_TYPE::X86Mem,
-                t1->AsX86Operand(fstate),          // base
-                nullptr, // $3->AsX86Operand(fstate),         // displacement
-                0,
-                8 * $4->GetValue().val.i64s           // offset
-            );
-            $0->SetX86Operand(ptr);
-            fstate->RecordLiveness($2);
-            fstate->RecordLiveness($3);
-            fstate->RecordLiveness($4);
-        };
-mem:    GetElementPtr(ri, ri, reg)    { $cost[0].cost = $cost[2].cost + $cost[3].cost + $cost[4].cost + 5; } = {
-            $action[2](fstate);
-            $action[3](fstate);
-            $action[4](fstate);
-            X86Operand *ptr = new X86Operand(fstate, OP_TYPE::X86Mem,
-                $2->AsX86Operand(fstate),         // base
-                $4->AsX86Operand(fstate),
-                8,
-                0
-            );
-            $0->SetX86Operand(ptr);
-            fstate->RecordLiveness($2);
-            fstate->RecordLiveness($3);
-            fstate->RecordLiveness($4);
-        };
-mem:    GetElementPtr(mem, ri, reg)    { $cost[0].cost = $cost[2].cost + $cost[3].cost + $cost[4].cost + 5; } = {
-            $action[2](fstate);
-            $action[3](fstate);
-            $action[4](fstate);
-
-            Tree *t1 = new Tree(REG);
-            t1->SetLLVMValue($0->GetLLVMValue());
-            assert($0->GetLLVMValue() && "GetElementPtr2");
-            fstate->CreateVirtualReg(t1);
-            fstate->GenerateMovStmt(t1, $2);
+            fstate->GenerateBinaryStmt("lea", t1, $2);
 
             X86Operand *ptr = new X86Operand(fstate, OP_TYPE::X86Mem,
                 t1->AsX86Operand(fstate),         // base
-                $4->AsX86Operand(fstate),
-                8,
-                0
+                $3->AsX86Operand(fstate),         // displacement
+                0,
+                8 * $4->GetValue().val.i64s           // offset
             );
             $0->SetX86Operand(ptr);
+            fstate->RecordLiveness(t1);
             fstate->RecordLiveness($2);
             fstate->RecordLiveness($3);
             fstate->RecordLiveness($4);
