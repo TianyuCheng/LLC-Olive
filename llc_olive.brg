@@ -276,35 +276,35 @@ stmt:   Br(cond, label, label)   { $cost[0].cost = $cost[2].cost + $cost[3].cost
                     break;
                 case CmpInst::Predicate::ICMP_UGT:
                     // unsigned greater than
-                    op = "jb";
+                    op = "jbe";
                     break;
                 case CmpInst::Predicate::ICMP_UGE:
                     // unsigned greater or equal
-                    op = "jbe";
+                    op = "jb";
                     break;
                 case CmpInst::Predicate::ICMP_ULT:
                     // unsigned less than
-                    op = "ja";
+                    op = "jae";
                     break;
                 case CmpInst::Predicate::ICMP_ULE:
                     // unsigned less or equal
-                    op = "jae";
+                    op = "ja";
                     break;
                 case CmpInst::Predicate::ICMP_SGT:
                     // signed greater than
-                    op = "jl";
+                    op = "jle";
                     break;
                 case CmpInst::Predicate::ICMP_SGE:
                     // signed greater or equal
-                    op = "jle";
+                    op = "jl";
                     break;
                 case CmpInst::Predicate::ICMP_SLT:
                     // signed less than
-                    op = "jg";
+                    op = "jge";
                     break;
                 case CmpInst::Predicate::ICMP_SLE:
                     // signed less or equal
-                    op = "jge";
+                    op = "jg";
                     break;
                 default:
                     assert(false && "FP TYPES NOT SUPPORTED!");

@@ -15,6 +15,7 @@ RESET=`tput sgr0`
 assembly:=$(patsubst %.c,%.s,$(wildcard $(TEST_DIR)/*.c))
 bitcodes:=$(patsubst %.c,%.bc,$(wildcard $(TEST_DIR)/*.c))
 executables:=$(patsubst %.c,%,$(wildcard $(TEST_DIR)/*.c))
+executables+=$(patsubst %.c,%-expected,$(wildcard $(TEST_DIR)/*.c))
 
 $(EXE): llc_olive.brg llc_olive.cpp FunctionState.cpp Tree.cpp RegisterAllocator.cpp
 	(cd $(TOOL_ROOT); make -j6)
@@ -23,15 +24,18 @@ tar:
 	(cd ../; tar -zcvf ./assignment6.tar.gz llc-olive/*)
 
 %: $(EXE) ./testcases/%.s
-	$(CC) ./testcases/$@.s -o ./testcases/$@
+	@echo -ne "${GREEN}[ ] COMPILING $@ ... ${RESET}"
+	@$(CC) ./testcases/$@.s -o ./testcases/$@ > /tmp/$@.compile
+	@$(CC) ./testcases/$@.bc -o ./testcases/$@-expected >/dev/null 2>/dev/null
+	@./test.sh $@
 
 llc_olive.cpp: llc_olive.brg
-	$(OLIVE) $<
+	@$(OLIVE) $<
 
 test: clean $(EXE) $(bitcodes) $(assembly) $(executables)
 
 %.s: %.bc
-	$(EXE) --num_regs=$(NUM_REGS) $< -o $@
+	@$(EXE) --num_regs=$(NUM_REGS) $< -o $@
 
 %.bc: %.c
 	@$(CC) -O0 -emit-llvm $< -S -w -o $@
