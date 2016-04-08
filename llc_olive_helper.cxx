@@ -1,5 +1,6 @@
 #define VERBOSE  0
 #define DEBUG    0
+#define SSA_REGISTER_ALLOCATOR 0
 
 // global variables
 
@@ -460,7 +461,7 @@ int main(int argc, char *argv[])
 
     // iterate through all functions to generate code for each function
     for (Function &func : function_list) {
-#if 0
+#if SSA_REGISTER_ALLOCATOR
         std::cout << "#################################################" << std::endl;
         std::cout << "Start build lifetime intervals.." << std::endl;
         std::cout << "#################################################" << std::endl;
