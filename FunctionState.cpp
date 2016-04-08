@@ -60,10 +60,10 @@ void FunctionState::PrintAssembly(std::ostream &out/*, RegisterAllocator &ra*/) 
 
     // epilog
     out << ".LFE" << function_id << ":" << std::endl;
+    out << "\taddq\t$" << (local_bytes - 4 * 8) << ",\t%rsp" << std::endl;
     // restore registers
     for (int i = 6; i >= 3; i--)
         out << "\tpopq\t%" << registers[callee_saved_regs[i]] << std::endl;
-    out << "\taddq\t$" << (local_bytes - 4 * 8) << ",\t%rsp" << std::endl;
     out << "\tmovq\t%rbp,\t%rsp" << std::endl;
     out << "\tleave" << std::endl;
     out << "\tret" << std::endl;
