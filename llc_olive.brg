@@ -299,11 +299,11 @@ stmt:   Br(cond, label, label)   { $cost[0].cost = $cost[2].cost + $cost[3].cost
             switch (pred) {
                 case CmpInst::Predicate::ICMP_EQ:
                     // equal
-                    op = "je";
+                    op = "jne";
                     break;
                 case CmpInst::Predicate::ICMP_NE:
                     // not equal
-                    op = "jne";
+                    op = "je";
                     break;
                 case CmpInst::Predicate::ICMP_UGT:
                     // unsigned greater than
