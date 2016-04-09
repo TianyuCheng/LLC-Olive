@@ -31,7 +31,7 @@ tar:
 llc_olive.cpp: llc_olive.brg
 	@$(OLIVE) $<
 
-test: clean $(EXE) $(bitcodes) $(targets)
+test: $(EXE) $(bitcodes) $(targets)
 
 %.s: %.bc
 	@$(EXE) --num_regs=$(NUM_REGS) $< -o $@
