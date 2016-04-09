@@ -242,6 +242,7 @@ reg:    Mul(ri, reg)       { $cost[0].cost = $cost[2].cost + $cost[3].cost + 2; 
              */
             $action[2](fstate);
             $action[3](fstate);
+            // std::cerr << "IS REG A PHYSICAL REG? " << $3->IsPhysicalReg() << std::endl;
             fstate->AssignVirtualReg($0, $3);    // assign a virtual register to the inst
             fstate->GenerateBinaryStmt("imul", $0, $2);
             // this will record the ending in liveness range for a register
@@ -383,43 +384,43 @@ stmt:   Br(cond, label, label)   { $cost[0].cost = $cost[2].cost + $cost[3].cost
             switch (pred) {
                 case CmpInst::Predicate::ICMP_EQ:
                     // equal
-                    op = "jne";
+                    op = "jne ";
                     break;
                 case CmpInst::Predicate::ICMP_NE:
                     // not equal
-                    op = "je";
+                    op = "je  ";
                     break;
                 case CmpInst::Predicate::ICMP_UGT:
                     // unsigned greater than
-                    op = "jbe";
+                    op = "jbe ";
                     break;
                 case CmpInst::Predicate::ICMP_UGE:
                     // unsigned greater or equal
-                    op = "jb";
+                    op = "jb  ";
                     break;
                 case CmpInst::Predicate::ICMP_ULT:
                     // unsigned less than
-                    op = "jae";
+                    op = "jae ";
                     break;
                 case CmpInst::Predicate::ICMP_ULE:
                     // unsigned less or equal
-                    op = "ja";
+                    op = "ja  ";
                     break;
                 case CmpInst::Predicate::ICMP_SGT:
                     // signed greater than
-                    op = "jle";
+                    op = "jle ";
                     break;
                 case CmpInst::Predicate::ICMP_SGE:
                     // signed greater or equal
-                    op = "jl";
+                    op = "jl  ";
                     break;
                 case CmpInst::Predicate::ICMP_SLT:
                     // signed less than
-                    op = "jge";
+                    op = "jge ";
                     break;
                 case CmpInst::Predicate::ICMP_SLE:
                     // signed less or equal
-                    op = "jg";
+                    op = "jg  ";
                     break;
                 default:
                     assert(false && "FP TYPES NOT SUPPORTED!");
@@ -430,18 +431,6 @@ stmt:   Br(cond, label, label)   { $cost[0].cost = $cost[2].cost + $cost[3].cost
             $action[3](fstate);
         };
 reg:    Call(args)               { $cost[0].cost = $cost[2].cost + 5; } = {
-            std::vector<Register> regs;
-
-            // we skip RAX, because this register will be used as special purpose register
-            for (int i = 1; i < 9; i++) {
-                bool used = fstate->RegisterInUse(caller_saved_regs[i]);
-                if (used) regs.push_back(caller_saved_regs[i]);
-            }
-
-            // preserve caller-saved registers
-            for (auto it = regs.begin(); it != regs.end(); it++)
-                fstate->GeneratePushStmt(*it);
-
             $action[2](fstate, 0);
 
             std::stringstream ss;
@@ -450,12 +439,7 @@ reg:    Call(args)               { $cost[0].cost = $cost[2].cost + 5; } = {
             fstate->GenerateStmt(s.c_str());
 
             fstate->CreatePhysicalReg($0, RAX);
-            $0->UseAsRegister();
-
-            // restore caller-saved registers
-            for (auto it = regs.rbegin(); it != regs.rend(); it++)
-                fstate->GeneratePopStmt(*it);
-
+            $0->UseAsPhysicalRegister();
         };
 args:   NOARGS                  { $cost[0].cost = 0;                  } = {
             // for args tree termination
@@ -510,7 +494,7 @@ ptr:    GetElementPtr(ri, ri, imm)    { $cost[0].cost = $cost[2].cost + $cost[3]
                 $2->AsX86Operand(fstate),         // base
                 $3->AsX86Operand(fstate),         // displacement
                 0,
-                8 * $4->GetValue().val.i64s           // offset
+                8 * $4->GetValue().val.i64s       // offset
             );
             $0->SetX86Operand(ptr);
             fstate->RecordLiveness($2);
@@ -534,7 +518,7 @@ ptr:    GetElementPtr(mem, ri, imm)    { $cost[0].cost = $cost[2].cost + $cost[3
                 t1->AsX86Operand(fstate),         // base
                 $3->AsX86Operand(fstate),         // displacement
                 0,
-                8 * $4->GetValue().val.i64s           // offset
+                8 * $4->GetValue().val.i64s       // offset
             );
             $0->SetX86Operand(ptr);
             fstate->RecordLiveness(t1);

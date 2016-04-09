@@ -98,7 +98,7 @@ public:
         allocator.Allocate(this, out, v.AsVirtualReg(), current_line);
     }
 
-    bool RegisterInUse(Register r) const { return allocator.RegisterInUse(r); }
+    bool RegisterInUse(Register r) { return allocator.RegisterInUse(r); }
 
     int GetLabelID() const { return label_id; }
     int GetFunctionID() const { return function_id; }
@@ -267,6 +267,10 @@ public:
             out << inst.opname << ":";
         }
         return out;
+    }
+
+    bool IsCall() const { 
+        return opname.compare(0, 4, "call") == 0;
     }
 private:
     std::string opname;

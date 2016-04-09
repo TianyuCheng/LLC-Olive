@@ -40,9 +40,10 @@ void FunctionState::PrintAssembly(std::ostream &out/*, RegisterAllocator &ra*/) 
     out << function_name  << ":" << std::endl;
     out << "\tpushq\t%rbp" << std::endl;
     out << "\tmovq\t%rsp,\t%rbp" << std::endl;
-    // save registers
+    // callee-save registers
     for (int i = 3; i < 7; i++)
-        out << "\tpushq\t%" << registers[callee_saved_regs[i]] << std::endl;
+        out << "\tpushq\t%" << registers[callee_saved_regs[i]] << "\t# push callee-saved reg" << std::endl;
+
     out << "\tsubq\t$" << (local_bytes - 4 * 8) << ",\t%rsp" << std::endl;
 
     int lineNo = 0;
@@ -51,7 +52,31 @@ void FunctionState::PrintAssembly(std::ostream &out/*, RegisterAllocator &ra*/) 
     for (X86Inst *inst : assembly) {
         allocator.ResetNoSpills();          // reset registers that cannot be spilt
         inst->ResolveRegs(this, out);
-        out << *inst;
+        if (inst->IsCall()) {
+            std::vector<Register> regs;
+            
+            // find which registers to preserve and restore
+            // we skip RAX, because this register will be used as special purpose register
+            for (int i = 1; i < 9; i++) {
+                Register r = caller_saved_regs[i];
+                if (RegisterInUse(r))
+                    regs.push_back(r);
+            }
+            
+            // push registers
+            for (auto it = regs.begin(); it != regs.end(); it++)
+                out << "\tpushq\t%" << registers[*it] << "\t# push caller-save reg" << std::endl;
+
+            // print call instruction
+            out << *inst << std::endl;
+
+            // push registers
+            for (auto it = regs.rbegin(); it != regs.rend(); it++)
+                out << "\tpopq\t%" << registers[*it] << "\t# pop caller-save reg" << std::endl;
+        }
+        else {
+            out << *inst;
+        }
 #if DEBUG
         out << "\t; line " << lineNo++;
 #endif
@@ -64,7 +89,7 @@ void FunctionState::PrintAssembly(std::ostream &out/*, RegisterAllocator &ra*/) 
     out << "\taddq\t$" << (local_bytes - 4 * 8) << ",\t%rsp" << std::endl;
     // restore registers
     for (int i = 6; i >= 3; i--)
-        out << "\tpopq\t%" << registers[callee_saved_regs[i]] << std::endl;
+        out << "\tpopq\t%" << registers[callee_saved_regs[i]] << "\t# pop callee-saved reg" << std::endl;
     out << "\tmovq\t%rbp,\t%rsp" << std::endl;
     out << "\tleave" << std::endl;
     out << "\tret" << std::endl;
@@ -179,7 +204,10 @@ void FunctionState::CreatePhysicalReg(Tree *t, Register r) {
 
 void FunctionState::AssignVirtualReg(Tree *lhs, Tree *rhs) {
     lhs->UseAsVirtualRegister();
-    if (rhs->GetRefCount() == 1) {
+    // if (rhs->IsVirtualReg()) std::cerr << "FOUND RHS TO BE A PHYSICAL REG" << std::endl;
+    // if (rhs->IsPhysicalReg()) std::cerr << "FOUND RHS TO BE A PHYSICAL REG" << std::endl;
+
+    if (rhs->IsVirtualReg() && rhs->GetRefCount() == 1) {
         // this register is about to be free, we can reuse it
         lhs->val = rhs->val;
         lhs->UseAsVirtualRegister();

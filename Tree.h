@@ -59,7 +59,7 @@ public:
 
     void UseAsVirtualRegister() { isReg = true; otype = REG; }
     void UseAsPhysicalRegister() { isReg = true; isPhysicalReg = true; otype = REG; }
-    bool IsVirtualReg() const { return isReg; }
+    bool IsVirtualReg() const { return isReg && !isPhysicalReg; }
     bool IsPhysicalReg() const { return isPhysicalReg; }
     int  GetVirtualReg() const { return val.AsVirtualReg(); }
     int  GetPhysicalReg() const { return val.AsVirtualReg(); }

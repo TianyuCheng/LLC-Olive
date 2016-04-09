@@ -47,7 +47,6 @@ public:
             delete it->second;
     }
     void DumpVirtualRegs() {
-#if DEBUG
         std::cerr << "##############################################" << std::endl;
         for (int i = 0; i < virtual2machine.size(); i++)
             std::cerr << "VirtualReg[" << i << "]:\t" << virtual2machine[i] << std::endl;
@@ -56,7 +55,6 @@ public:
             std::cerr << nospills[i] << " ";
         std::cerr << std::endl;
         std::cerr << "##############################################" << std::endl;
-#endif
     }
     std::string GetMCRegAt(int reg) {
         assert(reg >= 0 && reg < virtual2machine.size());
@@ -102,7 +100,7 @@ public:
         out << "####################################################" << std::endl;
     }
     void Allocate(FunctionState *fstate, std::ostream &out, int reg, int line);
-    bool RegisterInUse(Register r) const {
+    bool RegisterInUse(Register r) {
         auto it = register_status.find(r);
         if (it == register_status.end()) return false;
         return it->second >= 0;
