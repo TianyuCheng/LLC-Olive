@@ -6,7 +6,7 @@ FunctionState::FunctionState(std::string name, int n, int f, int l)
 {
     // initialize function state here
     // local_bytes is initiated to 8 for saved rip
-    local_bytes = (7 - 3) * 8;    // space for 4 callee_saved registers
+    local_bytes = 4 * 8;    // space for 4 callee_saved registers, 3 out of 7 are special purpose, like %rbp, %rsp, we will manually restore them
 }
 
 FunctionState::~FunctionState() {
@@ -108,7 +108,7 @@ void FunctionState::CreateLocal(Tree *t, int bytes) {
             new X86Operand(this, RBP),                     // base_address, should be rbp
             new X86Operand(this, OP_TYPE::X86Imm, 0),      // displacement
             0,                                             // multiplier    
-            -(local_bytes + bytes));                       // negate because locals are below rbp
+            -local_bytes);                       // negate because locals are below rbp
     // save the local variable memory address for future use
     locals.insert(std::pair<Tree*, X86Operand*>(t, local));
 }

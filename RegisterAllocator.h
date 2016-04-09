@@ -34,7 +34,6 @@ static const char* registers[] = {
 static int MAX_REGS = 16;
 static int REGS_OFFSET = 10;        // we start using registers from REGS_OFFSET
 
-
 class SimpleRegisterAllocator {
 public:
     SimpleRegisterAllocator(int n) : num_regs(n) {
