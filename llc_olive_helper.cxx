@@ -461,6 +461,8 @@ int main(int argc, char *argv[])
 
     // iterate through all functions to generate code for each function
     for (Function &func : function_list) {
+        // we cannot handle intrinsic function, but we need it to compile for array
+        if (func.isDeclaration() && !func.isIntrinsic()) continue;
 #if SSA_REGISTER_ALLOCATOR
         std::cout << "#################################################" << std::endl;
         std::cout << "Start build lifetime intervals.." << std::endl;

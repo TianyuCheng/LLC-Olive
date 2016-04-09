@@ -37,7 +37,7 @@ public:
     SimpleRegisterAllocator(int n) : num_regs(n) {
         // num_regs represents number of GENERAL PURPOSE REGISTERS:
         // r10, r11, r12, r13, r14, r15, r16
-        for (int i = REGS_OFFSET; i < MAX_REGS; i++)
+        for (int i = REGS_OFFSET; i < std::min(REGS_OFFSET + num_regs, MAX_REGS); i++)
             register_status[i] = -1;      // not used
     }
     virtual ~SimpleRegisterAllocator() {

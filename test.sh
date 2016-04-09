@@ -13,7 +13,13 @@ code2=$?
 success=1
 
 if [ ${code1} -eq ${code2} ]; then 
-    diff /tmp/actual /tmp/expected >/dev/null 2>/dev/null || vimdiff /tmp/actual /tmp/expected
+    DIFF=$(diff /tmp/actual /tmp/expected)
+    if [ "$DIFF" != "" ]; then
+        success=0
+        vim /tmp/expected -c "vert diffsplit /tmp/actual"
+        echo -ne "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b"
+        echo -e "${RED}[\u2613] TESTING $@ ... ${RESET}"
+    fi
 else
     success=0
     echo -ne "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b"
