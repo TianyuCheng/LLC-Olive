@@ -5,8 +5,11 @@
 #include <map>
 #include <set>
 #include <queue>
+#include <algorithm>
 #include "assert.h"
 #include "LiveRange.h"
+
+#define DEBUG 0
 
 class FunctionState;
 
@@ -44,8 +47,24 @@ public:
         for (auto it = liveness.begin(); it != liveness.end(); ++it)
             delete it->second;
     }
+    void DumpVirtualRegs() {
+#if DEBUG
+        std::cerr << "##############################################" << std::endl;
+        for (int i = 0; i < virtual2machine.size(); i++)
+            std::cerr << "VirtualReg[" << i << "]:\t" << virtual2machine[i] << std::endl;
+        std::cerr << "NoSpills?: ";
+        for (int i = 0; i < nospills.size(); i++)
+            std::cerr << nospills[i] << " ";
+        std::cerr << std::endl;
+        std::cerr << "##############################################" << std::endl;
+#endif
+    }
     std::string GetMCRegAt(int reg) {
         assert(reg >= 0 && reg < virtual2machine.size());
+        if (virtual2machine[reg] < 0 || virtual2machine[reg] >= MAX_REGS) {
+            std::cerr << "request virtual reg: " << reg << std::endl;
+            DumpVirtualRegs();
+        }
         assert(virtual2machine[reg] >= 0 && virtual2machine[reg] < MAX_REGS);
         return std::string(registers[virtual2machine[reg]]);
     }
@@ -89,11 +108,18 @@ public:
         if (it == register_status.end()) return false;
         return it->second >= 0;
     }
+
+    void ResetNoSpills() { nospills.clear(); nospills.resize(0); }
+    bool CanSpill(int vir_reg) {
+        auto it = std::find(nospills.begin(), nospills.end(), vir_reg);
+        return it == nospills.end();
+    }
 private:
     int num_regs;
     std::map<int, LiveRange*> liveness;
     std::map<int, int> register_status;
     std::vector<int> virtual2machine;   // map to value > 0 (good registers), value < 0 (memory), value = -1 (not allocated)
+    std::vector<int> nospills;          // registers used in current instruction, cannot spill it
 };
 
 
@@ -111,11 +137,6 @@ public:
     }
 
     virtual ~RegisterAllocator() { }
-
-    std::string Allocate() {
-        // TODO: interaction 
-        // return std::string("rax");
-    }
 
     bool isIntersect (Interval* ia, Interval* ib);
     int findNextIntersect (int pos, Interval* cur_itv, Interval* itv);

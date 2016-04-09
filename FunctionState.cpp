@@ -49,6 +49,7 @@ void FunctionState::PrintAssembly(std::ostream &out/*, RegisterAllocator &ra*/) 
 
     // TODO: remember to print function begin and ends
     for (X86Inst *inst : assembly) {
+        allocator.ResetNoSpills();          // reset registers that cannot be spilt
         inst->ResolveRegs(this, out);
         out << *inst;
 #if DEBUG
@@ -333,17 +334,19 @@ void FunctionState::RecordLiveStart(Tree *t) {
 // ========================================================
 // register allocation
 int  FunctionState::CreateSpill(std::ostream &out, int reg_idx) {
+    // std::cerr << "Spill out physical reg: " << reg_idx << std::endl;
     X86Operand operand(this, reg_idx);
     X86Inst inst("pushq", &operand);
-    out << inst << "\t; spill " << registers[reg_idx] << std::endl;
+    out << inst << std::endl;
     local_bytes += 8;
     return -local_bytes;
 }
 
 void FunctionState::RestoreSpill(std::ostream &out, int reg_idx, int offset) {
+    // std::cerr << "restore physical reg: " << reg_idx << " from offset: " << offset << std::endl;
     X86Operand operand1(this, reg_idx);
     X86Operand *operand2 = GetLocalMemoryAddress(offset);
     X86Inst inst("movq", &operand1, operand2);
-    out << inst << "\t; restore " << registers[reg_idx] << std::endl;
+    out << inst << std::endl;
     delete operand2;
 }

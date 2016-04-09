@@ -5,7 +5,15 @@
 #include "FunctionState.h"
 
 void SimpleRegisterAllocator::Allocate(FunctionState *fstate, std::ostream &out, int reg, int line) {
-    // std::cerr << "=========== ALLOCATE: ";
+#if DEBUG
+    std::cerr << "=========== ALLOCATE for virtual reg: " << reg << std::endl;
+    std::cerr << "BEFORE ALLOCATION" << std::endl;
+    DumpVirtualRegs();
+#endif
+
+    // add the current target virtual register to nospill, because we cannot spill it in current instruction
+    nospills.push_back(reg);
+
     int reg_idx = virtual2machine[reg];
     if (reg_idx == -1) {
         // this register has never been assigned,
@@ -13,18 +21,23 @@ void SimpleRegisterAllocator::Allocate(FunctionState *fstate, std::ostream &out,
         // double mapping
         virtual2machine[reg] = free_reg_idx;
         register_status[free_reg_idx] = reg;
-        return;
     }
-
-    if (reg_idx < -1) {
+    else if (reg_idx < -1) {
         int offset = reg_idx;                           // negative numbers used as offset to RBP
         int free_reg_idx = GetFreeReg(out, fstate, line);    // index of a free physical register
+#if DEBUG
+        std::cerr << "vir_reg_idx: " << reg << std::endl;
+        std::cerr << "phy_reg_idx: " << free_reg_idx << std::endl;
+#endif
         fstate->RestoreSpill(out, free_reg_idx, offset);
         // double mapping
         virtual2machine[reg] = free_reg_idx;
         register_status[free_reg_idx] = reg;
-        return;
     }
+#if DEBUG
+    std::cerr << "AFTER ALLOCATION" << std::endl;
+    DumpVirtualRegs();
+#endif
 
     // else do nothing because this register is live, and have a valid mapping
 }
@@ -35,6 +48,7 @@ int SimpleRegisterAllocator::GetRegToSpill(std::ostream &out, FunctionState *fst
     for (auto it = register_status.begin(); it != register_status.end(); it++) {
         int phy_reg = it->first;
         int vir_reg = it->second;
+        if (!CanSpill(vir_reg)) continue;
 
         LiveRange *range = liveness[vir_reg];
         std::vector<int> &innerpoints = range->innerpoints;
@@ -53,7 +67,7 @@ int SimpleRegisterAllocator::GetRegToSpill(std::ostream &out, FunctionState *fst
         }
     }
 
-    assert(phy_reg_to_spill != -1);
+    assert(phy_reg_to_spill != -1 && "Not enough registers!");
 
     // generate spill code
     int vir_reg = register_status[phy_reg_to_spill];
@@ -77,7 +91,10 @@ int SimpleRegisterAllocator::GetFreeReg(std::ostream &out, FunctionState *fstate
             std::cerr << "virtual reg:  " << vir_reg << std::endl;
             std::cerr << "current line: " << line << std::endl;
         }
-        if (line > range->endpoint) return phy_reg;
+        if (line > range->endpoint) {
+            virtual2machine[vir_reg] = -1;      // reset register assignment because the virtual register is expired
+            return phy_reg;
+        }
     }
 
     // if we cannot find a free physical register, then we have to spill
