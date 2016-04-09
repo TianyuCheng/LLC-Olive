@@ -50,3 +50,4 @@ clean:
 	@rm -rf ./llc_olive.h ./llc_olive.cpp
 
 .PHONY: opt compile tar test run push clean
+.PRECIOUS: %.bc %.s

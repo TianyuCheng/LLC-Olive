@@ -15,6 +15,7 @@
 %declare<void> stmt     <FUNCTION_STATE fstate>;
 %declare<void> value    <FUNCTION_STATE fstate>;
 %declare<void> ri       <FUNCTION_STATE fstate>;
+%declare<void> rm       <FUNCTION_STATE fstate>;
 %declare<void> reg      <FUNCTION_STATE fstate>;
 %declare<void> imm      <FUNCTION_STATE fstate>;
 %declare<void> mem      <FUNCTION_STATE fstate>;
@@ -34,6 +35,8 @@ value:  mem                 { $cost[0].cost = $cost[1].cost;                    
 ri:     reg                 { $cost[0].cost = $cost[1].cost;                    } = { $action[1](fstate); };
 ri:     imm                 { $cost[0].cost = $cost[1].cost;                    } = { $action[1](fstate); };
 
+rm:     reg                 { $cost[0].cost = $cost[1].cost;                    } = { $action[1](fstate); };
+rm:     mem                 { $cost[0].cost = $cost[1].cost;                    } = { $action[1](fstate); };
 
 reg:    REG                 { $cost[0].cost = 1;                                } = { $0->UseAsRegister(); };
 imm:    Load(IMM)           { $cost[0].cost = 0;                                } = { $0->UseAsImmediate(); };
@@ -164,8 +167,7 @@ stmt:   Store(mem, mem)      { $cost[0].cost = $cost[2].cost + $cost[3].cost;   
             $action[2](fstate);
             $action[3](fstate);
 
-            Tree *t1 = new Tree(REG);
-            t1->GetTreeRef();
+            Tree *t1 = (new Tree(REG))->GetTreeRef();
             fstate->CreateVirtualReg(t1);
 
             fstate->GenerateMovStmt(t1, $2);
@@ -184,6 +186,21 @@ reg:    Add(reg, ri)       { $cost[0].cost = $cost[2].cost + $cost[3].cost + 2; 
             $action[3](fstate);
             fstate->AssignVirtualReg($0, $2);    // assign a virtual register to the inst
             fstate->GenerateBinaryStmt("add", $0, $3);
+            // this will record the ending in liveness range for a register
+            // if the input is a register, and the register dies
+            fstate->RecordLiveness($2);
+            fstate->RecordLiveness($3);
+            $0->UseAsRegister();
+        };
+reg:    Add(ri, reg)       { $cost[0].cost = $cost[2].cost + $cost[3].cost + 2;    } = {
+            /*
+             * IR Add takes two arguments
+             * X86 Add takes two argument, both operands cannot be from memory in the instruction
+             */
+            $action[2](fstate);
+            $action[3](fstate);
+            fstate->AssignVirtualReg($0, $3);    // assign a virtual register to the inst
+            fstate->GenerateBinaryStmt("add", $0, $2);
             // this will record the ending in liveness range for a register
             // if the input is a register, and the register dies
             fstate->RecordLiveness($2);
@@ -212,20 +229,30 @@ reg:    Mul(reg, ri)       { $cost[0].cost = $cost[2].cost + $cost[3].cost + 2; 
              */
             $action[2](fstate);
             $action[3](fstate);
-            if ($2->GetRefCount() < $3->GetRefCount()) {
-                fstate->AssignVirtualReg($0, $2);    // assign a virtual register to the inst
-                fstate->GenerateBinaryStmt("imul", $0, $3);
-            } else {
-                fstate->AssignVirtualReg($0, $3);    // assign a virtual register to the inst
-                fstate->GenerateBinaryStmt("imul", $0, $2);
-            }
+            fstate->AssignVirtualReg($0, $2);    // assign a virtual register to the inst
+            fstate->GenerateBinaryStmt("imul", $0, $3);
             // this will record the ending in liveness range for a register
             // if the input is a register, and the register dies
             fstate->RecordLiveness($2);
             fstate->RecordLiveness($3);
             $0->UseAsRegister();
         };
-reg:    UDiv(reg, ri)       { $cost[0].cost = $cost[2].cost + $cost[3].cost + 4;    } = {
+reg:    Mul(ri, reg)       { $cost[0].cost = $cost[2].cost + $cost[3].cost + 2;    } = {
+            /*
+             * IR Mul takes two arguments
+             * X86 Mul takes two argument, both operands cannot be from memory in the instruction
+             */
+            $action[2](fstate);
+            $action[3](fstate);
+            fstate->AssignVirtualReg($0, $3);    // assign a virtual register to the inst
+            fstate->GenerateBinaryStmt("imul", $0, $2);
+            // this will record the ending in liveness range for a register
+            // if the input is a register, and the register dies
+            fstate->RecordLiveness($2);
+            fstate->RecordLiveness($3);
+            $0->UseAsRegister();
+        };
+reg:    UDiv(rm, rm)       { $cost[0].cost = $cost[2].cost + $cost[3].cost + 4;    } = {
             /*
              * IR Mul takes two arguments
              * X86 Mul takes one argument, perform %rax = %rax / src
@@ -240,8 +267,9 @@ reg:    UDiv(reg, ri)       { $cost[0].cost = $cost[2].cost + $cost[3].cost + 4;
 
             fstate->RecordLiveness($2);
             fstate->RecordLiveness($3);
+            $0->UseAsRegister();
         };
-reg:    SDiv(reg, ri)       { $cost[0].cost = $cost[2].cost + $cost[3].cost + 4;    } = {
+reg:    SDiv(rm, rm)       { $cost[0].cost = $cost[2].cost + $cost[3].cost + 4;    } = {
             /*
              * IR Mul takes two arguments
              * X86 Mul takes one argument, perform %rax = %rax / src
@@ -256,6 +284,54 @@ reg:    SDiv(reg, ri)       { $cost[0].cost = $cost[2].cost + $cost[3].cost + 4;
 
             fstate->RecordLiveness($2);
             fstate->RecordLiveness($3);
+            $0->UseAsRegister();
+        };
+reg:    UDiv(rm, imm)       { $cost[0].cost = $cost[2].cost + $cost[3].cost + 4;    } = {
+            /*
+             * IR Mul takes two arguments
+             * X86 Mul takes one argument, perform %rax = %rax / src
+             */
+            $action[2](fstate);
+            $action[3](fstate);
+
+            fstate->CreatePhysicalReg($0, RAX);         // the result is stored in %rax
+            fstate->GenerateMovStmt($0, $2);            // move one of the operands to %rax
+
+            Tree *t1 = (new Tree(REG))->GetTreeRef();
+            fstate->CreateVirtualReg(t1);
+            fstate->GenerateMovStmt(t1, $3);            // move one of the operands to new register
+
+            fstate->GenerateStmt("cqto");               // sign extension
+            fstate->GenerateUnaryStmt("div", t1);       // generate div instruction
+
+            fstate->RecordLiveness(t1);
+            fstate->RecordLiveness($2);
+            fstate->RecordLiveness($2);
+            fstate->RecordLiveness($3);
+            $0->UseAsRegister();
+        };
+reg:    SDiv(rm, imm)       { $cost[0].cost = $cost[2].cost + $cost[3].cost + 4;    } = {
+            /*
+             * IR Mul takes two arguments
+             * X86 Mul takes one argument, perform %rax = %rax / src
+             */
+            $action[2](fstate);
+            $action[3](fstate);
+
+            fstate->CreatePhysicalReg($0, RAX);         // the result is stored in %rax
+            fstate->GenerateMovStmt($0, $2);            // move one of the operands to %rax
+
+            Tree *t1 = (new Tree(REG))->GetTreeRef();
+            fstate->CreateVirtualReg(t1);
+            fstate->GenerateMovStmt(t1, $3);            // move one of the operands to new register
+
+            fstate->GenerateStmt("cqto");               // sign extension
+            fstate->GenerateUnaryStmt("idiv", t1);       // generate div instruction
+
+            fstate->RecordLiveness(t1);
+            fstate->RecordLiveness($2);
+            fstate->RecordLiveness($3);
+            $0->UseAsRegister();
         };
 
 stmt:   cond                 { $cost[0].cost = $cost[1].cost;                       } = { $action[1](fstate); };
@@ -455,8 +531,7 @@ ptr:    GetElementPtr(mem, ri, imm)    { $cost[0].cost = $cost[2].cost + $cost[3
             $action[3](fstate);
             $action[4](fstate);
 
-            Tree *t1 = new Tree(REG);
-            t1->GetTreeRef();
+            Tree *t1 = (new Tree(REG))->GetTreeRef();
             fstate->CreateVirtualReg(t1);
             fstate->GenerateBinaryStmt("lea", t1, $2);
 
