@@ -317,6 +317,7 @@ void FunctionState::RecordLiveness(Tree *t) {
     t->RemoveRef();                      // decrease the reference counter
 
     if (!t->IsVirtualReg()) return;      // we only care about registers' references
+    if (t->IsPhysicalReg()) return;      // we do not record the physical registers' liveness
 
 #if DEBUG
     std::cerr << "Virtual REG stop : " << t->GetValue().AsVirtualReg() << "\tRefCnt: " << t->GetRefCount() 
