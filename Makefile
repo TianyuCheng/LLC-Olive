@@ -6,14 +6,15 @@ CC			:=$(BIN_ROOT)/clang
 OLIVE		:=./olive/olive
 EXE			:=$(BIN_ROOT)/llc-olive
 
-NUM_REGS  	:= 2
+NUM_REGS  	:= 6
 # colorful terminal output
 RED  =`tput setaf 1`
 GREEN=`tput setaf 2`
 RESET=`tput sgr0`
 
-assembly:=$(patsubst %.c,%.s,$(wildcard $(TEST_DIR)/*.c))
+assembly:=$(patsubst %.c,%.s, $(wildcard $(TEST_DIR)/*.c))
 bitcodes:=$(patsubst %.c,%.bc,$(wildcard $(TEST_DIR)/*.c))
+targets :=$(patsubst %.c,%,   $(shell (cd testcases; ls *.c)))
 
 $(EXE): llc_olive.brg llc_olive.cpp FunctionState.cpp Tree.cpp RegisterAllocator.cpp
 	(cd $(TOOL_ROOT); make -j6)
@@ -30,7 +31,7 @@ tar:
 llc_olive.cpp: llc_olive.brg
 	@$(OLIVE) $<
 
-test: clean $(EXE) $(bitcodes) $(assembly)
+test: clean $(EXE) $(bitcodes) $(targets)
 
 %.s: %.bc
 	@$(EXE) --num_regs=$(NUM_REGS) $< -o $@

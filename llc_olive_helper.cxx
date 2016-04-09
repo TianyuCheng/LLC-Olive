@@ -26,13 +26,15 @@ static void burm_trace(NODEPTR p, int eruleno, COST cost) {
 
 void gen(NODEPTR p, FunctionState *fstate) {
     p->SetComputed(true);
-	if (burm_label(p) == 0)
-		std::cerr << "=== NO COVER ===\n";
-	else {
-		stmt_action(p->x.state, fstate);
-		if (shouldCover != 0)
-			dumpCover(p, 1, 0);
-	}
+    if (burm_label(p) == 0) {
+        std::cerr << "Failed to match grammar! Cannot generate assembly code\n";
+        exit(EXIT_FAILURE);
+    }
+    else {
+        stmt_action(p->x.state, fstate);
+        if (shouldCover != 0)
+            dumpCover(p, 1, 0);
+    }
 }
 
 void BasicBlockToExprTrees(FunctionState &fstate,

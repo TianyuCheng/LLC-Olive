@@ -238,6 +238,19 @@ void FunctionState::GenerateMovStmt(X86Operand *dst, X86Operand *src) {
         GenerateBinaryStmt("mov", dst, src);
 }
 
+void FunctionState::GenerateStmt(const char *op) {
+    AddInst(new X86Inst(op, nullptr, nullptr));
+}
+
+void FunctionState::GenerateUnaryStmt(const char *op_raw, Tree *src, bool suffix) {
+    std::string op = std::string(op_raw);
+    if (suffix) op = std::string(op_raw) + "q";
+
+    AddInst(new X86Inst(op.c_str(), 
+        src->AsX86Operand(this), nullptr
+    ));
+}
+
 void FunctionState::GenerateBinaryStmt(const char *op_raw, Tree *dst, Tree *src, bool suffix) {
     // Keep this one-line function, since we might want 
     // to migrate to different operand sizes, so we will
