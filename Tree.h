@@ -62,6 +62,7 @@ public:
     bool IsVirtualReg() const { return isReg; }
     bool IsPhysicalReg() const { return isPhysicalReg; }
     int  GetVirtualReg() const { return val.AsVirtualReg(); }
+    int  GetPhysicalReg() const { return val.AsVirtualReg(); }
 
     void SetComputed(bool c) { computed = c; }
     bool IsComputed() const { return computed; }

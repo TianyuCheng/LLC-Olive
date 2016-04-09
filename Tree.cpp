@@ -4,6 +4,8 @@
 Tree::~Tree() {
     for (Tree *ct : freeList) delete ct;
     switch (GetOpCode()) {
+        case LABEL:
+        case IMM:
         case REG:
             if (operand) delete operand; 
             break;
@@ -152,6 +154,7 @@ void Tree::DisplayTree(int indent) {
 
 X86Operand* Tree::AsX86Operand(FunctionState *fs) {
     if (operand) return operand;
+    if (otype == -1) otype = op;      // default
     switch (otype) {
         case REG:
             if (IsPhysicalReg())
@@ -160,10 +163,13 @@ X86Operand* Tree::AsX86Operand(FunctionState *fs) {
                 operand = new X86Operand(fs, X86OperandType::X86Reg, val.AsVirtualReg());
             break;
         case IMM:
-                operand = new X86Operand(fs, X86OperandType::X86Imm, val);
+            operand = new X86Operand(fs, X86OperandType::X86Imm, val);
             break;
         case MEM:
             operand = fs->GetLocalMemoryAddress(this);
+            break;
+        case LABEL:
+            operand = new X86Operand(fs, X86OperandType::X86Label, val);
             break;
         default:
             std::cerr << "AsX86Operand opcode: " << GetOpCode() << std::endl;
