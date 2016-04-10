@@ -494,7 +494,7 @@ ptr:    GetElementPtr(ri, ri, imm)    { $cost[0].cost = $cost[2].cost + $cost[3]
             GetElementPtrInst *inst = dyn_cast<GetElementPtrInst>($1->GetInst());
             assert(inst && "GetElementPtr must be not null");
             int size = GetTypeSize(inst->getSourceElementType());
-            std::cerr << "SIZE1: " << size << std::endl;
+            // std::cerr << "SIZE1: " << size << std::endl;
 
             $action[2](fstate);
             $action[3](fstate);
@@ -523,7 +523,7 @@ ptr:    GetElementPtr(mem, ri, imm)    { $cost[0].cost = $cost[2].cost + $cost[3
             GetElementPtrInst *inst = dyn_cast<GetElementPtrInst>($1->GetInst());
             assert(inst && "GetElementPtr must be not null");
             int size = GetTypeSize(inst->getSourceElementType());
-            std::cerr << "SIZE2: " << size << std::endl;
+            // std::cerr << "SIZE2: " << size << std::endl;
             const char *suffix = GetTypeSuffix(inst->getSourceElementType()).c_str();
 
             $action[2](fstate);
@@ -532,7 +532,7 @@ ptr:    GetElementPtr(mem, ri, imm)    { $cost[0].cost = $cost[2].cost + $cost[3
 
             Tree *t1 = (new Tree(REG))->GetTreeRef();
             fstate->CreateVirtualReg(t1);
-            fstate->GenerateBinaryStmt("lea", t1, $2, "q");
+            fstate->LoadEffectiveAddress(t1, $2);
 
             X86Operand *ptr = new X86Operand(fstate, OP_TYPE::X86Mem,
                 t1->AsX86Operand(fstate),         // base

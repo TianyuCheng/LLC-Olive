@@ -44,6 +44,7 @@ clean:
 	@rm -rf $(TEST_DIR)/*.actual
 	@rm -rf $(TEST_DIR)/*.expected
 	@rm -rf $(TEST_DIR)/*.s
+	@rm -rf $(TEST_DIR)/*.bc
 	@rm -rf $(TEST_DIR)/*.log
 	@rm -rf $(TEST_DIR)/.*.swp
 	@rm -rf ./assignment6.tar.gz
