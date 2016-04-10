@@ -30,8 +30,5 @@
 # Logs
 *.log
 
-llc_olive.cpp
-llc_olive.h
-
 # *.bc
 *.s
