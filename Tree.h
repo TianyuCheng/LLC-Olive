@@ -25,15 +25,15 @@ class Tree
 {
 public:
     Tree(int opcode)
-        : op(opcode), val(0), refcnt(0), level(1), operand(nullptr), otype(-1), isReg(false), isPhysicalReg(false), computed(false), isPtr(false), suffix("q")
+        : op(opcode), val(0), refcnt(0), level(1), operand(nullptr), otype(-1), isReg(false), isPhysicalReg(false), computed(false), isPtr(false), suffix("q"), cnstInt(64, 0), cnstFP(0.0)
     {
     }
     Tree(int opcode, VALUE v)
-        : op(opcode), val(v), refcnt(0), level(1), operand(nullptr), otype(-1), isReg(false), isPhysicalReg(false), computed(false), isPtr(false), suffix("q")
+        : op(opcode), val(v), refcnt(0), level(1), operand(nullptr), otype(-1), isReg(false), isPhysicalReg(false), computed(false), isPtr(false), suffix("q"), cnstInt(64, 0), cnstFP(0.0)
     {
     }
     Tree(int opcode, Tree *l, Tree *r)
-        : op(opcode), val(0), refcnt(0), level(1), operand(nullptr), otype(-1), isReg(false), isPhysicalReg(false), computed(false), isPtr(false), suffix("q")
+        : op(opcode), val(0), refcnt(0), level(1), operand(nullptr), otype(-1), isReg(false), isPhysicalReg(false), computed(false), isPtr(false), suffix("q"), cnstInt(64, 0), cnstFP(0.0)
     {
         AddChild(l);
         AddChild(r);
@@ -98,6 +98,8 @@ public:
     int GetRefCount() const { return refcnt; }
     int GetNumKids() const { return kids.size(); }
 
+    void CastAPInt(llvm::APInt cnst);
+    void CastAPFloat(llvm::APFloat cnst);
     void CastInt(llvm::ConstantInt *cnst);
     void CastFP(llvm::ConstantFP *cnst);
 
@@ -112,6 +114,9 @@ public:
 
     void SetSuffix(std::string sf) { suffix = sf; }
     const char* GetSuffix() const { return suffix.c_str(); }
+
+    llvm::APInt GetInteger() const { return cnstInt; }
+    llvm::APFloat GetFloat() const { return cnstFP; }
 
 private:
     void DisplayTree(int indent);
@@ -129,6 +134,8 @@ private:
     bool isPtr;
 
     X86Operand *operand;
+    llvm::APInt   cnstInt;
+    llvm::APFloat cnstFP;
 
     std::string func_name;
     std::string variable_name;

@@ -57,27 +57,26 @@ Tree* Tree::GetChild(int n) {
     return kids[n];
 }
 
-void Tree::CastInt(llvm::ConstantInt *cnst) {
+void Tree::CastAPInt(llvm::APInt cnst) {
     freeList.push_back(new Tree(IMM));
     Tree *ct = freeList.back();
-    const llvm::APInt integer = cnst->getValue();
-    unsigned bitWidth = cnst->getBitWidth();
-    if (integer.isSignedIntN(bitWidth)) {
+    unsigned bitWidth = cnst.getBitWidth();
+    if (cnst.isSignedIntN(bitWidth)) {
         switch (bitWidth) {
             case 1:
-                ct->SetValue((bool) cnst->getSExtValue());
+                ct->SetValue((bool) cnst.getSExtValue());
                 break;
             case 8:
-                ct->SetValue((int8_t)cnst->getSExtValue());
+                ct->SetValue((int8_t)cnst.getSExtValue());
                 break;
             case 16:
-                ct->SetValue((int16_t)cnst->getSExtValue());
+                ct->SetValue((int16_t)cnst.getSExtValue());
                 break;
             case 32:
-                ct->SetValue((int32_t)cnst->getSExtValue());
+                ct->SetValue((int32_t)cnst.getSExtValue());
                 break;
             case 64:
-                ct->SetValue((int64_t)cnst->getSExtValue());
+                ct->SetValue((int64_t)cnst.getSExtValue());
                 break;
             default:
                 std::cerr << "CAST CONSTANT INT FAILURE" << std::endl;
@@ -87,19 +86,19 @@ void Tree::CastInt(llvm::ConstantInt *cnst) {
     else {
         switch (bitWidth) {
             case 1:
-                ct->SetValue((bool) cnst->getZExtValue());
+                ct->SetValue((bool) cnst.getZExtValue());
                 break;
             case 8:
-                ct->SetValue((int8_t)cnst->getZExtValue());
+                ct->SetValue((int8_t)cnst.getZExtValue());
                 break;
             case 16:
-                ct->SetValue((int16_t)cnst->getZExtValue());
+                ct->SetValue((int16_t)cnst.getZExtValue());
                 break;
             case 32:
-                ct->SetValue((int32_t)cnst->getZExtValue());
+                ct->SetValue((int32_t)cnst.getZExtValue());
                 break;
             case 64:
-                ct->SetValue((int64_t)cnst->getZExtValue());
+                ct->SetValue((int64_t)cnst.getZExtValue());
                 break;
             default:
                 std::cerr << "CAST CONSTANT INT FAILURE" << std::endl;
@@ -107,14 +106,24 @@ void Tree::CastInt(llvm::ConstantInt *cnst) {
         }
     }
     this->AddChild(ct);
+    this->cnstInt = llvm::APInt(cnst);
 }
 
-void Tree::CastFP(llvm::ConstantFP *cnst) {
+void Tree::CastAPFloat(llvm::APFloat cnst) {
     freeList.push_back(new Tree(IMM));
     Tree *ct = freeList.back();
     // for now, assume all floating point uses 64 bit double
-    ct->SetValue((double) cnst->getValueAPF().convertToDouble());
+    ct->SetValue((double) cnst.convertToDouble());
     this->AddChild(ct);
+    this->cnstFP = cnst;
+}
+
+void Tree::CastInt(llvm::ConstantInt *cnst) {
+    CastAPInt(cnst->getValue());
+}
+
+void Tree::CastFP(llvm::ConstantFP *cnst) {
+    CastAPFloat(cnst->getValueAPF());
 }
 
 void Tree::DisplayTree(int indent) {

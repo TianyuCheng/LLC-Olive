@@ -1,6 +1,7 @@
 #ifndef VALUE_H
 #define VALUE_H
 
+#include <cstdint>
 #include <string>
 #include <sstream>
 #include <iostream>
@@ -48,12 +49,94 @@ typedef struct VALUE {
     VALUE(float f)    { val.i64u = 0; bitWidth = 32;                   isFP = true ; val.f32 = f;  }
     VALUE(double f)   { val.i64u = 0; bitWidth = 64;                   isFP = true ; val.f32 = f;  }
 
+    VALUE(uint64_t value, int bits) {
+        isFP = false;
+        bitWidth = bits;
+        isSigned = false;
+        switch (bits) {
+            case 1:
+                val.b = (bool) value;
+                break;
+            case 8:
+                val.i8u = (uint8_t) value;
+                break;
+            case 16:
+                val.i16u = (uint16_t) value;
+                break;
+            case 32:
+                val.i32u = (uint32_t) value;
+                break;
+            case 64:
+                val.i64u = (uint64_t) value;
+                break;
+            default:
+                assert(false && "unrecognized bitwidth");
+        }
+    }
+
+    VALUE(int64_t value, int bits) {
+        isFP = false;
+        bitWidth = bits;
+        isSigned = true;
+        switch (bits) {
+            case 1:
+                val.b = (bool) value;
+                break;
+            case 8:
+                val.i8s = (int8_t) value;
+                break;
+            case 16:
+                val.i16s = (int16_t) value;
+                break;
+            case 32:
+                val.i32s = (int32_t) value;
+                break;
+            case 64:
+                val.i64s = (int64_t) value;
+                break;
+            default:
+                assert(false && "unrecognized bitwidth");
+        } 
+    }
+
     int AsVirtualReg() const { return val.i32s; }       // some time a tree node to represent a register
     const char* AsLabel() const {
         std::stringstream ss;
         ss << ".L" << val.i32s;
         std::string s = ss.str();
         return s.c_str();
+    }
+
+    VALUE operator+(VALUE op2) {
+        bool sign = isSigned && op2.isSigned;
+        int bits = std::max(bitWidth, op2.bitWidth);
+        if (sign)
+            return VALUE(val.i64s + op2.val.i64s, bits);
+        return VALUE(val.i64u + op2.val.i64u, bits);
+    }
+
+    VALUE operator-(VALUE op2) {
+        bool sign = isSigned && op2.isSigned;
+        int bits = std::max(bitWidth, op2.bitWidth);
+        if (sign)
+            return VALUE(val.i64s - op2.val.i64s, bits);
+        return VALUE(val.i64u - op2.val.i64u, bits);
+    }
+
+    VALUE operator*(VALUE op2) {
+        bool sign = isSigned && op2.isSigned;
+        int bits = std::max(bitWidth, op2.bitWidth);
+        if (sign)
+            return VALUE(val.i64s * op2.val.i64s, bits);
+        return VALUE(val.i64u * op2.val.i64u, bits);
+    }
+
+    VALUE operator/(VALUE op2) {
+        bool sign = isSigned && op2.isSigned;
+        int bits = std::max(bitWidth, op2.bitWidth);
+        if (sign)
+            return VALUE(val.i64s / op2.val.i64s, bits);
+        return VALUE(val.i64u / op2.val.i64u, bits);
     }
 
     friend std::ostream& operator<<(std::ostream& out, VALUE &v) {

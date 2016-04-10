@@ -3,6 +3,7 @@ TEST_DIR	:=./testcases
 BIN_ROOT	:=../../build/bin
 TOOL_ROOT	:=../../build/tools
 CC			:=$(BIN_ROOT)/clang
+OPT			:=$(BIN_ROOT)/opt
 OLIVE		:=./olive/olive
 EXE			:=$(BIN_ROOT)/llc-olive
 
@@ -37,7 +38,9 @@ test: $(EXE) $(bitcodes) $(targets)
 	@$(EXE) --num_regs=$(NUM_REGS) $< -o $@
 
 %.bc: %.c
-	@$(CC) -O0 -emit-llvm $< -S -c -o $@
+	@$(CC) -O0 -emit-llvm $< -S -c -o $@.tmp
+	@$(OPT) -mem2reg $@.tmp -S -o $@
+	@rm -rf $@.tmp
 
 clean:
 	@rm -rf $(EXE)
@@ -47,6 +50,7 @@ clean:
 	@rm -rf $(TEST_DIR)/*.bc
 	@rm -rf $(TEST_DIR)/*.log
 	@rm -rf $(TEST_DIR)/.*.swp
+	@rm -rf $(TEST_DIR)/*.tmp
 	@rm -rf ./assignment6.tar.gz
 	@rm -rf ./llc_olive.h ./llc_olive.cpp
 
