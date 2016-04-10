@@ -77,6 +77,7 @@
 #define ARGS 69
 #define NOARGS 70
 #define PTR 71
+#define GlobalValue 72
 
 struct burm_state {
   int op;
@@ -90,7 +91,7 @@ struct burm_state {
     unsigned burm_rm:2;
     unsigned burm_reg:5;
     unsigned burm_imm:2;
-    unsigned burm_mem:2;
+    unsigned burm_mem:3;
     unsigned burm_ptr:2;
     unsigned burm_cond:2;
     unsigned burm_label:1;

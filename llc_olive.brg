@@ -10,7 +10,7 @@
 %term Trunc=36 ZExt=37 SExt=38 FPToUI=39 FPToSI=40 UIToFP=41 SIToFP=42 FPTrunc=43 FPExt=44 PtrToInt=45 IntToPtr=46 BitCast=47 AddrSpaceCast=48
 %term CleanupPad=49 CatchPad=50
 %term ICmp=51 FCmp=52 PHI=53 Call=54 Select=55 UserOp1=56 UserOp2=57 VAArg=58 ExtractElement=59 InsertElement=60 ShuffleVector=61 ExtractValue=62 InsertValue=63 LandingPad=64
-%term REG=65 IMM=66 MEM=67 LABEL=68 ARGS=69 NOARGS=70 PTR=71
+%term REG=65 IMM=66 MEM=67 LABEL=68 ARGS=69 NOARGS=70 PTR=71 GlobalValue=72
 
 %declare<void> stmt     <FUNCTION_STATE fstate>;
 %declare<void> value    <FUNCTION_STATE fstate>;
@@ -43,6 +43,7 @@ imm:    Load(IMM)           { $cost[0].cost = 0;                                
 imm:    IMM                 { $cost[0].cost = 0;                                } = { $0->UseAsImmediate(); };
 mem:    MEM                 { $cost[0].cost = 10;                               } = { $0->UseAsMemory(); };
 mem:    ptr                 { return 1;                                         } = { $action[1](fstate); $0->UseAsMemory(); };
+mem:    GlobalValue         { $cost[0].cost = 1;                                } = { };
 label:  LABEL               { $cost[0].cost = 1;                                } = { };
 
 stmt:   Ret(imm)            { $cost[0].cost = $cost[2].cost + 1;                } = {

@@ -8,7 +8,7 @@
 #include <llvm/IR/Type.h>
 #include <llvm/IR/DerivedTypes.h>
 
-enum X86OperandType { X86Reg, X86Imm, X86Mem, X86Arg, X86Label, X86Function };
+enum X86OperandType { X86Reg, X86Imm, X86Mem, X86Arg, X86Label, X86Function, X86GlobalValue };
 typedef X86OperandType OP_TYPE;
 
 typedef struct VALUE {

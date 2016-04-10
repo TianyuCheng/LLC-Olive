@@ -2,10 +2,9 @@
 #define DEBUG    0
 #define SSA_REGISTER_ALLOCATOR 0
 
-// global variables
-
 static int labelID = 0;
 static int functionID = 0;
+static GlobalState gstate;
 
 using namespace llvm;
 
@@ -28,6 +27,7 @@ void gen(NODEPTR p, FunctionState *fstate) {
     p->SetComputed(true);
     if (burm_label(p) == 0) {
         std::cerr << "Failed to match grammar! Cannot generate assembly code\n";
+        p->DisplayTree();
         exit(EXIT_FAILURE);
     }
     else {
@@ -37,12 +37,10 @@ void gen(NODEPTR p, FunctionState *fstate) {
     }
 }
 
-void BasicBlockToExprTrees(FunctionState &fstate,
-        std::vector<Tree*> &treeList, BasicBlock &bb) {
+void InstructionToExprTree(FunctionState &fstate,
+        std::vector<Tree*> &treeList, Instruction &instruction) {
 
-    for (auto inst = bb.begin(); inst != bb.end(); inst++) {
-        Tree *t = new Tree(inst->getOpcode());
-        Instruction &instruction = *inst;
+        Tree *t = new Tree(instruction.getOpcode());
         t->SetInst(&instruction);
 
 #if VERBOSE
@@ -74,15 +72,40 @@ void BasicBlockToExprTrees(FunctionState &fstate,
                     // check if the operand is a constant int
                     t->CastFP(cnst);
                 }
+                else if (Function *func = dyn_cast<Function>(v)) {
+                    if (func->isIntrinsic()) {
+                        // we cannot handle intrinsic function, but we need it to compile for array
+                        // so we just use the libc version instead
+                        std::string llvmName = func->getName().str();
+                        // errs() << "Intrinsic Function: " << llvmName << "\n";
+                        int first = llvmName.find('.');
+                        assert (first != std::string::npos);
+                        int second = llvmName.find('.', first+1);
+                        llvmName = llvmName.substr(first+1, second-first-1);
+                        // errs() << "LibC Function: " << llvmName << "\n";
+                        t->SetFuncName(llvmName);
+                    }
+                    else {
+                        t->SetFuncName(v->getName().str());
+                    }
+                }
                 else if (ConstantExpr *cnst = dyn_cast<ConstantExpr>(v)) {
                     // check if the operand is a constant int
-#if 0
-                    errs() << "NOT IMPLEMENTED CONST EXPR\n";
-                    exit(EXIT_FAILURE);
-#endif
+                    Instruction *icnst = cnst->getAsInstruction();
+                    assert(icnst);
+                    icnst->insertBefore(&instruction);
+                    InstructionToExprTree(fstate, treeList, *icnst);
+
+                    Tree *wrapper = fstate.FindFromTreeMap(icnst);
+                    assert(wrapper && "operands must be previously defined");
+                    assert (wrapper != t);
+                    t->AddChild(wrapper->GetTreeRef());      // automatically increase the refcnt
                 }
-                else if (Function *func = dyn_cast<Function>(v)) {
-                    t->SetFuncName(v->getName().str());
+                else if (GlobalVariable *gv = dyn_cast<GlobalVariable>(v)) {
+                    Tree *wrapper = gstate.FindFromGlobalMap(gv);
+                    assert(wrapper && "global operands must be previously defined");
+                    assert (wrapper != t);
+                    t->AddChild(wrapper->GetTreeRef());      // automatically increase the refcnt
                 }
                 // ... There are many kinds of constant, right now we do not deal with them ...
                 else {
@@ -151,6 +174,14 @@ void BasicBlockToExprTrees(FunctionState &fstate,
         // store the current tree in map
         fstate.AddToTreeMap(&instruction, t);
         treeList.push_back(t);
+}
+
+void BasicBlockToExprTrees(FunctionState &fstate,
+        std::vector<Tree*> &treeList, BasicBlock &bb) {
+
+    for (auto inst = bb.begin(); inst != bb.end(); inst++) {
+        Instruction &instruction = *inst;
+        InstructionToExprTree(fstate, treeList, instruction);
     } // end of instruction loop in a basic block
 }
 
@@ -436,6 +467,41 @@ void MakeAssembly(Function &func, /*RegisterAllocator &ra,*/ std::ostream &out) 
     labelID = fstate.GetLabelID() + 1;
 }
 
+void MakeGlobalVariable(Module *module, std::ostream &out) {
+    for (auto it = module->global_begin(); it != module->global_end(); it++) {
+        GlobalVariable &global = *it;
+        if (global.hasSection())
+            out << "\t." << global.getSection() << std::endl;
+        out << "\t.global " << global.getName().str() << std::endl;
+        out << "\t.type\t"  << global.getName().str() << ", @object" << std::endl;
+        out << "\t.align\t" << global.getAlignment() << std::endl;
+        out << global.getName().str() << ":" << std::endl;
+        if (global.hasComdat())
+            out << "\t.comm \t" << global.getComdat() << std::endl;
+
+        if (global.isConstant()) {
+            switch (global.getAlignment()) {
+                case 1:
+                {
+                    assert(global.getNumOperands() > 0);
+                    Value *v = global.getOperand(0);
+                    ConstantDataArray *str = dyn_cast<ConstantDataArray>(v);
+                    assert(str && "string cast must be successful");
+                    StringRef data;
+                    if (str->isString())        data = str->getAsString();
+                    else if (str->isCString())  data = str->getAsCString();
+                    out << "\t.string \"" << data.str() << "\"" << std::endl;
+                }
+            }
+        } // end of constant check
+        
+        Tree *t = new Tree(GlobalValue);
+        t->SetVariableName(global.getName().str());
+        gstate.AddGlobalVariable(&global, t);
+
+    } // end of for loop
+}
+
 int main(int argc, char *argv[])
 {
     // parse arguments from command line
@@ -454,17 +520,20 @@ int main(int argc, char *argv[])
     assemblyOut.open(OutputFilename.c_str());
     assert(assemblyOut.good());
     assemblyOut << "\t.file\t\"" << InputFilename.c_str() << "\"" << std::endl;
+
+    // data segment
+    assemblyOut << "\t.data" << std::endl;
+    MakeGlobalVariable(module.get(), assemblyOut);
+
+    // text segment
     assemblyOut << "\t.text" << std::endl;
-
     // obtain a function list in module, and iterate over function
-
     // check if this bitcode file contains a main function or not
     Module::FunctionListType &function_list = module->getFunctionList();
 
     // iterate through all functions to generate code for each function
     for (Function &func : function_list) {
-        // we cannot handle intrinsic function, but we need it to compile for array
-        if (func.isDeclaration() && !func.isIntrinsic()) continue;
+        if (func.isDeclaration()) continue;
 #if SSA_REGISTER_ALLOCATOR
         std::cout << "#################################################" << std::endl;
         std::cout << "Start build lifetime intervals.." << std::endl;

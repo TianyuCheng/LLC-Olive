@@ -6,6 +6,7 @@
 #include <fstream>
 #include <cassert>
 #include <set>
+#include <map>
 #include <vector>
 #include <cmath>
 
@@ -21,13 +22,17 @@
 #include <llvm/IR/Constants.h>
 #include <llvm/IR/Argument.h>
 #include <llvm/IR/InstrTypes.h>
+#include <llvm/IR/GlobalValue.h>
+#include <llvm/IR/GlobalVariable.h>
 #include <llvm/Analysis/LoopPass.h>
 #include <llvm/Analysis/LoopInfo.h>
 
 #include "Insts.h"
 #include "Tree.h"
 #include "FunctionState.h"
+#include "GlobalState.h"
 
+class GlobalState;
 class FunctionState;
 
 typedef struct COST {

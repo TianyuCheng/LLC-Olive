@@ -53,6 +53,9 @@ public:
     void SetFuncName(std::string n) { func_name = n; }
     std::string GetFuncName() const { return func_name; }
 
+    void SetVariableName(std::string n) { variable_name = n; }
+    std::string GetVariableName() const { return variable_name; }
+
     void UseAsPtr() { isReg = false, isPtr = true; otype = MEM; }
     void UseAsMemory() { isReg = false; otype = MEM; }
     void UseAsImmediate() { isReg = false; otype = IMM; }
@@ -128,6 +131,7 @@ private:
     X86Operand *operand;
 
     std::string func_name;
+    std::string variable_name;
     std::string suffix;
 
     X86OperandType operandType;

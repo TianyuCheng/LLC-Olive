@@ -146,6 +146,12 @@ public:
         // if operand is a register that is in some operand, then mark it as used but not allocated
     }
 
+    X86Operand(FUNCTION_STATE fs, OP_TYPE t, std::string v, bool unused) 
+        : fstate(fs), type(t), val(0), explicit_reg(false), base_address(nullptr), displacement(nullptr) {
+        assert (t == OP_TYPE::X86Function || t == OP_TYPE::X86GlobalValue );
+        name = v;
+    }
+
     X86Operand(FUNCTION_STATE fs, OP_TYPE t, X86Operand *base, X86Operand *dis, int siz, int off) 
         : fstate(fs), type(t), val(0), explicit_reg(false), base_address(base), displacement(dis), stride(siz), offset(off) {
         assert (t == OP_TYPE::X86Mem && "X86Mem must be constructed using X86Operand(FUNCTION_STATE fs, OP_TYPE t, X86Operand *base, X86Operand *dis, int siz, int off) constructor.");
@@ -187,9 +193,10 @@ public:
         else if (op.type == OP_TYPE::X86Label) {
             out << op.val.AsLabel();
         }
-        else if (op.type == OP_TYPE::X86Function) {
-            out << op.func_name;
-        } else {
+        else if (op.type == OP_TYPE::X86Function || op.type == OP_TYPE::X86GlobalValue) {
+            out << op.name;
+        }
+        else {
             assert(false && "OP_TYPE is invalid!");
         }
         return out;
@@ -219,7 +226,7 @@ private:
     FUNCTION_STATE fstate;
     // operand type differentor
     OP_TYPE type;
-    std::string func_name;
+    std::string name;
 
     // for imm and reg
     VALUE val;

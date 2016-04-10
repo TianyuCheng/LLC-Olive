@@ -27,6 +27,7 @@ add_llvm_tool(llc-olive
   Tree.cpp
   Value.h
   LiveRange.h
+  GlobalState.h
   FunctionState.cpp
   FunctionState.h
   RegisterAllocator.cpp

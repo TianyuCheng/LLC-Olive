@@ -142,6 +142,9 @@ void Tree::DisplayTree(int indent) {
         case MEM:
             std::cerr << "op: " << "mem" << std::endl;
             break;
+        case GlobalValue:
+            std::cerr << "op: " << "global" << std::endl;
+            break;
         default:
             std::cerr << "op: " << llvm::Instruction::getOpcodeName(op) << "(" << op << ")" << std::endl;
     }
@@ -170,6 +173,9 @@ X86Operand* Tree::AsX86Operand(FunctionState *fs) {
             break;
         case LABEL:
             operand = new X86Operand(fs, X86OperandType::X86Label, val);
+            break;
+        case GlobalValue:
+            operand = new X86Operand(fs, X86OperandType::X86GlobalValue, variable_name, true);
             break;
         default:
             std::cerr << "AsX86Operand opcode: " << GetOpCode() << std::endl;
