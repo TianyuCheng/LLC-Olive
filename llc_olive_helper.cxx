@@ -479,21 +479,68 @@ void MakeGlobalVariable(Module *module, std::ostream &out) {
         if (global.hasComdat())
             out << "\t.comm \t" << global.getComdat() << std::endl;
 
-        if (global.isConstant()) {
-            switch (global.getAlignment()) {
-                case 1:
-                {
-                    assert(global.getNumOperands() > 0);
-                    Value *v = global.getOperand(0);
-                    ConstantDataArray *str = dyn_cast<ConstantDataArray>(v);
-                    assert(str && "string cast must be successful");
-                    StringRef data;
-                    if (str->isString())        data = str->getAsString();
-                    else if (str->isCString())  data = str->getAsCString();
-                    out << "\t.string \"" << data.str() << "\"" << std::endl;
-                }
+        switch (global.getAlignment()) {
+            case 1:
+            {
+                assert(global.getNumOperands() > 0);
+                Value *v = global.getOperand(0);
+                ConstantDataArray *str = dyn_cast<ConstantDataArray>(v);
+                assert(str && "string cast must be successful");
+                StringRef data;
+                if (str->isString())        data = str->getAsString();
+                else if (str->isCString())  data = str->getAsCString();
+                out << "\t.string \"" << data.str() << "\"" << std::endl;
+                break;
             }
-        } // end of constant check
+            default:
+            {
+                assert(global.getNumOperands() > 0);
+                Value *v = global.getOperand(0);
+                ConstantInt *cnstInt = dyn_cast<ConstantInt>(v);
+                assert(v && "global variable constant cast must be successfull");
+
+                const APInt integer = cnstInt->getValue();
+                unsigned bitWidth = cnstInt->getBitWidth();
+                int64_t  sext = cnstInt->getSExtValue();
+                uint64_t zext = cnstInt->getZExtValue();
+                if (integer.isSignedIntN(bitWidth)) {
+                    switch (bitWidth/8) {
+                        case 1:
+                            out << "\t.byte\t" << (int8_t)sext << std::endl;
+                            break;
+                        case 2:
+                            out << "\t.value\t" << (int16_t)sext << std::endl;
+                            break;
+                        case 4:
+                            out << "\t.long\t" << (int32_t)sext << std::endl;
+                            break;
+                        case 8:
+                            out << "\t.quad\t" << (int32_t)sext << std::endl;
+                            break;
+                        default:
+                            assert(false && "invalid global variable size");
+                    }
+                }
+                else {
+                    switch (bitWidth/8) {
+                        case 1:
+                            out << "\t.byte\t" << (uint8_t)sext << std::endl;
+                            break;
+                        case 2:
+                            out << "\t.value\t" << (uint16_t)sext << std::endl;
+                            break;
+                        case 4:
+                            out << "\t.long\t" << (uint32_t)sext << std::endl;
+                            break;
+                        case 8:
+                            out << "\t.quad\t" << (uint32_t)sext << std::endl;
+                            break;
+                        default:
+                            assert(false && "invalid global variable size");
+                    }
+                } // end of integer check sign
+            }
+        }
         
         Tree *t = new Tree(GlobalValue);
         t->SetVariableName(global.getName().str());

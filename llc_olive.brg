@@ -341,7 +341,7 @@ cond:   ICmp(imm, imm)       { $cost[0].cost = $cost[2].cost + $cost[3].cost;   
             $action[3](fstate);
             fstate->CreateVirtualReg($0);
             fstate->GenerateMovStmt($0, $2);
-            fstate->GenerateBinaryStmt("cmp", $0, $3);
+            fstate->GenerateBinaryStmt("cmp ", $0, $3);
             // this will record the ending in liveness range for a register
             // if the input is a register, and the register dies
             fstate->RecordLiveness($2);
@@ -351,7 +351,7 @@ cond:   ICmp(reg, imm)       { $cost[0].cost = $cost[2].cost + $cost[3].cost;   
             $action[2](fstate);
             $action[3](fstate);
             fstate->AssignVirtualReg($0, $2);    // assign a virtual register to the inst
-            fstate->GenerateBinaryStmt("cmp", $0, $3);
+            fstate->GenerateBinaryStmt("cmp ", $0, $3);
             // this will record the ending in liveness range for a register
             // if the input is a register, and the register dies
             fstate->RecordLiveness($2);
@@ -361,7 +361,7 @@ cond:   ICmp(reg, reg)       { $cost[0].cost = $cost[2].cost + $cost[3].cost;   
             $action[2](fstate);
             $action[3](fstate);
             fstate->AssignVirtualReg($0, $2);    // assign a virtual register to the inst
-            fstate->GenerateBinaryStmt("cmp", $0, $3);
+            fstate->GenerateBinaryStmt("cmp ", $0, $3);
             // this will record the ending in liveness range for a register
             // if the input is a register, and the register dies
             fstate->RecordLiveness($2);
@@ -486,7 +486,7 @@ reg:    BitCast(mem)            { $cost[0].cost = $cost[2].cost + 1; } = {
             fstate->LoadEffectiveAddress($0, $2);
             $0->UseAsRegister();
         };
-ptr:    GetElementPtr(ri, ri, imm)    { $cost[0].cost = $cost[2].cost + $cost[3].cost + $cost[4].cost + 5; } = {
+ptr:    GetElementPtr(ri, imm, imm)    { $cost[0].cost = $cost[2].cost + $cost[3].cost + $cost[4].cost + 5; } = {
             if ($0->IsComputed()) return;
             $0->SetComputed(true);
 
@@ -495,14 +495,13 @@ ptr:    GetElementPtr(ri, ri, imm)    { $cost[0].cost = $cost[2].cost + $cost[3]
             GetElementPtrInst *inst = dyn_cast<GetElementPtrInst>($1->GetInst());
             assert(inst && "GetElementPtr must be not null");
             int size = GetTypeSize(inst->getSourceElementType());
-            // std::cerr << "SIZE1: " << size << std::endl;
 
             $action[2](fstate);
             $action[3](fstate);
             $action[4](fstate);
             X86Operand *ptr = new X86Operand(fstate, OP_TYPE::X86Mem,
                 $2->AsX86Operand(fstate),         // base
-                $3->AsX86Operand(fstate),         // displacement
+                0,
                 0,
                 size * $4->GetValue().val.i64s    // offset
             );
@@ -515,7 +514,7 @@ ptr:    GetElementPtr(ri, ri, imm)    { $cost[0].cost = $cost[2].cost + $cost[3]
             $0->UseAsMemory();
             $0->UseAsPtr();
         };
-ptr:    GetElementPtr(mem, ri, imm)    { $cost[0].cost = $cost[2].cost + $cost[3].cost + $cost[4].cost + 5; } = {
+ptr:    GetElementPtr(mem, imm, imm)    { $cost[0].cost = $cost[2].cost + $cost[3].cost + $cost[4].cost + 5; } = {
             if ($0->IsComputed()) return;
             $0->SetComputed(true);
 
@@ -524,7 +523,6 @@ ptr:    GetElementPtr(mem, ri, imm)    { $cost[0].cost = $cost[2].cost + $cost[3
             GetElementPtrInst *inst = dyn_cast<GetElementPtrInst>($1->GetInst());
             assert(inst && "GetElementPtr must be not null");
             int size = GetTypeSize(inst->getSourceElementType());
-            // std::cerr << "SIZE2: " << size << std::endl;
             const char *suffix = GetTypeSuffix(inst->getSourceElementType()).c_str();
 
             $action[2](fstate);
@@ -537,12 +535,75 @@ ptr:    GetElementPtr(mem, ri, imm)    { $cost[0].cost = $cost[2].cost + $cost[3
 
             X86Operand *ptr = new X86Operand(fstate, OP_TYPE::X86Mem,
                 t1->AsX86Operand(fstate),         // base
-                $3->AsX86Operand(fstate),         // displacement
+                0,
                 0,
                 size * $4->GetValue().val.i64s       // offset
             );
             $0->SetX86Operand(ptr);
             $0->SetSuffix(suffix);
+
+            fstate->RecordLiveness(t1);
+            fstate->RecordLiveness($2);
+            fstate->RecordLiveness($3);
+            fstate->RecordLiveness($4);
+            $0->UseAsMemory();
+            $0->UseAsPtr();
+        };
+ptr:    GetElementPtr(ri, ri, reg)    { $cost[0].cost = $cost[2].cost + $cost[3].cost + $cost[4].cost + 5; } = {
+            if ($0->IsComputed()) return;
+            $0->SetComputed(true);
+
+            // get size of array elements
+            using namespace llvm;
+            GetElementPtrInst *inst = dyn_cast<GetElementPtrInst>($1->GetInst());
+            assert(inst && "GetElementPtr must be not null");
+            int size = GetTypeSize(inst->getSourceElementType());
+
+            $action[2](fstate);
+            $action[3](fstate);
+            $action[4](fstate);
+            X86Operand *ptr = new X86Operand(fstate, OP_TYPE::X86Mem,
+                $2->AsX86Operand(fstate),         // base
+                $4->AsX86Operand(fstate),         // index
+                size,                             // element size
+                0                                 // offset
+            );
+            $0->SetX86Operand(ptr);
+            $0->SetSuffix(GetTypeSuffix(inst->getSourceElementType()));
+
+            fstate->RecordLiveness($2);
+            fstate->RecordLiveness($3);
+            fstate->RecordLiveness($4);
+            $0->UseAsMemory();
+            $0->UseAsPtr();
+        };
+ptr:    GetElementPtr(mem, imm, reg)    { $cost[0].cost = $cost[2].cost + $cost[3].cost + $cost[4].cost + 5; } = {
+            if ($0->IsComputed()) return;
+            $0->SetComputed(true);
+
+            // get size of array elements
+            using namespace llvm;
+            GetElementPtrInst *inst = dyn_cast<GetElementPtrInst>($1->GetInst());
+            assert(inst && "GetElementPtr must be not null");
+            int size = GetTypeSize(inst->getSourceElementType());
+            const char *suffix = GetTypeSuffix(inst->getSourceElementType()).c_str();
+
+            $action[2](fstate);
+            $action[3](fstate);
+            $action[4](fstate);
+
+            Tree *t1 = (new Tree(REG))->GetTreeRef();
+            fstate->CreateVirtualReg(t1);
+            fstate->LoadEffectiveAddress(t1, $2);
+
+            X86Operand *ptr = new X86Operand(fstate, OP_TYPE::X86Mem,
+                t1->AsX86Operand(fstate),         // base
+                $4->AsX86Operand(fstate),         // index
+                size,                             // element size
+                0                                 // offset
+            );
+            $0->SetX86Operand(ptr);
+            $0->SetSuffix(GetTypeSuffix(inst->getSourceElementType()));
 
             fstate->RecordLiveness(t1);
             fstate->RecordLiveness($2);

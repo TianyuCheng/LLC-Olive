@@ -126,8 +126,10 @@ static short burm_nts_16[] = { burm_label_NT, 0 };
 static short burm_nts_17[] = { burm_cond_NT, burm_label_NT, burm_label_NT, 0 };
 static short burm_nts_18[] = { burm_args_NT, 0 };
 static short burm_nts_19[] = { burm_value_NT, burm_args_NT, 0 };
-static short burm_nts_20[] = { burm_ri_NT, burm_ri_NT, burm_imm_NT, 0 };
-static short burm_nts_21[] = { burm_mem_NT, burm_ri_NT, burm_imm_NT, 0 };
+static short burm_nts_20[] = { burm_ri_NT, burm_imm_NT, burm_imm_NT, 0 };
+static short burm_nts_21[] = { burm_mem_NT, burm_imm_NT, burm_imm_NT, 0 };
+static short burm_nts_22[] = { burm_ri_NT, burm_ri_NT, burm_reg_NT, 0 };
+static short burm_nts_23[] = { burm_mem_NT, burm_imm_NT, burm_reg_NT, 0 };
 
 short *burm_nts[] = {
   burm_nts_0,  /* 0 */
@@ -178,6 +180,8 @@ short *burm_nts[] = {
   burm_nts_1,  /* 45 */
   burm_nts_20,  /* 46 */
   burm_nts_21,  /* 47 */
+  burm_nts_22,  /* 48 */
+  burm_nts_23,  /* 49 */
 };
 
 char burm_arity[] = {
@@ -380,8 +384,10 @@ std::string burm_string[] = {
   /* 43 */  "reg: Trunc(reg)",
   /* 44 */  "reg: BitCast(reg)",
   /* 45 */  "reg: BitCast(mem)",
-  /* 46 */  "ptr: GetElementPtr(ri,ri,imm)",
-  /* 47 */  "ptr: GetElementPtr(mem,ri,imm)",
+  /* 46 */  "ptr: GetElementPtr(ri,imm,imm)",
+  /* 47 */  "ptr: GetElementPtr(mem,imm,imm)",
+  /* 48 */  "ptr: GetElementPtr(ri,ri,reg)",
+  /* 49 */  "ptr: GetElementPtr(mem,imm,reg)",
 };
 
 
@@ -438,6 +444,8 @@ int burm_file_numbers[] = {
   /* 45 */  0,
   /* 46 */  0,
   /* 47 */  0,
+  /* 48 */  0,
+  /* 49 */  0,
 };
 
 int burm_line_numbers[] = {
@@ -488,7 +496,9 @@ int burm_line_numbers[] = {
   /* 44 */  469,
   /* 45 */  479,
   /* 46 */  489,
-  /* 47 */  518,
+  /* 47 */  517,
+  /* 48 */  552,
+  /* 49 */  580,
 };
 
 #pragma GCC diagnostic push
@@ -566,6 +576,8 @@ static short burm_decode_ptr[] = {
    -1,
   46,
   47,
+  48,
+  49,
 };
 
 static short burm_decode_cond[] = {
@@ -953,14 +965,28 @@ int burm_cost_code(COST *_c, int _ern,struct burm_state *_s)
 {
 
 
- (*_c).cost = _s->kids[0]->cost[burm_ri_NT].cost + _s->kids[1]->cost[burm_ri_NT].cost + _s->kids[2]->cost[burm_imm_NT].cost + 5; 
+ (*_c).cost = _s->kids[0]->cost[burm_ri_NT].cost + _s->kids[1]->cost[burm_imm_NT].cost + _s->kids[2]->cost[burm_imm_NT].cost + 5; 
 }
   break;
   case 47:
 {
 
 
- (*_c).cost = _s->kids[0]->cost[burm_mem_NT].cost + _s->kids[1]->cost[burm_ri_NT].cost + _s->kids[2]->cost[burm_imm_NT].cost + 5; 
+ (*_c).cost = _s->kids[0]->cost[burm_mem_NT].cost + _s->kids[1]->cost[burm_imm_NT].cost + _s->kids[2]->cost[burm_imm_NT].cost + 5; 
+}
+  break;
+  case 48:
+{
+
+
+ (*_c).cost = _s->kids[0]->cost[burm_ri_NT].cost + _s->kids[1]->cost[burm_ri_NT].cost + _s->kids[2]->cost[burm_reg_NT].cost + 5; 
+}
+  break;
+  case 49:
+{
+
+
+ (*_c).cost = _s->kids[0]->cost[burm_mem_NT].cost + _s->kids[1]->cost[burm_imm_NT].cost + _s->kids[2]->cost[burm_reg_NT].cost + 5; 
 }
   break;
   }
@@ -1864,14 +1890,13 @@ FUNCTION_STATE fstate)
             GetElementPtrInst *inst = dyn_cast<GetElementPtrInst>(_s->node->GetInst());
             assert(inst && "GetElementPtr must be not null");
             int size = GetTypeSize(inst->getSourceElementType());
-            // std::cerr << "SIZE1: " << size << std::endl;
 
             ri_action(_s->kids[0],fstate);
-            ri_action(_s->kids[1],fstate);
+            imm_action(_s->kids[1],fstate);
             imm_action(_s->kids[2],fstate);
             X86Operand *ptr = new X86Operand(fstate, OP_TYPE::X86Mem,
                 _s->kids[0]->node->AsX86Operand(fstate),         // base
-                _s->kids[1]->node->AsX86Operand(fstate),         // displacement
+                0,
                 0,
                 size * _s->kids[2]->node->GetValue().val.i64s    // offset
             );
@@ -1899,11 +1924,10 @@ FUNCTION_STATE fstate)
             GetElementPtrInst *inst = dyn_cast<GetElementPtrInst>(_s->node->GetInst());
             assert(inst && "GetElementPtr must be not null");
             int size = GetTypeSize(inst->getSourceElementType());
-            // std::cerr << "SIZE2: " << size << std::endl;
             const char *suffix = GetTypeSuffix(inst->getSourceElementType()).c_str();
 
             mem_action(_s->kids[0],fstate);
-            ri_action(_s->kids[1],fstate);
+            imm_action(_s->kids[1],fstate);
             imm_action(_s->kids[2],fstate);
 
             Tree *t1 = (new Tree(REG))->GetTreeRef();
@@ -1912,12 +1936,87 @@ FUNCTION_STATE fstate)
 
             X86Operand *ptr = new X86Operand(fstate, OP_TYPE::X86Mem,
                 t1->AsX86Operand(fstate),         // base
-                _s->kids[1]->node->AsX86Operand(fstate),         // displacement
+                0,
                 0,
                 size * _s->kids[2]->node->GetValue().val.i64s       // offset
             );
             _s->node->SetX86Operand(ptr);
             _s->node->SetSuffix(suffix);
+
+            fstate->RecordLiveness(t1);
+            fstate->RecordLiveness(_s->kids[0]->node);
+            fstate->RecordLiveness(_s->kids[1]->node);
+            fstate->RecordLiveness(_s->kids[2]->node);
+            _s->node->UseAsMemory();
+            _s->node->UseAsPtr();
+        
+}
+  break;
+  case 48:
+{
+
+
+
+            if (_s->node->IsComputed()) return;
+            _s->node->SetComputed(true);
+
+            // get size of array elements
+            using namespace llvm;
+            GetElementPtrInst *inst = dyn_cast<GetElementPtrInst>(_s->node->GetInst());
+            assert(inst && "GetElementPtr must be not null");
+            int size = GetTypeSize(inst->getSourceElementType());
+
+            ri_action(_s->kids[0],fstate);
+            ri_action(_s->kids[1],fstate);
+            reg_action(_s->kids[2],fstate);
+            X86Operand *ptr = new X86Operand(fstate, OP_TYPE::X86Mem,
+                _s->kids[0]->node->AsX86Operand(fstate),         // base
+                _s->kids[2]->node->AsX86Operand(fstate),         // index
+                size,                             // element size
+                0                                 // offset
+            );
+            _s->node->SetX86Operand(ptr);
+            _s->node->SetSuffix(GetTypeSuffix(inst->getSourceElementType()));
+
+            fstate->RecordLiveness(_s->kids[0]->node);
+            fstate->RecordLiveness(_s->kids[1]->node);
+            fstate->RecordLiveness(_s->kids[2]->node);
+            _s->node->UseAsMemory();
+            _s->node->UseAsPtr();
+        
+}
+  break;
+  case 49:
+{
+
+
+
+            if (_s->node->IsComputed()) return;
+            _s->node->SetComputed(true);
+
+            // get size of array elements
+            using namespace llvm;
+            GetElementPtrInst *inst = dyn_cast<GetElementPtrInst>(_s->node->GetInst());
+            assert(inst && "GetElementPtr must be not null");
+            int size = GetTypeSize(inst->getSourceElementType());
+            const char *suffix = GetTypeSuffix(inst->getSourceElementType()).c_str();
+
+            mem_action(_s->kids[0],fstate);
+            imm_action(_s->kids[1],fstate);
+            reg_action(_s->kids[2],fstate);
+
+            Tree *t1 = (new Tree(REG))->GetTreeRef();
+            fstate->CreateVirtualReg(t1);
+            fstate->LoadEffectiveAddress(t1, _s->kids[0]->node);
+
+            X86Operand *ptr = new X86Operand(fstate, OP_TYPE::X86Mem,
+                t1->AsX86Operand(fstate),         // base
+                _s->kids[2]->node->AsX86Operand(fstate),         // index
+                size,                             // element size
+                0                                 // offset
+            );
+            _s->node->SetX86Operand(ptr);
+            _s->node->SetSuffix(GetTypeSuffix(inst->getSourceElementType()));
 
             fstate->RecordLiveness(t1);
             fstate->RecordLiveness(_s->kids[0]->node);
@@ -1951,7 +2050,7 @@ FUNCTION_STATE fstate)
             imm_action(_s->kids[1],fstate);
             fstate->CreateVirtualReg(_s->node);
             fstate->GenerateMovStmt(_s->node, _s->kids[0]->node);
-            fstate->GenerateBinaryStmt("cmp", _s->node, _s->kids[1]->node);
+            fstate->GenerateBinaryStmt("cmp ", _s->node, _s->kids[1]->node);
             // this will record the ending in liveness range for a register
             // if the input is a register, and the register dies
             fstate->RecordLiveness(_s->kids[0]->node);
@@ -1967,7 +2066,7 @@ FUNCTION_STATE fstate)
             reg_action(_s->kids[0],fstate);
             imm_action(_s->kids[1],fstate);
             fstate->AssignVirtualReg(_s->node, _s->kids[0]->node);    // assign a virtual register to the inst
-            fstate->GenerateBinaryStmt("cmp", _s->node, _s->kids[1]->node);
+            fstate->GenerateBinaryStmt("cmp ", _s->node, _s->kids[1]->node);
             // this will record the ending in liveness range for a register
             // if the input is a register, and the register dies
             fstate->RecordLiveness(_s->kids[0]->node);
@@ -1983,7 +2082,7 @@ FUNCTION_STATE fstate)
             reg_action(_s->kids[0],fstate);
             reg_action(_s->kids[1],fstate);
             fstate->AssignVirtualReg(_s->node, _s->kids[0]->node);    // assign a virtual register to the inst
-            fstate->GenerateBinaryStmt("cmp", _s->node, _s->kids[1]->node);
+            fstate->GenerateBinaryStmt("cmp ", _s->node, _s->kids[1]->node);
             // this will record the ending in liveness range for a register
             // if the input is a register, and the register dies
             fstate->RecordLiveness(_s->kids[0]->node);
@@ -2633,9 +2732,31 @@ burm_trace(burm_np, 22, c);         s->cost[burm_stmt_NT] = c ;
     children=GET_KIDS(u);
     for(i=0;i<arity;i++)
       k[i]=burm_label1(children[i]);
-    if (   /* ptr: GetElementPtr(mem,ri,imm) */
+    if (   /* ptr: GetElementPtr(mem,imm,reg) */
       k[0]->rule.burm_mem && 
+      k[1]->rule.burm_imm && 
+      k[2]->rule.burm_reg
+    ) {
+      if(burm_cost_code(&c,49,s) && COST_LESS(c,s->cost[burm_ptr_NT])) {
+burm_trace(burm_np, 49, c);         s->cost[burm_ptr_NT] = c ;
+        s->rule.burm_ptr = 4;
+        burm_closure_ptr(s, c );
+      }
+    }
+    if (   /* ptr: GetElementPtr(ri,ri,reg) */
+      k[0]->rule.burm_ri && 
       k[1]->rule.burm_ri && 
+      k[2]->rule.burm_reg
+    ) {
+      if(burm_cost_code(&c,48,s) && COST_LESS(c,s->cost[burm_ptr_NT])) {
+burm_trace(burm_np, 48, c);         s->cost[burm_ptr_NT] = c ;
+        s->rule.burm_ptr = 3;
+        burm_closure_ptr(s, c );
+      }
+    }
+    if (   /* ptr: GetElementPtr(mem,imm,imm) */
+      k[0]->rule.burm_mem && 
+      k[1]->rule.burm_imm && 
       k[2]->rule.burm_imm
     ) {
       if(burm_cost_code(&c,47,s) && COST_LESS(c,s->cost[burm_ptr_NT])) {
@@ -2644,9 +2765,9 @@ burm_trace(burm_np, 47, c);         s->cost[burm_ptr_NT] = c ;
         burm_closure_ptr(s, c );
       }
     }
-    if (   /* ptr: GetElementPtr(ri,ri,imm) */
+    if (   /* ptr: GetElementPtr(ri,imm,imm) */
       k[0]->rule.burm_ri && 
-      k[1]->rule.burm_ri && 
+      k[1]->rule.burm_imm && 
       k[2]->rule.burm_imm
     ) {
       if(burm_cost_code(&c,46,s) && COST_LESS(c,s->cost[burm_ptr_NT])) {
@@ -3203,8 +3324,10 @@ NODEPTR *burm_kids(NODEPTR p, int eruleno, NODEPTR kids[]) {
     kids[0] = burm_child(p,0);
     kids[1] = burm_child(p,1);
     break;
-  case 47: /* ptr: GetElementPtr(mem,ri,imm) */
-  case 46: /* ptr: GetElementPtr(ri,ri,imm) */
+  case 49: /* ptr: GetElementPtr(mem,imm,reg) */
+  case 48: /* ptr: GetElementPtr(ri,ri,reg) */
+  case 47: /* ptr: GetElementPtr(mem,imm,imm) */
+  case 46: /* ptr: GetElementPtr(ri,imm,imm) */
   case 39: /* stmt: Br(cond,label,label) */
     kids[0] = burm_child(p,0);
     kids[1] = burm_child(p,1);
