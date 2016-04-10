@@ -68,6 +68,7 @@ void FunctionState::PrintAssembly(std::ostream &out/*, RegisterAllocator &ra*/) 
                 out << "\tpushq\t%" << registers[*it] << "\t\t# push caller-save reg" << std::endl;
 
             // print call instruction
+            out << "\txorq\t%rax,\t%rax" << std::endl;      // some functions, like printf requires rax to be 0
             out << *inst;
 #if DEBUG
             out << "\t# line " << lineNo++;
@@ -131,7 +132,7 @@ void FunctionState::CreateLocal(Tree *t, int bytes) {
     if (it != locals.end()) return;
 
     // now allocate local variable
-    if (bytes % 4 != 0) bytes += 4 - bytes % 4;
+    if (bytes % 8 != 0) bytes += 8 - bytes % 8;
     local_bytes += bytes;
     X86Operand *local = new X86Operand(this, OP_TYPE::X86Mem, 
             new X86Operand(this, RBP),                     // base_address, should be rbp
