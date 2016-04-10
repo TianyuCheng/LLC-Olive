@@ -1,8 +1,12 @@
 #ifndef VALUE_H
 #define VALUE_H
 
+#include <string>
 #include <sstream>
 #include <iostream>
+
+#include <llvm/IR/Type.h>
+#include <llvm/IR/DerivedTypes.h>
 
 enum X86OperandType { X86Reg, X86Imm, X86Mem, X86Arg, X86Label, X86Function };
 typedef X86OperandType OP_TYPE;
@@ -58,22 +62,91 @@ typedef struct VALUE {
             else                  out << v.val.f64;
         } else {
             if (v.isSigned) {
-                if (v.bitWidth ==  1) out << v.val.b;
+                if (v.bitWidth ==  1)      out << v.val.b;
                 else if (v.bitWidth ==  8) out << v.val.i8s;
                 else if (v.bitWidth == 16) out << v.val.i16s;
                 else if (v.bitWidth == 32) out << v.val.i32s;
-                else                  out << v.val.i64s;
+                else                       out << v.val.i64s;
             } else {
-                if (v.bitWidth ==  1) out << v.val.b;
+                if (v.bitWidth ==  1)      out << v.val.b;
                 else if (v.bitWidth ==  8) out << v.val.i8u;
                 else if (v.bitWidth == 16) out << v.val.i16u;
                 else if (v.bitWidth == 32) out << v.val.i32u;
-                else                  out << v.val.i64u;
+                else                       out << v.val.i64u;
             }
         }
         return out;
     }
 } VALUE;
+
+static int GetTypeSize(llvm::Type *type) {
+    using namespace llvm;
+    Type::TypeID id = type->getTypeID();
+    switch (id) {
+        case Type::TypeID::PointerTyID:
+            return 8;       // 64-bit pointer
+        case Type::TypeID::FloatTyID:
+            return 4;       // 32 bits
+        case Type::TypeID::DoubleTyID:
+            return 8;       // 64 bits
+        case Type::TypeID::ArrayTyID:
+            {
+                ArrayType *ty = dyn_cast<ArrayType>(type);
+                assert(ty && "array type must not be null");
+                return GetTypeSize(ty->getElementType());
+            }
+        case Type::TypeID::IntegerTyID:
+            {
+                IntegerType *ty = dyn_cast<IntegerType>(type);
+                assert(ty && "integer type must not be null");
+                return ty->getBitWidth() / 8;
+            }
+        default:
+            std::cerr << "Unhandle-able TypeID: " << id << std::endl;
+            assert(false && "not implemented Type Size");
+    }
+    return -1;
+}
+
+static std::string GetTypeSuffix(VALUE &v) {
+    if (v.isFP) {
+        if (v.bitWidth == 32) return "l";
+        else                  return "q";
+    } else {
+        if (v.isSigned) {
+            if (v.bitWidth ==  1)      return "b";
+            else if (v.bitWidth ==  8) return "b";
+            else if (v.bitWidth == 16) return "w";
+            else if (v.bitWidth == 32) return "l";
+            else                       return "q";
+        } else {
+            if (v.bitWidth ==  1)      return "b";
+            else if (v.bitWidth ==  8) return "b";
+            else if (v.bitWidth == 16) return "w";
+            else if (v.bitWidth == 32) return "l";
+            else                       return "q";
+        }
+    }
+    assert(false && "should not reach here for GetTypeSuffix");
+}
+
+static std::string GetTypeSuffix(llvm::Type *type) {
+    using namespace llvm;
+    int size = GetTypeSize(type);
+    switch (size) {
+        case 1:
+            return "b";
+        case 2:
+            return "w";
+        case 4:
+            return "l";
+        case 8:
+            return "q";
+        default:
+            std::cerr << "Unhandle-able Type Size: " << size << std::endl;
+            assert(false && "not implemented Type Size");
+    }
+}
 
 
 #endif /* end of include guard: VALUE_H */

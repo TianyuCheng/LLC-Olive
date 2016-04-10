@@ -42,7 +42,7 @@ void FunctionState::PrintAssembly(std::ostream &out/*, RegisterAllocator &ra*/) 
     out << "\tmovq\t%rsp,\t%rbp" << std::endl;
     // callee-save registers
     for (int i = 3; i < 7; i++)
-        out << "\tpushq\t%" << registers[callee_saved_regs[i]] << "\t# push callee-saved reg" << std::endl;
+        out << "\tpushq\t%" << registers[callee_saved_regs[i]] << "\t\t# push callee-saved reg" << std::endl;
 
     out << "\tsubq\t$" << (local_bytes - 4 * 8) << ",\t%rsp" << std::endl;
 
@@ -65,22 +65,26 @@ void FunctionState::PrintAssembly(std::ostream &out/*, RegisterAllocator &ra*/) 
             
             // push registers
             for (auto it = regs.begin(); it != regs.end(); it++)
-                out << "\tpushq\t%" << registers[*it] << "\t# push caller-save reg" << std::endl;
+                out << "\tpushq\t%" << registers[*it] << "\t\t# push caller-save reg" << std::endl;
 
             // print call instruction
-            out << *inst << std::endl;
+            out << *inst;
+#if DEBUG
+            out << "\t# line " << lineNo++;
+#endif
+            out << std::endl;
 
             // push registers
             for (auto it = regs.rbegin(); it != regs.rend(); it++)
-                out << "\tpopq\t%" << registers[*it] << "\t# pop caller-save reg" << std::endl;
+                out << "\tpopq\t%" << registers[*it] << "\t\t# pop caller-save reg" << std::endl;
         }
         else {
             out << *inst;
-        }
 #if DEBUG
-        out << "\t; line " << lineNo++;
+            out << "\t# line " << lineNo++;
 #endif
-        out << std::endl;
+            out << std::endl;
+        }
         current_line++;
     }
 
@@ -89,7 +93,7 @@ void FunctionState::PrintAssembly(std::ostream &out/*, RegisterAllocator &ra*/) 
     out << "\taddq\t$" << (local_bytes - 4 * 8) << ",\t%rsp" << std::endl;
     // restore registers
     for (int i = 6; i >= 3; i--)
-        out << "\tpopq\t%" << registers[callee_saved_regs[i]] << "\t# pop callee-saved reg" << std::endl;
+        out << "\tpopq\t%" << registers[callee_saved_regs[i]] << "\t\t# pop callee-saved reg" << std::endl;
     out << "\tmovq\t%rbp,\t%rsp" << std::endl;
     out << "\tleave" << std::endl;
     out << "\tret" << std::endl;
@@ -236,7 +240,7 @@ void FunctionState::LoadFromImm(Tree *dst, Tree *src) {
 }
 
 void FunctionState::LoadEffectiveAddress(Tree *dst, Tree *src) {
-    GenerateBinaryStmt("lea", dst, src);
+    GenerateBinaryStmt("lea", dst, src, "q");
 }
 
 void FunctionState::GenerateLabelStmt(const char *l) {
@@ -247,45 +251,45 @@ void FunctionState::GenerateLabelStmt(Tree *t) {
     AddInst(new X86Inst(t->GetValue().AsLabel(), true));
 }
 
-void FunctionState::GenerateMovStmt(Tree *dst, Tree *src) {
+void FunctionState::GenerateMovStmt(Tree *dst, Tree *src, const char *suffix) {
     assert(!(dst->GetOpCode() == MEM && src->GetOpCode() == MEM) && "src and dst cannot both come from memory");
     // Keep this one-line function, since we might want 
     // to migrate to different operand sizes, so we will
     // be using movb, movw, movl, movq according to the
     // operands
     if (src->GetOpCode() == IMM)
-        GenerateBinaryStmt("mov", dst, src);
+        GenerateBinaryStmt("mov", dst, src, suffix);
     else
-        GenerateBinaryStmt("mov", dst, src);
+        GenerateBinaryStmt("mov", dst, src, suffix);
 }
 
-void FunctionState::GenerateMovStmt(X86Operand *dst, X86Operand *src) {
+void FunctionState::GenerateMovStmt(X86Operand *dst, X86Operand *src, const char *suffix) {
     if (src->GetType() == OP_TYPE::X86Imm)
-        GenerateBinaryStmt("mov", dst, src);
+        GenerateBinaryStmt("mov", dst, src, suffix);
     else
-        GenerateBinaryStmt("mov", dst, src);
+        GenerateBinaryStmt("mov", dst, src, suffix);
 }
 
 void FunctionState::GenerateStmt(const char *op) {
     AddInst(new X86Inst(op, nullptr, nullptr));
 }
 
-void FunctionState::GenerateUnaryStmt(const char *op_raw, Tree *src, bool suffix) {
+void FunctionState::GenerateUnaryStmt(const char *op_raw, Tree *src, const char *suffix) {
     std::string op = std::string(op_raw);
-    if (suffix) op = std::string(op_raw) + "q";
+    if (suffix) op = std::string(op_raw) + suffix;
 
     AddInst(new X86Inst(op.c_str(), 
         src->AsX86Operand(this), nullptr
     ));
 }
 
-void FunctionState::GenerateBinaryStmt(const char *op_raw, Tree *dst, Tree *src, bool suffix) {
+void FunctionState::GenerateBinaryStmt(const char *op_raw, Tree *dst, Tree *src, const char *suffix) {
     // Keep this one-line function, since we might want 
     // to migrate to different operand sizes, so we will
     // be using suffixes b, w, l, q according to the
     // operands
     std::string op = std::string(op_raw);
-    if (suffix) op = std::string(op_raw) + "q";
+    if (suffix) op = std::string(op_raw) + suffix;
 
     AddInst(new X86Inst(op.c_str(), 
         dst->AsX86Operand(this), 
@@ -293,13 +297,13 @@ void FunctionState::GenerateBinaryStmt(const char *op_raw, Tree *dst, Tree *src,
     ));
 }
 
-void FunctionState::GenerateBinaryStmt(const char *op_raw, X86Operand *dst, X86Operand *src, bool suffix) {
+void FunctionState::GenerateBinaryStmt(const char *op_raw, X86Operand *dst, X86Operand *src, const char *suffix) {
     // Keep this one-line function, since we might want 
     // to migrate to different operand sizes, so we will
     // be using suffixes b, w, l, q according to the
     // operands
     std::string op = std::string(op_raw);
-    if (suffix) op = std::string(op_raw) + "q";
+    if (suffix) op = std::string(op_raw) + suffix;
     AddInst(new X86Inst(op.c_str(), dst, src));
 }
 
@@ -379,8 +383,8 @@ int  FunctionState::CreateSpill(std::ostream &out, int reg_idx) {
     // std::cerr << "Spill out physical reg: " << reg_idx << std::endl;
     X86Operand operand(this, reg_idx);
     X86Inst inst("pushq", &operand);
-    out << inst << std::endl;
     local_bytes += 8;
+    out << inst << "\t# spill reg: " << registers[reg_idx] << " at OFFSET: " << -local_bytes << std::endl;
     return -local_bytes;
 }
 
@@ -389,6 +393,6 @@ void FunctionState::RestoreSpill(std::ostream &out, int reg_idx, int offset) {
     X86Operand operand1(this, reg_idx);
     X86Operand *operand2 = GetLocalMemoryAddress(offset);
     X86Inst inst("movq", &operand1, operand2);
-    out << inst << std::endl;
+    out << inst << "\t# restore spill reg at OFFSET: " << offset << std::endl;
     delete operand2;
 }

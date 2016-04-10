@@ -10,7 +10,7 @@
 %term Trunc=36 ZExt=37 SExt=38 FPToUI=39 FPToSI=40 UIToFP=41 SIToFP=42 FPTrunc=43 FPExt=44 PtrToInt=45 IntToPtr=46 BitCast=47 AddrSpaceCast=48
 %term CleanupPad=49 CatchPad=50
 %term ICmp=51 FCmp=52 PHI=53 Call=54 Select=55 UserOp1=56 UserOp2=57 VAArg=58 ExtractElement=59 InsertElement=60 ShuffleVector=61 ExtractValue=62 InsertValue=63 LandingPad=64
-%term REG=65 IMM=66 MEM=67 LABEL=68 ARGS=69 NOARGS=70
+%term REG=65 IMM=66 MEM=67 LABEL=68 ARGS=69 NOARGS=70 PTR=71
 
 %declare<void> stmt     <FUNCTION_STATE fstate>;
 %declare<void> value    <FUNCTION_STATE fstate>;
@@ -89,22 +89,23 @@ mem:    Alloca(imm)         { $cost[0].cost = $cost[2].cost + 1;    } = {
             $action[2](fstate);
 
             Type *type = inst->getAllocatedType();
+            int type_size = GetTypeSize(type);
 
             if (inst->isArrayAllocation()) {
                 llvm::ConstantInt* array_size = dyn_cast<llvm::ConstantInt>(inst->getArraySize());
                 int elems = array_size->getZExtValue();
-                fstate->CreateLocal($0, 8 * elems);     // reserve the space for array elements
+                fstate->CreateLocal($0, type_size * elems);     // reserve the space for array elements
             }
             else if (type->isArrayTy()) {
                 ArrayType *arr_ty = dyn_cast<ArrayType>(type);
                 int elems = arr_ty->getNumElements();
-                fstate->CreateLocal($0, 8 * elems);     // reserve the space for array elements
+                fstate->CreateLocal($0, type_size * elems);     // reserve the space for array elements
             }
             else if (type->isStructTy()) {
                 assert(false && "struct not supported");
             }
             else {
-                fstate->CreateLocal($0, 8);
+                fstate->CreateLocal($0, type_size);
             }
 
             // this will record the ending in liveness range for a register
@@ -146,7 +147,7 @@ reg:    Load(mem)           { $cost[0].cost = $cost[2].cost + 1;    } = {
 stmt:   Store(imm, mem)      { $cost[0].cost = $cost[2].cost + $cost[3].cost;    } = {
             $action[2](fstate);
             $action[3](fstate);
-            fstate->GenerateMovStmt($3, $2);
+            fstate->GenerateMovStmt($3, $2, $3->GetSuffix());
             // this will record the ending in liveness range for a register
             // if the input is a register, and the register dies
             fstate->RecordLiveness($2);
@@ -155,7 +156,7 @@ stmt:   Store(imm, mem)      { $cost[0].cost = $cost[2].cost + $cost[3].cost;   
 stmt:   Store(reg, mem)      { $cost[0].cost = $cost[2].cost + $cost[3].cost;    } = {
             $action[2](fstate);
             $action[3](fstate);
-            fstate->GenerateMovStmt($3, $2);
+            fstate->GenerateMovStmt($3, $2, $3->GetSuffix());
             // this will record the ending in liveness range for a register
             // if the input is a register, and the register dies
             fstate->RecordLiveness($2);
@@ -168,8 +169,8 @@ stmt:   Store(mem, mem)      { $cost[0].cost = $cost[2].cost + $cost[3].cost;   
             Tree *t1 = (new Tree(REG))->GetTreeRef();
             fstate->CreateVirtualReg(t1);
 
-            fstate->GenerateMovStmt(t1, $2);
-            fstate->GenerateMovStmt($3, t1);
+            fstate->GenerateMovStmt(t1, $2, $3->GetSuffix());
+            fstate->GenerateMovStmt($3, t1, $3->GetSuffix());
 
             fstate->RecordLiveness(t1);
             fstate->RecordLiveness($2);
@@ -450,7 +451,8 @@ args:   ARGS(value, args)        { $cost[0].cost = $cost[2].cost + $cost[3].cost
             if (n < 6) {
                 $0->SetValue(params_regs[n]);
                 $0->UseAsPhysicalRegister();
-                fstate->GenerateMovStmt($0, $2);
+                if (!$2->IsPointer()) fstate->GenerateMovStmt($0, $2);
+                else                  fstate->LoadEffectiveAddress($0, $2);
             } else {
                 // more than 6 argments should be pushed on stack in reversed order
                 fstate->GeneratePushStmt($2);
@@ -487,6 +489,13 @@ ptr:    GetElementPtr(ri, ri, imm)    { $cost[0].cost = $cost[2].cost + $cost[3]
             if ($0->IsComputed()) return;
             $0->SetComputed(true);
 
+            // get size of array elements
+            using namespace llvm;
+            GetElementPtrInst *inst = dyn_cast<GetElementPtrInst>($1->GetInst());
+            assert(inst && "GetElementPtr must be not null");
+            int size = GetTypeSize(inst->getSourceElementType());
+            std::cerr << "SIZE1: " << size << std::endl;
+
             $action[2](fstate);
             $action[3](fstate);
             $action[4](fstate);
@@ -494,17 +503,28 @@ ptr:    GetElementPtr(ri, ri, imm)    { $cost[0].cost = $cost[2].cost + $cost[3]
                 $2->AsX86Operand(fstate),         // base
                 $3->AsX86Operand(fstate),         // displacement
                 0,
-                8 * $4->GetValue().val.i64s       // offset
+                size * $4->GetValue().val.i64s    // offset
             );
             $0->SetX86Operand(ptr);
+            $0->SetSuffix(GetTypeSuffix(inst->getSourceElementType()));
+
             fstate->RecordLiveness($2);
             fstate->RecordLiveness($3);
             fstate->RecordLiveness($4);
             $0->UseAsMemory();
+            $0->UseAsPtr();
         };
 ptr:    GetElementPtr(mem, ri, imm)    { $cost[0].cost = $cost[2].cost + $cost[3].cost + $cost[4].cost + 5; } = {
             if ($0->IsComputed()) return;
             $0->SetComputed(true);
+
+            // get size of array elements
+            using namespace llvm;
+            GetElementPtrInst *inst = dyn_cast<GetElementPtrInst>($1->GetInst());
+            assert(inst && "GetElementPtr must be not null");
+            int size = GetTypeSize(inst->getSourceElementType());
+            std::cerr << "SIZE2: " << size << std::endl;
+            const char *suffix = GetTypeSuffix(inst->getSourceElementType()).c_str();
 
             $action[2](fstate);
             $action[3](fstate);
@@ -512,20 +532,23 @@ ptr:    GetElementPtr(mem, ri, imm)    { $cost[0].cost = $cost[2].cost + $cost[3
 
             Tree *t1 = (new Tree(REG))->GetTreeRef();
             fstate->CreateVirtualReg(t1);
-            fstate->GenerateBinaryStmt("lea", t1, $2);
+            fstate->GenerateBinaryStmt("lea", t1, $2, "q");
 
             X86Operand *ptr = new X86Operand(fstate, OP_TYPE::X86Mem,
                 t1->AsX86Operand(fstate),         // base
                 $3->AsX86Operand(fstate),         // displacement
                 0,
-                8 * $4->GetValue().val.i64s       // offset
+                size * $4->GetValue().val.i64s       // offset
             );
             $0->SetX86Operand(ptr);
+            $0->SetSuffix(suffix);
+
             fstate->RecordLiveness(t1);
             fstate->RecordLiveness($2);
             fstate->RecordLiveness($3);
             fstate->RecordLiveness($4);
             $0->UseAsMemory();
+            $0->UseAsPtr();
         };
 %%
 #include "llc_olive_helper.cxx"

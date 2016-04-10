@@ -25,15 +25,15 @@ class Tree
 {
 public:
     Tree(int opcode)
-        : op(opcode), val(0), refcnt(0), level(1), operand(nullptr), otype(-1), isReg(false), isPhysicalReg(false), computed(false)
+        : op(opcode), val(0), refcnt(0), level(1), operand(nullptr), otype(-1), isReg(false), isPhysicalReg(false), computed(false), isPtr(false), suffix("q")
     {
     }
     Tree(int opcode, VALUE v)
-        : op(opcode), val(v), refcnt(0), level(1), operand(nullptr), otype(-1), isReg(false), isPhysicalReg(false), computed(false)
+        : op(opcode), val(v), refcnt(0), level(1), operand(nullptr), otype(-1), isReg(false), isPhysicalReg(false), computed(false), isPtr(false), suffix("q")
     {
     }
     Tree(int opcode, Tree *l, Tree *r)
-        : op(opcode), val(0), refcnt(0), level(1), operand(nullptr), otype(-1), isReg(false), isPhysicalReg(false), computed(false)
+        : op(opcode), val(0), refcnt(0), level(1), operand(nullptr), otype(-1), isReg(false), isPhysicalReg(false), computed(false), isPtr(false), suffix("q")
     {
         AddChild(l);
         AddChild(r);
@@ -53,6 +53,7 @@ public:
     void SetFuncName(std::string n) { func_name = n; }
     std::string GetFuncName() const { return func_name; }
 
+    void UseAsPtr() { isReg = false, isPtr = true; otype = MEM; }
     void UseAsMemory() { isReg = false; otype = MEM; }
     void UseAsImmediate() { isReg = false; otype = IMM; }
     void UseAsRegister() { isReg = true; otype = REG; }
@@ -61,6 +62,7 @@ public:
     void UseAsPhysicalRegister() { isReg = true; isPhysicalReg = true; otype = REG; }
     bool IsVirtualReg() const { return isReg && !isPhysicalReg; }
     bool IsPhysicalReg() const { return isPhysicalReg; }
+    bool IsPointer() const { return isPtr; }
     int  GetVirtualReg() const { return val.AsVirtualReg(); }
     int  GetPhysicalReg() const { return val.AsVirtualReg(); }
 
@@ -105,6 +107,9 @@ public:
     void SetX86Operand(X86Operand *oper) { operand = oper; }
     X86Operand *AsX86Operand(FunctionState *fs);
 
+    void SetSuffix(std::string sf) { suffix = sf; }
+    const char* GetSuffix() const { return suffix.c_str(); }
+
 private:
     void DisplayTree(int indent);
 
@@ -118,10 +123,12 @@ private:
     bool isReg;
     bool computed;
     bool isPhysicalReg;
+    bool isPtr;
 
     X86Operand *operand;
 
     std::string func_name;
+    std::string suffix;
 
     X86OperandType operandType;
     llvm::Value *llvmValue;

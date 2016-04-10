@@ -41,14 +41,16 @@ public:
     void LoadFromReg(Tree *dst, Tree *src);
     void LoadFromImm(Tree *dst, Tree *src);
     void LoadEffectiveAddress(Tree *dst, Tree *src);
+
+    void GenerateStmt(const char *op);
+    void GenerateUnaryStmt(const char *op, Tree *src, const char* suffix=nullptr);
+    void GenerateBinaryStmt(const char *op, Tree *dst, Tree *src, const char* suffix=nullptr);
+    void GenerateBinaryStmt(const char *op, X86Operand *dst, X86Operand *src, const char *suffix=nullptr);
+
+    void GenerateMovStmt(Tree *dst, Tree *src, const char* suffix="q");
+    void GenerateMovStmt(X86Operand *dst, X86Operand *src, const char* suffix="q");
     void GenerateLabelStmt(const char *label);
     void GenerateLabelStmt(Tree *v);
-    void GenerateMovStmt(Tree *dst, Tree *src);
-    void GenerateMovStmt(X86Operand *dst, X86Operand *src);
-    void GenerateStmt(const char *op);
-    void GenerateUnaryStmt(const char *op, Tree *src, bool suffix=true);
-    void GenerateBinaryStmt(const char *op, Tree *dst, Tree *src, bool suffix=true);
-    void GenerateBinaryStmt(const char *op, X86Operand *dst, X86Operand *src, bool suffix=true);
     void GeneratePushStmt(Tree *t);
     void GeneratePushStmt(Register r);
     void GeneratePopStmt(Tree *t);
