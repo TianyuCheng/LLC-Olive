@@ -171,6 +171,12 @@ void InstructionToExprTree(FunctionState &fstate,
                     t->AddChild(new Tree(DUMMY));
                 }
                 break;
+            case GetElementPtr:
+                if (t->GetNumKids() == 2) {
+                    // fill the get element ptr instruction with dummy node
+                    t->AddChild(new Tree(DUMMY));
+                }
+                break;
             case Call:
                 t->KidsAsArguments();
                 break;
@@ -462,6 +468,7 @@ void MakeAssembly(Function &func, /*RegisterAllocator &ra,*/ std::ostream &out) 
                     // if (t->GetOpCode() == REG) t->GetTreeRef();
                     fstate.AddInst(new X86Inst("#-----------------#"));
                     gen(t, &fstate);        // generate each phi instruction
+                    fstate.RecordLiveness(t);
                     fstate.AddInst(new X86Inst("#-----------------#"));
                 }
             }
@@ -489,6 +496,7 @@ void MakeAssembly(Function &func, /*RegisterAllocator &ra,*/ std::ostream &out) 
                 // if (t->GetOpCode() == REG) t->GetTreeRef();
                 fstate.AddInst(new X86Inst("#-----------------#"));
                 gen(t, &fstate);        // generate each phi instruction
+                fstate.RecordLiveness(t);
                 fstate.AddInst(new X86Inst("#-----------------#"));
             }
         }

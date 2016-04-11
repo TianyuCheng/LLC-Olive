@@ -104,7 +104,7 @@ public:
             // llvm::errs() << "-------------------------- PHI --------------------------\n";
             auto phi = key.first;
             auto value = it->second;
-            Tree *phi_reg = phiRegs[phi];
+            Tree *phi_reg = phiRegs[phi]->GetTreeRef();
 
             using namespace llvm;
             // errs() << "FOUND PHI OPERAND: ";
@@ -154,7 +154,7 @@ public:
             }
             treeList.push_back(t);
             // llvm::errs() << "PHI-REG refcnt: " << phi_reg->GetRefCount() << "\n";
-            RecordLiveStart(phi_reg->GetTreeRef());
+            // RecordLiveStart(phi_reg->GetTreeRef());
             // llvm::errs() << "------------------------ PHI END ------------------------\n";
         }
     }
