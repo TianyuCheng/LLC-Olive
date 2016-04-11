@@ -177,6 +177,7 @@ X86Operand* Tree::AsX86Operand(FunctionState *fs) {
         case UDiv:
         case SDiv:
         case Load:
+        case BitCast:
         case REG:
             if (IsPhysicalReg())
                 operand = new X86Operand(fs, val.AsVirtualReg());

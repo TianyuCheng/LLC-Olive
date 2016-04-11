@@ -94,7 +94,7 @@ struct burm_state {
     unsigned burm_reg:5;
     unsigned burm_imm:3;
     unsigned burm_mem:3;
-    unsigned burm_ptr:3;
+    unsigned burm_ptr:4;
     unsigned burm_bptr:2;
     unsigned burm_cond:2;
     unsigned burm_label:1;

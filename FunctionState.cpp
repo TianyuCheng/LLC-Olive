@@ -44,7 +44,8 @@ void FunctionState::PrintAssembly(std::ostream &out/*, RegisterAllocator &ra*/) 
     for (int i = 3; i < 7; i++)
         out << "\tpushq\t%" << registers[callee_saved_regs[i]] << "\t\t# push callee-saved reg" << std::endl;
 
-    out << "\tsubq\t$" << (local_bytes - 4 * 8) << ",\t%rsp" << std::endl;
+    if (local_bytes - 4 * 8 > 0)
+        out << "\tsubq\t$" << (local_bytes - 4 * 8) << ",\t%rsp" << std::endl;
 
     std::vector<Register> regs;
 
@@ -94,7 +95,8 @@ void FunctionState::PrintAssembly(std::ostream &out/*, RegisterAllocator &ra*/) 
 
     // epilog
     out << ".LFE" << function_id << ":" << std::endl;
-    out << "\taddq\t$" << (local_bytes - 4 * 8) << ",\t%rsp" << std::endl;
+    if (local_bytes - 4 * 8 > 0)
+        out << "\taddq\t$" << (local_bytes - 4 * 8) << ",\t%rsp" << std::endl;
     // restore registers
     for (int i = 6; i >= 3; i--)
         out << "\tpopq\t%" << registers[callee_saved_regs[i]] << "\t\t# pop callee-saved reg" << std::endl;
@@ -407,21 +409,22 @@ void FunctionState::GeneratePopStmt(Register r) {
 }
 
 void FunctionState::RecordLiveness(Tree *t) {
+    t->RemoveRef();                      // decrease the reference counter
+
     if (t->IsPhiNode()) {
         // this must be a phi node,
         // find the real reference for phi
-        t = phiChildToParent[t];
+        t = t->GetParent();
         assert(t && "phinode must have its parent");
     }
-
-    t->RemoveRef();                      // decrease the reference counter
 
     if (!t->IsVirtualReg()) return;      // we only care about registers' references
     if (t->IsPhysicalReg()) return;      // we do not record the physical registers' liveness
 
 #if DEBUG
-    std::cerr << "Virtual REG stop : " << t->GetValue().AsVirtualReg() << "\tRefCnt: " << t->GetRefCount() 
+    std::cerr << "Virtual REG stop\t OPCODE: " << t->GetOpCode() << "\tVirtual Reg: "  << t->GetValue().AsVirtualReg() << "\tRefCnt: " << t->GetRefCount() 
               << "\tLineNo: " << (assembly.size() - 1)<< std::endl;
+    assert(t->GetRefCount() >= 0);
 #endif
 
     int reg = t->val.AsVirtualReg();
@@ -435,15 +438,15 @@ void FunctionState::RecordLiveStart(Tree *t) {
     if (t->IsPhiNode()) {
         // this must be a phi node,
         // find the real reference for phi
-        t = phiChildToParent[t];
+        t = t->GetParent();
         assert(t && "phinode must have its parent");
     }
+    if (!t->IsPhysicalReg() && (t->IsVirtualReg() && t->GetRefCount() > 0)) {
 #if DEBUG
     if (t->IsVirtualReg())
         std::cerr << "Virtual REG start: " << t->GetValue().AsVirtualReg() << "\tRefCnt: " << t->GetRefCount() 
                   << "\tLineNo: " << (assembly.size() - 1)<< std::endl;
 #endif
-    if (!t->IsPhysicalReg() && (t->IsVirtualReg()/* && t->GetRefCount() > 0*/)) {
         int reg = t->val.AsVirtualReg();
         int startLine = assembly.size();
         allocator.RecordLiveStart(reg, startLine);

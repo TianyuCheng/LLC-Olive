@@ -104,7 +104,7 @@ public:
             // llvm::errs() << "-------------------------- PHI --------------------------\n";
             auto phi = key.first;
             auto value = it->second;
-            Tree *phi_reg = phiRegs[phi]->GetTreeRef();
+            Tree *phi_reg = phiRegs[phi];
 
             using namespace llvm;
             // errs() << "FOUND PHI OPERAND: ";
@@ -113,7 +113,8 @@ public:
             Tree *t = new Tree(PHI);
             t->SetValue(phi_reg->GetValue());
             t->UseAsPhi();
-            phiChildToParent[t] = phi_reg;      // backward mapping for recording liveness
+            t->SetParent(phi_reg);
+            t->GetTreeRef();
             // llvm::errs() << "PHI-REG VALUE: " << phi_reg->GetValue().val.i32s << "\n";
 
             if (Instruction *inst = dyn_cast<Instruction>(value)) {
@@ -209,7 +210,6 @@ private:
     std::map<llvm::Argument*, Tree*> argsMap;
     std::map<std::pair<llvm::PHINode*, llvm::BasicBlock*>, llvm::Value*> phiMap;
     std::map<llvm::PHINode*, Tree*> phiRegs;
-    std::map<Tree*, Tree*> phiChildToParent;
     std::vector<X86Operand*> freeList;
 };
 

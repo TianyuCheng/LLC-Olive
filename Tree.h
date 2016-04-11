@@ -21,19 +21,31 @@ enum X86OperandType;
 class X86Operand;
 class FunctionState;
 
+enum OPERATION { READ, WRITE };
+
 class Tree
 {
 public:
     Tree(int opcode)
-        : op(opcode), val(0), refcnt(0), level(1), operand(nullptr), otype(-1), isReg(false), isPhysicalReg(false), computed(false), isPtr(false), isPhi(false), suffix("q"), cnstInt(64, 0), cnstFP(0.0), hasValue(false)
+        : op(opcode), val(0), refcnt(0), level(1), operand(nullptr), 
+          otype(-1), isReg(false), isPhysicalReg(false), computed(false), 
+          isPtr(false), isPhi(false), suffix("q"), phiParent(nullptr),
+          cnstInt(64, 0), cnstFP(0.0), hasValue(false)
+          
     {
     }
     Tree(int opcode, VALUE v)
-        : op(opcode), val(v), refcnt(0), level(1), operand(nullptr), otype(-1), isReg(false), isPhysicalReg(false), computed(false), isPtr(false), isPhi(false), suffix("q"), cnstInt(64, 0), cnstFP(0.0), hasValue(false)
+        : op(opcode), val(v), refcnt(0), level(1), operand(nullptr), 
+          otype(-1), isReg(false), isPhysicalReg(false), computed(false), 
+          isPtr(false), isPhi(false), suffix("q"), phiParent(nullptr),
+          cnstInt(64, 0), cnstFP(0.0), hasValue(false)
     {
     }
     Tree(int opcode, Tree *l, Tree *r)
-        : op(opcode), val(0), refcnt(0), level(1), operand(nullptr), otype(-1), isReg(false), isPhysicalReg(false), computed(false), isPtr(false), isPhi(false), suffix("q"), cnstInt(64, 0), cnstFP(0.0), hasValue(false)
+        : op(opcode), val(0), refcnt(0), level(1), operand(nullptr), 
+          otype(-1), isReg(false), isPhysicalReg(false), computed(false), 
+          isPtr(false), isPhi(false), suffix("q"), phiParent(nullptr),
+          cnstInt(64, 0), cnstFP(0.0), hasValue(false)
     {
         AddChild(l);
         AddChild(r);
@@ -95,8 +107,22 @@ public:
     Tree* GetChild(int n);
     void KidsAsArguments();
 
-    Tree* GetTreeRef() { refcnt++; return this; }
-    void RemoveRef() { refcnt--; }
+    Tree* GetTreeRef() { 
+        if (!isPhi) { refcnt++; return this; }
+        assert(phiParent != nullptr && "a phi instruction cannot find its origin");
+        int oldref = phiParent->GetRefCount();
+        phiParent->GetTreeRef();    // increment parent's refcnt
+        int newref = phiParent->GetRefCount();
+        assert(oldref != newref);
+        return this;
+    }
+    void RemoveRef() { 
+        if (!isPhi) { refcnt--; }
+        else {
+            assert(phiParent != nullptr && "a phi instruction cannot find its origin");
+            phiParent->RemoveRef();     // remove parent's refcnt
+        }
+    }
 
     int GetRefCount() const { return refcnt; }
     int GetNumKids() const { return kids.size(); }
@@ -121,6 +147,44 @@ public:
     llvm::APInt GetInteger() const { return cnstInt; }
     llvm::APFloat GetFloat() const { return cnstFP; }
 
+    void SetParent(Tree *parent) { phiParent = parent; }
+    Tree *GetParent() { return phiParent; }
+    
+    
+    void AddRead() { 
+        operations.push_back(OPERATION::READ); 
+        for (auto kid : kids) kid->AddRead();
+    }
+    void AddWrite() { 
+        operations.push_back(OPERATION::WRITE); 
+        for (auto kid : kids) kid->AddWrite();
+    }
+
+    bool IsFlowDepdendent() {
+        if (computed) return true;      // if this node has been computed, then there is no dependency problem
+
+        if (operations.size() >= 2) {
+            for (auto it = operations.begin(); it != operations.end() - 1; it++) {
+                OPERATION curr = *it;
+                OPERATION next = *(it + 1);
+                // flow dependence is read after write
+                if (curr == OPERATION::WRITE && next == OPERATION::READ)
+                    return true;
+            }
+        }
+        // check children's dependencies
+        for (auto kid : kids)
+            if (kid->IsFlowDepdendent())
+                return true;
+        return false;
+    }
+
+    void ClearDependence() {
+        operations.clear();
+        for (auto kid : kids)
+            kid->ClearDependence();
+    }
+
 private:
     void DisplayTree(int indent);
 
@@ -137,6 +201,11 @@ private:
     bool isPhysicalReg;
     bool isPtr;
     bool isPhi;
+
+    Tree *phiParent;
+
+    // dependence analysis
+    std::vector<OPERATION> operations;
 
     X86Operand *operand;
     llvm::APInt   cnstInt;

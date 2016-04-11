@@ -1,5 +1,6 @@
 #define VERBOSE  0
 #define DEBUG    0
+#define DEBUG_DEPENDENCE 0
 #define SSA_REGISTER_ALLOCATOR 0
 
 static int labelID = 0;
@@ -24,7 +25,6 @@ static void burm_trace(NODEPTR p, int eruleno, COST cost) {
 }
 
 void gen(NODEPTR p, FunctionState *fstate) {
-    p->SetComputed(true);
     if (burm_label(p) == 0) {
         std::cerr << "Failed to match grammar! Cannot generate assembly code\n";
         p->DisplayTree();
@@ -35,6 +35,7 @@ void gen(NODEPTR p, FunctionState *fstate) {
         if (shouldCover != 0)
             dumpCover(p, 1, 0);
     }
+    p->SetComputed(true);
 }
 
 void InstructionToExprTree(FunctionState &fstate,
@@ -394,6 +395,53 @@ void BuildIntervals (Function &func, std::map<int, Interval*> &all_intervals, st
 }
 
 /**
+ * Solve for Flow Dependence
+ * */
+void SolveFlowDependence(std::vector<Tree*> &treeList, int start, int end) {
+    for (int i = start; i < end; i++) {
+        Tree *t = treeList[i];
+        t->ClearDependence();
+    }
+    for (int i = start; i < end; i++) {
+        Tree *t = treeList[i];
+        // solve in the sequence that we will generate the code
+        if (t->GetRefCount() != 0) continue;
+
+        switch (t->GetOpCode()) {
+            case Add:
+            case Sub:
+            case Mul:
+            case UDiv:
+            case SDiv:
+            case ICmp:
+                for (int i = 0; i < t->GetNumKids(); i++)
+                    t->GetChild(i)->AddRead();
+                break;
+            case Ret:
+                assert(t->GetNumKids() == 1 && "arity for ret must be 1");
+                t->GetChild(0)->AddRead();
+            case Load:
+                assert(t->GetNumKids() == 1 && "arity for load must be 1");
+                t->GetChild(0)->AddRead();
+                break;
+            case Store:
+                assert(t->GetNumKids() == 2 && "arity for store must be 2");
+                t->GetChild(0)->AddRead();
+                t->GetChild(1)->AddWrite();
+                break;
+            case Br:
+                break;
+            case GetElementPtr:
+                for (int i = 0; i < t->GetNumKids(); i++)
+                    t->GetChild(i)->AddRead();
+                break;
+            case Call:
+                break;
+        }
+    }
+}
+
+/**
  * Generate assembly for a single function
  * */
 void MakeAssembly(Function &func, /*RegisterAllocator &ra,*/ std::ostream &out) {
@@ -442,6 +490,7 @@ void MakeAssembly(Function &func, /*RegisterAllocator &ra,*/ std::ostream &out) 
             fstate.GenerateLabelStmt(wrapper);
         }
         BasicBlockToExprTrees(fstate, treeList, bb);
+        SolveFlowDependence(treeList, size, treeList.size());
 
         bool phiProcessed = false;
         // iterate through tree list for each individual instruction tree
@@ -466,20 +515,33 @@ void MakeAssembly(Function &func, /*RegisterAllocator &ra,*/ std::ostream &out) 
                     Tree *t = phiList[i];
                     // t->DisplayTree();
                     // if (t->GetOpCode() == REG) t->GetTreeRef();
-                    fstate.AddInst(new X86Inst("#-----------------#"));
+                    fstate.AddInst(new X86Inst("#-------- PHI ---------#"));
                     gen(t, &fstate);        // generate each phi instruction
                     fstate.RecordLiveness(t);
-                    fstate.AddInst(new X86Inst("#-----------------#"));
+                    fstate.AddInst(new X86Inst("#-------- PHI ---------#"));
                 }
             }
 
+#if DEBUG_DEPENDENCE
+            errs() << "##############################################################\n";
+            t->DisplayTree();
+            errs() << "RefCount:\t" << t->GetRefCount() << "\n";
+            errs() << "Flow Dep:\t" << t->IsFlowDepdendent() << "\n";
+#endif
+
             // check if this tree satisfies the condition for saving into register
-            if (t->GetRefCount() == 0/* || t->GetRefCount() > 2*/) {
+            bool flowDep = t->IsFlowDepdendent();
+            if (t->GetRefCount() == 0 || flowDep) {
 #if VERBOSE
                 t->DisplayTree();
 #endif
-                if (t->GetOpCode() == REG) t->GetTreeRef();
+                // if (t->GetOpCode() == REG) t->GetTreeRef();
                 gen(t, &fstate);
+                
+                // if this is caused by flow dependency, then try resolving it
+                // and the code generated might be more economical
+                if (flowDep)
+                    SolveFlowDependence(treeList, i, treeList.size());
             }
 
         } // end of Tree iteration
@@ -494,10 +556,10 @@ void MakeAssembly(Function &func, /*RegisterAllocator &ra,*/ std::ostream &out) 
                 Tree *t = phiList[i];
                 // t->DisplayTree();
                 // if (t->GetOpCode() == REG) t->GetTreeRef();
-                fstate.AddInst(new X86Inst("#-----------------#"));
+                fstate.AddInst(new X86Inst("#-------- PHI ---------#"));
                 gen(t, &fstate);        // generate each phi instruction
                 fstate.RecordLiveness(t);
-                fstate.AddInst(new X86Inst("#-----------------#"));
+                fstate.AddInst(new X86Inst("#-------- PHI ---------#"));
             }
         }
 
@@ -553,7 +615,7 @@ void MakeGlobalVariable(Module *module, std::ostream &out) {
                     if (integer.isSignedIntN(bitWidth)) {
                         switch (bitWidth/8) {
                             case 1:
-                                out << "\t.byte\t" << (int8_t)sext << std::endl;
+                                out << "\t.byte\t" << std::dec << (int8_t)sext << std::endl;
                                 break;
                             case 2:
                                 out << "\t.value\t" << (int16_t)sext << std::endl;

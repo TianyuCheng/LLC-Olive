@@ -82,6 +82,9 @@ public:
             // register not have a starting point
             liveness[reg] = new LiveRange(startline);
         }
+        else {
+            RecordLiveStop(reg, startline);
+        }
     }
     void RecordLiveStop(int reg, int endline) {
         auto it = liveness.find(reg);
