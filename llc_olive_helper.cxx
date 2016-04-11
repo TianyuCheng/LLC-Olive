@@ -535,49 +535,73 @@ void MakeGlobalVariable(Module *module, std::ostream &out) {
             {
                 assert(global.getNumOperands() > 0);
                 Value *v = global.getOperand(0);
-                ConstantInt *cnstInt = dyn_cast<ConstantInt>(v);
-                assert(v && "global variable constant cast must be successfull");
-
-                const APInt integer = cnstInt->getValue();
-                unsigned bitWidth = cnstInt->getBitWidth();
-                int64_t  sext = cnstInt->getSExtValue();
-                uint64_t zext = cnstInt->getZExtValue();
-                if (integer.isSignedIntN(bitWidth)) {
-                    switch (bitWidth/8) {
-                        case 1:
-                            out << "\t.byte\t" << (int8_t)sext << std::endl;
-                            break;
-                        case 2:
-                            out << "\t.value\t" << (int16_t)sext << std::endl;
-                            break;
-                        case 4:
-                            out << "\t.long\t" << (int32_t)sext << std::endl;
-                            break;
-                        case 8:
-                            out << "\t.quad\t" << (int32_t)sext << std::endl;
-                            break;
-                        default:
-                            assert(false && "invalid global variable size");
+                if (ConstantInt *cnstInt = dyn_cast<ConstantInt>(v)) {
+                    const APInt integer = cnstInt->getValue();
+                    unsigned bitWidth = cnstInt->getBitWidth();
+                    int64_t  sext = cnstInt->getSExtValue();
+                    uint64_t zext = cnstInt->getZExtValue();
+                    if (integer.isSignedIntN(bitWidth)) {
+                        switch (bitWidth/8) {
+                            case 1:
+                                out << "\t.byte\t" << (int8_t)sext << std::endl;
+                                break;
+                            case 2:
+                                out << "\t.value\t" << (int16_t)sext << std::endl;
+                                break;
+                            case 4:
+                                out << "\t.long\t" << (int32_t)sext << std::endl;
+                                break;
+                            case 8:
+                                out << "\t.quad\t" << (int32_t)sext << std::endl;
+                                break;
+                            default:
+                                assert(false && "invalid global variable size");
+                        }
+                    }
+                    else {
+                        switch (bitWidth/8) {
+                            case 1:
+                                out << "\t.byte\t" << (uint8_t)sext << std::endl;
+                                break;
+                            case 2:
+                                out << "\t.value\t" << (uint16_t)sext << std::endl;
+                                break;
+                            case 4:
+                                out << "\t.long\t" << (uint32_t)sext << std::endl;
+                                break;
+                            case 8:
+                                out << "\t.quad\t" << (uint32_t)sext << std::endl;
+                                break;
+                            default:
+                                assert(false && "invalid global variable size");
+                        }
+                    } // end of integer check sign
+                }
+                else if (ConstantDataArray *cnstArray = dyn_cast<ConstantDataArray>(v)) {
+                    int num_elems = cnstArray->getNumElements();
+                    for (int i = 0; i < num_elems; i++) {
+                        int size = GetTypeSize(cnstArray->getElementType());
+                        switch (size) {
+                            case 1:
+                                out << "\t.byte\t" << (int8_t)cnstArray->getElementAsInteger(i) << std::endl;
+                                break;
+                            case 2:
+                                out << "\t.value\t" << (int16_t)cnstArray->getElementAsInteger(i) << std::endl;
+                                break;
+                            case 4:
+                                out << "\t.long\t" << (int32_t)cnstArray->getElementAsInteger(i) << std::endl;
+                                break;
+                            case 8:
+                                out << "\t.quad\t" << (int32_t)cnstArray->getElementAsInteger(i) << std::endl;
+                                break;
+                            default:
+                                assert(false && "not handle-able global variable array element size");
+                        }
                     }
                 }
                 else {
-                    switch (bitWidth/8) {
-                        case 1:
-                            out << "\t.byte\t" << (uint8_t)sext << std::endl;
-                            break;
-                        case 2:
-                            out << "\t.value\t" << (uint16_t)sext << std::endl;
-                            break;
-                        case 4:
-                            out << "\t.long\t" << (uint32_t)sext << std::endl;
-                            break;
-                        case 8:
-                            out << "\t.quad\t" << (uint32_t)sext << std::endl;
-                            break;
-                        default:
-                            assert(false && "invalid global variable size");
-                    }
-                } // end of integer check sign
+                    assert(false && "not handle-able global variable type");
+                } // end of constant checking
             }
         }
         
