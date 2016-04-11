@@ -39,9 +39,9 @@ test: $(EXE) $(bitcodes) $(targets)
 
 %.bc: %.c
 	@$(CC) -O0 -emit-llvm $< -S -c -o $@
-	@# @$(CC) -O0 -emit-llvm $< -S -c -o $@.tmp
-	@# @$(OPT) -mem2reg $@.tmp -S -o $@
-	@# @rm -rf $@.tmp
+	@#$(CC) -O0 -emit-llvm $< -S -c -o $@.tmp
+	@#$(OPT) -mem2reg $@.tmp -S -o $@
+	@#rm -rf $@.tmp
 
 clean:
 	@rm -rf $(EXE)

@@ -623,6 +623,18 @@ reg:    Trunc(reg)              { $cost[0].cost = $cost[2].cost + 3;            
             fstate->LoadFromReg($0, $2);
             fstate->RecordLiveness($2);
         };
+reg:    SExt(reg)              { $cost[0].cost = $cost[2].cost + 3;              } = {
+            $action[2](fstate);
+            fstate->CreateVirtualReg($0);
+            fstate->LoadFromReg($0, $2);
+            fstate->RecordLiveness($2);
+        };
+reg:    ZExt(reg)              { $cost[0].cost = $cost[2].cost + 3;              } = {
+            $action[2](fstate);
+            fstate->CreateVirtualReg($0);
+            fstate->LoadFromReg($0, $2);
+            fstate->RecordLiveness($2);
+        };
 reg:    BitCast(reg)            { $cost[0].cost = $cost[2].cost + 1; } = {
             if ($0->IsComputed()) return;
             $0->SetComputed(true);
