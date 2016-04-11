@@ -53,7 +53,11 @@ clean:
 	@rm -rf $(TEST_DIR)/.*.swp
 	@rm -rf $(TEST_DIR)/*.tmp
 	@rm -rf ./assignment6.tar.gz
-	@rm -rf ./llc_olive.h ./llc_olive.cpp
 
-.PHONY: opt compile tar test run push clean
+stampede: clean tar
+	@scp ../CMakeLists.txt tcheng@stampede.tacc.utexas.edu:/work/03741/tcheng/llvm/tools/CMakeLists.txt
+	@scp ../assignment6.tar.gz tcheng@stampede.tacc.utexas.edu:/work/03741/tcheng/llvm/tools/
+	@ssh tcheng@stampede.tacc.utexas.edu 'cd /work/03741/tcheng/llvm/tools/; rm -rf llc-olive; tar xvf ./assignment6.tar.gz; cd llc-olive; make clean test'
+
+.PHONY: opt compile tar test run push clean stampede
 .PRECIOUS: %.bc %.s
