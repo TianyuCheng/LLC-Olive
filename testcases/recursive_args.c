@@ -1,3 +1,5 @@
+#include <stdio.h>
+
 long long recursive_args(
         long long a,
         long long b,
@@ -12,7 +14,13 @@ long long recursive_args(
         return 1;
     } else {
         long long ret = a + b - c + d - e + f - g + h - i;
-        return recursive_args(a - 1, b, c, d, e, f, g, h, i);
+        printf("a: %llu\tb: %llu\tc: %llu\n",   a, b, c);
+        printf("d: %llu\te: %llu\tf: %llu\n",   d, e, f);
+        printf("g: %llu\th: %llu\ti: %llu\n\n", g, h, i);
+        long long rec = recursive_args(a - 1, b, c, d, e, f, g, h, i);
+        printf("ret: %llu\n  ", ret);
+        printf("rec: %llu\n\n", rec);
+        return ret * rec;
     }
 }
 

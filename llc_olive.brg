@@ -10,7 +10,7 @@
 %term Trunc=36 ZExt=37 SExt=38 FPToUI=39 FPToSI=40 UIToFP=41 SIToFP=42 FPTrunc=43 FPExt=44 PtrToInt=45 IntToPtr=46 BitCast=47 AddrSpaceCast=48
 %term CleanupPad=49 CatchPad=50
 %term ICmp=51 FCmp=52 PHI=53 Call=54 Select=55 UserOp1=56 UserOp2=57 VAArg=58 ExtractElement=59 InsertElement=60 ShuffleVector=61 ExtractValue=62 InsertValue=63 LandingPad=64
-%term REG=65 IMM=66 MEM=67 LABEL=68 ARGS=69 NOARGS=70 PTR=71 GlobalValue=72
+%term REG=65 IMM=66 MEM=67 LABEL=68 ARGS=69 NOARGS=70 PTR=71 GlobalValue=72 PHIInst=73
 
 %declare<void> stmt     <FUNCTION_STATE fstate>;
 %declare<void> value    <FUNCTION_STATE fstate>;
@@ -26,31 +26,37 @@
 %declare<void> args     <FUNCTION_STATE fstate, int n>;
 %%
 
-stmt:   reg                 { return 1;                                         } = { $action[1](fstate); };
-stmt:   mem                 { return 1;                                         } = { $action[1](fstate); };
+stmt:   reg                 { return 1;                                         } = { $action[1](fstate); /*fstate->RecordLiveness($1);*/ };
+stmt:   mem                 { return 1;                                         } = { $action[1](fstate); /*fstate->RecordLiveness($1);*/ };
 
-value:  reg                 { $cost[0].cost = $cost[1].cost;                    } = { $action[1](fstate); };
-value:  imm                 { $cost[0].cost = $cost[1].cost;                    } = { $action[1](fstate); };
-value:  mem                 { $cost[0].cost = $cost[1].cost;                    } = { $action[1](fstate); };
+value:  reg                 { $cost[0].cost = $cost[1].cost;                    } = { $action[1](fstate); /*fstate->RecordLiveness($1);*/ };
+value:  imm                 { $cost[0].cost = $cost[1].cost;                    } = { $action[1](fstate); /*fstate->RecordLiveness($1);*/ };
+value:  mem                 { $cost[0].cost = $cost[1].cost;                    } = { $action[1](fstate); /*fstate->RecordLiveness($1);*/ };
 
-ri:     reg                 { $cost[0].cost = $cost[1].cost;                    } = { $action[1](fstate); };
-ri:     imm                 { $cost[0].cost = $cost[1].cost;                    } = { $action[1](fstate); };
+ri:     reg                 { $cost[0].cost = $cost[1].cost;                    } = { $action[1](fstate); /*fstate->RecordLiveness($1);*/ };
+ri:     imm                 { $cost[0].cost = $cost[1].cost;                    } = { $action[1](fstate); /*fstate->RecordLiveness($1);*/ };
 
-rm:     reg                 { $cost[0].cost = $cost[1].cost;                    } = { $action[1](fstate); };
-rm:     mem                 { $cost[0].cost = $cost[1].cost;                    } = { $action[1](fstate); };
+rm:     reg                 { $cost[0].cost = $cost[1].cost;                    } = { $action[1](fstate); /*fstate->RecordLiveness($1);*/ };
+rm:     mem                 { $cost[0].cost = $cost[1].cost;                    } = { $action[1](fstate); /*fstate->RecordLiveness($1);*/ };
 
-rim:     reg                 { $cost[0].cost = $cost[1].cost;                    } = { $action[1](fstate); };
-rim:     imm                 { $cost[0].cost = $cost[1].cost;                    } = { $action[1](fstate); };
-rim:     mem                 { $cost[0].cost = $cost[1].cost;                    } = { $action[1](fstate); };
+rim:    reg                 { $cost[0].cost = $cost[1].cost;                    } = { $action[1](fstate); /*fstate->RecordLiveness($1);*/ };
+rim:    imm                 { $cost[0].cost = $cost[1].cost;                    } = { $action[1](fstate); /*fstate->RecordLiveness($1);*/ };
+rim:    mem                 { $cost[0].cost = $cost[1].cost;                    } = { $action[1](fstate); /*fstate->RecordLiveness($1);*/ };
 
-reg:    REG                 { $cost[0].cost = 1;                                } = { $0->UseAsRegister(); };
-imm:    Load(IMM)           { $cost[0].cost = 0;                                } = { $0->UseAsImmediate(); };
-imm:    IMM                 { $cost[0].cost = 0;                                } = { $0->UseAsImmediate(); };
-mem:    MEM                 { $cost[0].cost = 10;                               } = { $0->UseAsMemory(); };
-mem:    ptr                 { return 1;                                         } = { $action[1](fstate); $0->UseAsMemory(); };
+reg:    REG                 { $cost[0].cost = 1;                                } = { $0->UseAsRegister();  /*fstate->RecordLiveness($1);*/ };
+imm:    Load(IMM)           { $cost[0].cost = 0;                                } = { $0->UseAsImmediate(); /*                           */ };
+imm:    IMM                 { $cost[0].cost = 0;                                } = { $0->UseAsImmediate(); /*fstate->RecordLiveness($1);*/ };
+mem:    MEM                 { $cost[0].cost = 10;                               } = { $0->UseAsMemory();    /*fstate->RecordLiveness($1);*/ };
+mem:    ptr                 { return 1;                                         } = { $action[1](fstate); $0->UseAsMemory();  };
 mem:    GlobalValue         { $cost[0].cost = 1;                                } = { };
 label:  LABEL               { $cost[0].cost = 1;                                } = { };
 
+reg:    PHI(ri)             { $cost[0].cost = 1;                                } = {
+            // PHI is special because its register is pre-allocated
+            // ri should have already been computed
+            fstate->GenerateMovStmt($0, $2);
+            fstate->RecordLiveness($2);
+        };
 stmt:   Ret(imm)            { $cost[0].cost = $cost[2].cost + 1;                } = {
             /*
              * IR Ret takes a register argument
@@ -191,6 +197,7 @@ imm:    Add(imm, imm)       { $cost[0].cost = 0;    } = {
 
             fstate->RecordLiveness($2);
             fstate->RecordLiveness($3);
+            $0->UseAsImmediate();
         };
 reg:    Add(imm, imm)       { $cost[0].cost = 1;    } = {
             $action[2](fstate);
@@ -200,7 +207,7 @@ reg:    Add(imm, imm)       { $cost[0].cost = 1;    } = {
             // compute the arithmetic operation
             Tree *t1 = (new Tree(IMM))->GetTreeRef();
             t1->SetValue($2->GetValue() + $3->GetValue());
-            fstate->GenerateMovStmt($0, t1);
+            fstate->GenerateMovStmt($0, t1, $0->GetSuffix());
 
             fstate->RecordLiveness($2);
             fstate->RecordLiveness($3);
@@ -241,10 +248,11 @@ imm:    Sub(imm, imm)       { $cost[0].cost = 0;    } = {
             $action[3](fstate);
 
             // compute the arithmetic operation
-            $0->SetValue($2->GetValue() + $3->GetValue());
+            $0->SetValue($2->GetValue() - $3->GetValue());
 
             fstate->RecordLiveness($2);
             fstate->RecordLiveness($3);
+            $0->UseAsImmediate();
         };
 reg:    Sub(imm, imm)       { $cost[0].cost = 1;    } = {
             $action[2](fstate);
@@ -284,6 +292,7 @@ imm:    Mul(imm, imm)       { $cost[0].cost = 0;    } = {
 
             fstate->RecordLiveness($2);
             fstate->RecordLiveness($3);
+            $0->UseAsImmediate();
         };
 reg:    Mul(imm, imm)       { $cost[0].cost = 2;    } = {
             $action[2](fstate);
@@ -330,6 +339,31 @@ reg:    Mul(ri, reg)       { $cost[0].cost = $cost[2].cost + $cost[3].cost + 2; 
             fstate->RecordLiveness($3);
             $0->UseAsRegister();
         };
+imm:    UDiv(imm, imm)       { $cost[0].cost = 0;    } = {
+            $action[2](fstate);
+            $action[3](fstate);
+
+            // compute the arithmetic operation
+            $0->SetValue($2->GetValue() / $3->GetValue());
+
+            fstate->RecordLiveness($2);
+            fstate->RecordLiveness($3);
+            $0->UseAsImmediate();
+        };
+reg:    UDiv(imm, imm)       { $cost[0].cost = 2;    } = {
+            $action[2](fstate);
+            $action[3](fstate);
+            fstate->CreateVirtualReg($0);
+
+            // compute the arithmetic operation
+            Tree *t1 = (new Tree(IMM))->GetTreeRef();
+            t1->SetValue($2->GetValue() / $3->GetValue());
+            fstate->GenerateMovStmt($0, t1);
+
+            fstate->RecordLiveness($2);
+            fstate->RecordLiveness($3);
+            $0->UseAsRegister();
+        };
 reg:    UDiv(rm, rm)       { $cost[0].cost = $cost[2].cost + $cost[3].cost + 4;    } = {
             /*
              * IR Mul takes two arguments
@@ -342,6 +376,31 @@ reg:    UDiv(rm, rm)       { $cost[0].cost = $cost[2].cost + $cost[3].cost + 4; 
             fstate->GenerateMovStmt($0, $2);            // move one of the operands to %rax
             fstate->GenerateStmt("cqto");               // sign extension
             fstate->GenerateUnaryStmt("div", $3);       // generate div instruction
+
+            fstate->RecordLiveness($2);
+            fstate->RecordLiveness($3);
+            $0->UseAsRegister();
+        };
+imm:    SDiv(imm, imm)       { $cost[0].cost = 0;    } = {
+            $action[2](fstate);
+            $action[3](fstate);
+
+            // compute the arithmetic operation
+            $0->SetValue($2->GetValue() / $3->GetValue());
+
+            fstate->RecordLiveness($2);
+            fstate->RecordLiveness($3);
+            $0->UseAsImmediate();
+        };
+reg:    SDiv(imm, imm)       { $cost[0].cost = 2;    } = {
+            $action[2](fstate);
+            $action[3](fstate);
+            fstate->CreateVirtualReg($0);
+
+            // compute the arithmetic operation
+            Tree *t1 = (new Tree(IMM))->GetTreeRef();
+            t1->SetValue($2->GetValue() / $3->GetValue());
+            fstate->GenerateMovStmt($0, t1);
 
             fstate->RecordLiveness($2);
             fstate->RecordLiveness($3);
@@ -510,6 +569,14 @@ stmt:   Br(cond, label, label)   { $cost[0].cost = $cost[2].cost + $cost[3].cost
             $action[3](fstate);
         };
 reg:    Call(args)               { $cost[0].cost = $cost[2].cost + 5; } = {
+            int num_args = std::min(6, fstate->GetNumArgs());
+
+            fstate->AddInst(new X86Inst("call-begin", true));
+
+            // Need to preserve caller_saved_regs
+            for (int i = 1; i < 1 + num_args; i++)
+                fstate->GeneratePushStmt(caller_saved_regs[i]);
+
             $action[2](fstate, 0);
 
             std::stringstream ss;
@@ -519,23 +586,36 @@ reg:    Call(args)               { $cost[0].cost = $cost[2].cost + 5; } = {
 
             fstate->CreatePhysicalReg($0, RAX);
             $0->UseAsPhysicalRegister();
+
+            // Need to restore caller_saved_regs
+            for (int i = num_args; i > 0; i--)
+                fstate->GeneratePopStmt(caller_saved_regs[i]);
+
+            fstate->AddInst(new X86Inst("call-end", true));
         };
 args:   NOARGS                  { $cost[0].cost = 0;                  } = {
             // for args tree termination
         };
 args:   ARGS(value, args)        { $cost[0].cost = $cost[2].cost + $cost[3].cost; } = {
-            $action[2](fstate);
-            $action[3](fstate, n + 1);
             if (n < 6) {
+                // arguments in registers are added in order
+                $action[2](fstate);
+
                 $0->SetValue(params_regs[n]);
                 $0->UseAsPhysicalRegister();
                 if (!$2->IsPointer()) fstate->GenerateMovStmt($0, $2);
                 else                  fstate->LoadEffectiveAddress($0, $2);
+                fstate->RecordLiveness($2);
+
+                $action[3](fstate, n + 1);
             } else {
+                // arguments in memory are added in reversed order
                 // more than 6 argments should be pushed on stack in reversed order
+                $action[3](fstate, n + 1);
+                $action[2](fstate);
                 fstate->GeneratePushStmt($2);
+                fstate->RecordLiveness($2);
             }
-            fstate->RecordLiveness($2);
         };
 reg:    Trunc(reg)              { $cost[0].cost = $cost[2].cost + 3;              } = {
             $action[2](fstate);
@@ -564,8 +644,8 @@ reg:    BitCast(mem)            { $cost[0].cost = $cost[2].cost + 1; } = {
             $0->UseAsRegister();
         };
 ptr:    GetElementPtr(ri, imm, imm)    { $cost[0].cost = $cost[2].cost + $cost[3].cost + $cost[4].cost + 5; } = {
-            if ($0->IsComputed()) return;
-            $0->SetComputed(true);
+            // if ($0->IsComputed()) return;
+            // $0->SetComputed(true);
 
             // get size of array elements
             using namespace llvm;
@@ -592,8 +672,8 @@ ptr:    GetElementPtr(ri, imm, imm)    { $cost[0].cost = $cost[2].cost + $cost[3
             $0->UseAsPtr();
         };
 ptr:    GetElementPtr(mem, imm, imm)    { $cost[0].cost = $cost[2].cost + $cost[3].cost + $cost[4].cost + 5; } = {
-            if ($0->IsComputed()) return;
-            $0->SetComputed(true);
+            // if ($0->IsComputed()) return;
+            // $0->SetComputed(true);
 
             // get size of array elements
             using namespace llvm;
@@ -627,8 +707,8 @@ ptr:    GetElementPtr(mem, imm, imm)    { $cost[0].cost = $cost[2].cost + $cost[
             $0->UseAsPtr();
         };
 ptr:    GetElementPtr(ri, ri, reg)    { $cost[0].cost = $cost[2].cost + $cost[3].cost + $cost[4].cost + 5; } = {
-            if ($0->IsComputed()) return;
-            $0->SetComputed(true);
+            // if ($0->IsComputed()) return;
+            // $0->SetComputed(true);
 
             // get size of array elements
             using namespace llvm;
@@ -655,8 +735,8 @@ ptr:    GetElementPtr(ri, ri, reg)    { $cost[0].cost = $cost[2].cost + $cost[3]
             $0->UseAsPtr();
         };
 ptr:    GetElementPtr(mem, imm, reg)    { $cost[0].cost = $cost[2].cost + $cost[3].cost + $cost[4].cost + 5; } = {
-            if ($0->IsComputed()) return;
-            $0->SetComputed(true);
+            // if ($0->IsComputed()) return;
+            // $0->SetComputed(true);
 
             // get size of array elements
             using namespace llvm;

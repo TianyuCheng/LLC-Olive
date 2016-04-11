@@ -1,3 +1,4 @@
+#include <stdio.h>
 int main() {
     long long a = 3;
     long long b = 4;
@@ -12,6 +13,7 @@ int main() {
         }
     }
     // c = 4 now
+    printf("c=%llu\n", c);
     
     long long d = 0;
 

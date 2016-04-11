@@ -36,11 +36,15 @@ static int REGS_OFFSET = 10;        // we start using registers from REGS_OFFSET
 
 class SimpleRegisterAllocator {
 public:
-    SimpleRegisterAllocator(int n) : num_regs(n) {
+    SimpleRegisterAllocator(int n) : num_regs(n), spillable(0) {
         // num_regs represents number of GENERAL PURPOSE REGISTERS:
         // r10, r11, r12, r13, r14, r15, r16
-        for (int i = REGS_OFFSET; i < std::min(REGS_OFFSET + num_regs, MAX_REGS); i++)
+        for (int i = MAX_REGS-1; i >= std::max(REGS_OFFSET, MAX_REGS-num_regs); i--)
             register_status[i] = -1;      // not used
+
+        // R10 and R11 are disabled during function call arguments preparation
+        disabled_regs.insert(R10);
+        disabled_regs.insert(R11);
     }
     virtual ~SimpleRegisterAllocator() {
         for (auto it = liveness.begin(); it != liveness.end(); ++it)
@@ -81,6 +85,10 @@ public:
     }
     void RecordLiveStop(int reg, int endline) {
         auto it = liveness.find(reg);
+        if (it == liveness.end()) {
+            std::cerr << "Requested Virtual Reg: " << reg << std::endl;
+            DumpVirtualRegs();
+        }
         assert(it != liveness.end());
         liveness[reg]->AddInnerPoint(endline);
     }
@@ -88,7 +96,7 @@ public:
         out << "####################################################" << std::endl;
         for (auto it = liveness.begin(); it != liveness.end(); ++it) {
             LiveRange *range = it->second;
-            out << "Virtual Register " << it->first << ":\t" 
+            out << "# Virtual Register " << it->first << ":\t" 
                 << "start:\t" << range->startpoint << "\t"
                 << "end:\t"   << range->endpoint << "\t"
                 << "inner points: ";
@@ -111,12 +119,19 @@ public:
         auto it = std::find(nospills.begin(), nospills.end(), vir_reg);
         return it == nospills.end();
     }
+
+    void EnableSpill(FunctionState *fstate, std::ostream &out);
+    void DisableSpill(FunctionState *fstate, std::ostream &out);
+
 private:
     int num_regs;
+    int spillable;
     std::map<int, LiveRange*> liveness;
     std::map<int, int> register_status;
     std::vector<int> virtual2machine;   // map to value > 0 (good registers), value < 0 (memory), value = -1 (not allocated)
     std::vector<int> nospills;          // registers used in current instruction, cannot spill it
+    std::vector<Register> function_save_regs;
+    std::set<Register> disabled_regs;
 };
 
 

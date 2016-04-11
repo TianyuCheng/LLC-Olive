@@ -1,3 +1,5 @@
+#include <stdio.h>
+
 long long factorial(long long a) {
     if (a == 1) {
         return 1;

@@ -143,7 +143,7 @@ void Tree::DisplayTree(int indent) {
             std::cerr << "op: " << "label" << std::endl;
             break;
         case REG:
-            std::cerr << "op: " << "reg" << std::endl;
+            std::cerr << "op: " << "reg (" << val.AsVirtualReg() << ")" << std::endl;
             break;
         case IMM:
             std::cerr << "op: " << "imm" << std::endl;
@@ -153,6 +153,9 @@ void Tree::DisplayTree(int indent) {
             break;
         case GlobalValue:
             std::cerr << "op: " << "global" << std::endl;
+            break;
+        case PHI:
+            std::cerr << "op: " << "PHI-decomposite" << std::endl;
             break;
         default:
             std::cerr << "op: " << llvm::Instruction::getOpcodeName(op) << "(" << op << ")" << std::endl;

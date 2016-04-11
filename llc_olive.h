@@ -78,6 +78,7 @@
 #define NOARGS 70
 #define PTR 71
 #define GlobalValue 72
+#define PHIInst 73
 
 struct burm_state {
   int op;

@@ -25,15 +25,15 @@ class Tree
 {
 public:
     Tree(int opcode)
-        : op(opcode), val(0), refcnt(0), level(1), operand(nullptr), otype(-1), isReg(false), isPhysicalReg(false), computed(false), isPtr(false), suffix("q"), cnstInt(64, 0), cnstFP(0.0)
+        : op(opcode), val(0), refcnt(0), level(1), operand(nullptr), otype(-1), isReg(false), isPhysicalReg(false), computed(false), isPtr(false), isPhi(false), suffix("q"), cnstInt(64, 0), cnstFP(0.0), hasValue(false)
     {
     }
     Tree(int opcode, VALUE v)
-        : op(opcode), val(v), refcnt(0), level(1), operand(nullptr), otype(-1), isReg(false), isPhysicalReg(false), computed(false), isPtr(false), suffix("q"), cnstInt(64, 0), cnstFP(0.0)
+        : op(opcode), val(v), refcnt(0), level(1), operand(nullptr), otype(-1), isReg(false), isPhysicalReg(false), computed(false), isPtr(false), isPhi(false), suffix("q"), cnstInt(64, 0), cnstFP(0.0), hasValue(false)
     {
     }
     Tree(int opcode, Tree *l, Tree *r)
-        : op(opcode), val(0), refcnt(0), level(1), operand(nullptr), otype(-1), isReg(false), isPhysicalReg(false), computed(false), isPtr(false), suffix("q"), cnstInt(64, 0), cnstFP(0.0)
+        : op(opcode), val(0), refcnt(0), level(1), operand(nullptr), otype(-1), isReg(false), isPhysicalReg(false), computed(false), isPtr(false), isPhi(false), suffix("q"), cnstInt(64, 0), cnstFP(0.0), hasValue(false)
     {
         AddChild(l);
         AddChild(r);
@@ -47,8 +47,9 @@ public:
         return op; 
     }
     
-    void SetValue(VALUE v) { val = v; }
+    void SetValue(VALUE v) { val = v; hasValue = true; }
     VALUE& GetValue() { return val; }
+    bool HasValue() { return hasValue; }
 
     void SetFuncName(std::string n) { func_name = n; }
     std::string GetFuncName() const { return func_name; }
@@ -56,7 +57,8 @@ public:
     void SetVariableName(std::string n) { variable_name = n; }
     std::string GetVariableName() const { return variable_name; }
 
-    void UseAsPtr() { isReg = false, isPtr = true; otype = MEM; }
+    void UseAsPhi() { isPhi = true; otype = REG; }
+    void UseAsPtr() { isReg = false; isPtr = true; otype = MEM; }
     void UseAsMemory() { isReg = false; otype = MEM; }
     void UseAsImmediate() { isReg = false; otype = IMM; }
     void UseAsRegister() { isReg = true; otype = REG; }
@@ -66,6 +68,7 @@ public:
     bool IsVirtualReg() const { return isReg && !isPhysicalReg; }
     bool IsPhysicalReg() const { return isPhysicalReg; }
     bool IsPointer() const { return isPtr; }
+    bool IsPhiNode() const { return isPhi; }
     int  GetVirtualReg() const { return val.AsVirtualReg(); }
     int  GetPhysicalReg() const { return val.AsVirtualReg(); }
 
@@ -130,8 +133,10 @@ private:
 
     bool isReg;
     bool computed;
+    bool hasValue;
     bool isPhysicalReg;
     bool isPtr;
+    bool isPhi;
 
     X86Operand *operand;
     llvm::APInt   cnstInt;

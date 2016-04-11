@@ -8,6 +8,6 @@ enum { Alloca=29, Load=30, Store=31, GetElementPtr=32, Fence=33, AtomicCmpXchg=3
 enum { Trunc=36, ZExt=37, SExt=38, FPToUI=39, FPToSI=40, UIToFP=41, SIToFP=42, FPTrunc=43, FPExt=44, PtrToInt=45, IntToPtr=46, BitCast=47, AddrSpaceCast=48 };
 enum { CleanupPad=49, CatchPad=50 };
 enum { ICmp=51, FCmp=52, PHI=53, Call=54, Select=55, UserOp1=56, UserOp2=57, VAArg=58, ExtractElement=59, InsertElement=60, ShuffleVector=61, ExtractValue=62, InsertValue=63, LandingPad=64 };
-enum { REG=65, IMM=66, MEM=67, LABEL=68, ARGS=69, NOARGS=70, DUMMY=0 };
+enum { REG=65, IMM=66, MEM=67, LABEL=68, ARGS=69, NOARGS=70, PTR=71, GlobalValue=72, PHIInst=73, DUMMY=0 };
 
 #endif /* end of include guard: INSTS_H */

@@ -47,15 +47,21 @@ void InstructionToExprTree(FunctionState &fstate,
         errs() << "\n";
         instruction.print(errs());
         errs() << "\n";
+        errs() << "---------------------------------------------------------------\n";
 #endif
 #if VERBOSE > 1
-        errs() << "---------------------------------------------------------------\n";
         errs() << "OperandNum: " << instruction.getNumOperands() << "\t";
         errs() << "opcode: " << instruction.getOpcode() << "\n";
 #endif
 
+        bool process = true;
+        if (PHINode::classof(&instruction)) {
+            t = (fstate.FindFromTreeMap(&instruction))->GetTreeRef();
+            process = false;
+        }
+
         int num_operands = instruction.getNumOperands();
-        for (int i = 0; i < num_operands; i++) {
+        for (int i = 0; i < num_operands && process; i++) {
             Value *v = instruction.getOperand(i);
 #if VERBOSE > 1
             errs() << "\tOperand " << i << ":\t";
@@ -117,7 +123,7 @@ void InstructionToExprTree(FunctionState &fstate,
                         errs() << "OPERAND IS AN UNDEF VALUE\n";
                     }
 #endif
-                    // exit(EXIT_FAILURE);
+                    exit(EXIT_FAILURE);
                 }
             }
             else if (Instruction *def = dyn_cast<Instruction>(v)) {
@@ -409,17 +415,13 @@ void MakeAssembly(Function &func, /*RegisterAllocator &ra,*/ std::ostream &out) 
                         fstate.CreateLabel(block);
             } // end of operand loop
 
-#if 0
-            // check phi instruction
-            Instruction instruction = *inst;
-            if (PhiNode::classof(&instruction)) {
-                for (int i = 0; i < num_operands; i++) {
-                    Value *v = inst->getOperand(i);
-                    if (Instruction *def = dyn_cast<Instruction>(v)) {
-                        BasicBlock *parentBlock = def->getParent();
-                        Instruction *ins = new Instruction(v, , parentBlock);
-                    }
-                }
+#if 1
+            // pre-process phi instruction
+            Instruction &instruction = *inst;
+            if (PHINode::classof(&instruction)) {
+                PHINode *node = dyn_cast<PHINode>(&instruction);
+                assert(node && "cast to phi node must be successful");
+                fstate.AddToPhiMap(node);
             }
 #endif
         } // end of inst loop
@@ -435,6 +437,7 @@ void MakeAssembly(Function &func, /*RegisterAllocator &ra,*/ std::ostream &out) 
         }
         BasicBlockToExprTrees(fstate, treeList, bb);
 
+        bool phiProcessed = false;
         // iterate through tree list for each individual instruction tree
         // replace the complicated/common tree expression with registers
         for (unsigned i = size; i < treeList.size(); i++) {
@@ -446,14 +449,50 @@ void MakeAssembly(Function &func, /*RegisterAllocator &ra,*/ std::ostream &out) 
             errs() << Instruction::getOpcodeName(t->GetOpCode()) << "\tLEVEL:\t" << t->GetLevel() << "\tRefCount:\t" << t->GetRefCount() << "\n";
             errs() << "NumOperands: " << t->GetNumKids() << "\n";
 #endif
+
+            // check if the last instruction is termInst
+            if (Instruction::isTerminator(t->GetOpCode())) {
+                phiProcessed = true;
+                // process phi before terminator
+                std::vector<Tree*> phiList;
+                fstate.BasicBlockProcessPhi(gstate, phiList, &bb);
+                for (unsigned i = 0; i < phiList.size(); i++) {
+                    Tree *t = phiList[i];
+                    // t->DisplayTree();
+                    // if (t->GetOpCode() == REG) t->GetTreeRef();
+                    fstate.AddInst(new X86Inst("#-----------------#"));
+                    gen(t, &fstate);        // generate each phi instruction
+                    fstate.AddInst(new X86Inst("#-----------------#"));
+                }
+            }
+
             // check if this tree satisfies the condition for saving into register
             if (t->GetRefCount() == 0/* || t->GetRefCount() > 2*/) {
-#if VERBOSE > 2
+#if VERBOSE
                 t->DisplayTree();
 #endif
+                if (t->GetOpCode() == REG) t->GetTreeRef();
                 gen(t, &fstate);
             }
+
         } // end of Tree iteration
+
+        // If the basic block is not well formed, then there will be no terminator instruction
+        // we put this code here just to make sure phi gets processed
+        if (!phiProcessed) {
+            // after processing each block, we should process phi instructions as well
+            std::vector<Tree*> phiList;
+            fstate.BasicBlockProcessPhi(gstate, phiList, &bb);
+            for (unsigned i = 0; i < phiList.size(); i++) {
+                Tree *t = phiList[i];
+                // t->DisplayTree();
+                // if (t->GetOpCode() == REG) t->GetTreeRef();
+                fstate.AddInst(new X86Inst("#-----------------#"));
+                gen(t, &fstate);        // generate each phi instruction
+                fstate.AddInst(new X86Inst("#-----------------#"));
+            }
+        }
+
     } // end of basic block loop
     // ------------------------------------------------------------------------
 

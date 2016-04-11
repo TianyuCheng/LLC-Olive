@@ -14,11 +14,14 @@
 #include "llc_olive.h"
 #include "LiveRange.h"
 #include "RegisterAllocator.h"
+#include "GlobalState.h"
 
 class X86Inst;          // forward declaration
 class X86Operand;
 class Tree;
 class RegisterAllocator;
+
+#define PRINT_TO_PHYSICAL_REG    1
 
 /**
  * Function State Keeper
@@ -81,13 +84,94 @@ public:
     void AddToTreeMap(llvm::Argument *arg, Tree *t) {
         argsMap.insert(std::pair<llvm::Argument*, Tree*>(arg, t));
     }
-    Tree* FindFromTreeMap(llvm::Instruction *instruction) const {
+    void AddToPhiMap(llvm::PHINode *phi) {
+        Tree *phiTree = new Tree(REG);
+        CreateVirtualReg(phiTree);
+        phiRegs.insert(std::pair<llvm::PHINode*, Tree*>(phi, phiTree));
+        phiTree->UseAsVirtualRegister();
+
+        for (auto it = phi->block_begin(); it != phi->block_end(); it++) {
+            llvm::BasicBlock *bb = *it;
+            llvm::Value *v = phi->getIncomingValueForBlock(bb);
+            auto key = std::pair<llvm::PHINode*, llvm::BasicBlock*>(phi, bb);
+            phiMap[key] = v;
+        }
+    }
+    void BasicBlockProcessPhi(GlobalState &gstate, std::vector<Tree*> &treeList, llvm::BasicBlock *bb) {
+        for (auto it = phiMap.begin(); it != phiMap.end(); it++) {
+            auto key = it->first;
+            if (key.second != bb) continue;        // find corresponding pairs for this basic block
+            // llvm::errs() << "-------------------------- PHI --------------------------\n";
+            auto phi = key.first;
+            auto value = it->second;
+            Tree *phi_reg = phiRegs[phi];
+
+            using namespace llvm;
+            // errs() << "FOUND PHI OPERAND: ";
+            // value->print(errs()); errs() << "\n";
+
+            Tree *t = new Tree(PHI);
+            t->SetValue(phi_reg->GetValue());
+            t->UseAsPhi();
+            phiChildToParent[t] = phi_reg;      // backward mapping for recording liveness
+            // llvm::errs() << "PHI-REG VALUE: " << phi_reg->GetValue().val.i32s << "\n";
+
+            if (Instruction *inst = dyn_cast<Instruction>(value)) {
+                Tree *child = FindFromTreeMap(inst);
+                assert(child && "phi operand (instruction as reg) must be previously computed");
+                t->AddChild(child->GetTreeRef());
+            }
+            else if (Argument *arg = dyn_cast<Argument>(value)) {
+                Tree *child = FindFromTreeMap(arg);
+                assert(child && "phi operand (argument) must be previously computed");
+                t->AddChild(child->GetTreeRef());
+            }
+            else if (Constant *def = dyn_cast<Constant>(value)) {
+                if (ConstantInt *cnst = dyn_cast<ConstantInt>(value)) {
+                    // check if the operand is a constant int
+                    t->CastInt(cnst);
+                }
+                else if (ConstantFP *cnst = dyn_cast<ConstantFP>(value)) {
+                    // check if the operand is a constant int
+                    t->CastFP(cnst);
+                }
+                else if (GlobalVariable *gv = dyn_cast<GlobalVariable>(value)) {
+                    Tree *wrapper = gstate.FindFromGlobalMap(gv);
+                    assert(wrapper && "global operands must be previously defined");
+                    t->AddChild(wrapper->GetTreeRef());      // automatically increase the refcnt
+                }
+                // ... There are many kinds of constant, right now we do not deal with them ...
+                else {
+                    // this is bad and probably needs to terminate the execution
+                    errs() << "NOT IMPLEMENTED OTHER CONST TYPES FOR PHI:\t"; value->print(errs()); errs() << "\n";
+                    exit(EXIT_FAILURE);
+                }
+            }
+            else {
+                using namespace llvm;
+                value->print(errs()); errs() << "\n";
+                assert(false && "unsupported phi operands");
+            }
+            treeList.push_back(t);
+            // llvm::errs() << "PHI-REG refcnt: " << phi_reg->GetRefCount() << "\n";
+            RecordLiveStart(phi_reg->GetTreeRef());
+            // llvm::errs() << "------------------------ PHI END ------------------------\n";
+        }
+    }
+
+    Tree* FindFromTreeMap(llvm::Instruction *instruction) {
         auto it = instMap.find(instruction);
         if (it != instMap.end())
             return it->second;
+
+        if (llvm::PHINode::classof(instruction)) {
+            llvm::PHINode *node = llvm::dyn_cast<llvm::PHINode>(instruction);
+            assert(node && "cast to phi node must be successful");
+            return phiRegs[node];
+        }
         return nullptr;
     }
-    Tree* FindFromTreeMap(llvm::Argument *arg) const {
+    Tree* FindFromTreeMap(llvm::Argument *arg) {
         auto it = argsMap.find(arg);
         if (it != argsMap.end())
             return it->second;
@@ -104,6 +188,7 @@ public:
 
     int GetLabelID() const { return label_id; }
     int GetFunctionID() const { return function_id; }
+    int GetNumArgs() const { return num_args; }
 private:
     // information about the function
     std::string function_name;
@@ -122,6 +207,9 @@ private:
     std::map<llvm::BasicBlock*, Tree*> labelMap;
     std::map<llvm::Instruction*, Tree*> instMap;
     std::map<llvm::Argument*, Tree*> argsMap;
+    std::map<std::pair<llvm::PHINode*, llvm::BasicBlock*>, llvm::Value*> phiMap;
+    std::map<llvm::PHINode*, Tree*> phiRegs;
+    std::map<Tree*, Tree*> phiChildToParent;
     std::vector<X86Operand*> freeList;
 };
 
@@ -171,7 +259,7 @@ public:
                 out << "%" << registers[op.val.AsVirtualReg()];
             }
             else {
-#if 1
+#if PRINT_TO_PHYSICAL_REG
                 out << "%" << op.fstate->GetMCRegAt(op.val.AsVirtualReg());
 #else
                 out << "%" << op.val.AsVirtualReg();
@@ -263,8 +351,10 @@ public:
     X86Operand *GetSrc() const { return src; }
 
     void ResolveRegs(FunctionState *fstate, std::ostream &out) {
+#if PRINT_TO_PHYSICAL_REG
         if (dst) dst->ResolveRegs(fstate, out);
         if (src) src->ResolveRegs(fstate, out);
+#endif
     }
 
     friend std::ostream& operator<<(std::ostream& out, X86Inst &inst) {
@@ -281,6 +371,8 @@ public:
     bool IsCall() const { 
         return opname.compare(0, 4, "call") == 0;
     }
+    bool IsCallBegin() const { return opname == std::string("call-begin"); }    // before register push
+    bool IsCallEnd() const { return opname == std::string("call-end"); }        // after register pop
 private:
     std::string opname;
     X86Operand *dst;

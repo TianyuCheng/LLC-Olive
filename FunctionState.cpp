@@ -21,7 +21,7 @@ FunctionState::~FunctionState() {
 
 void FunctionState::PrintAssembly(std::ostream &out/*, RegisterAllocator &ra*/) {
 #if DEBUG
-    allocator.PrintLiveness(std::cerr);
+    allocator.PrintLiveness(out);
 #endif
     // print assembly to file
     
@@ -46,15 +46,16 @@ void FunctionState::PrintAssembly(std::ostream &out/*, RegisterAllocator &ra*/) 
 
     out << "\tsubq\t$" << (local_bytes - 4 * 8) << ",\t%rsp" << std::endl;
 
-    int lineNo = 0;
+    std::vector<Register> regs;
 
     // TODO: remember to print function begin and ends
     for (X86Inst *inst : assembly) {
         allocator.ResetNoSpills();          // reset registers that cannot be spilt
         inst->ResolveRegs(this, out);
-        if (inst->IsCall()) {
-            std::vector<Register> regs;
-            
+
+        if (inst->IsCallBegin()) {
+            allocator.DisableSpill(this, out);
+            regs.clear();
             // find which registers to preserve and restore
             // we skip RAX, because this register will be used as special purpose register
             for (int i = 1; i < 9; i++) {
@@ -62,29 +63,31 @@ void FunctionState::PrintAssembly(std::ostream &out/*, RegisterAllocator &ra*/) 
                 if (RegisterInUse(r))
                     regs.push_back(r);
             }
-            
             // push registers
             for (auto it = regs.begin(); it != regs.end(); it++)
                 out << "\tpushq\t%" << registers[*it] << "\t\t# push caller-save reg" << std::endl;
-
-            // print call instruction
-            out << "\txorq\t%rax,\t%rax" << std::endl;      // some functions, like printf requires rax to be 0
-            out << *inst;
-#if DEBUG
-            out << "\t# line " << lineNo++;
-#endif
-            out << std::endl;
-
+        }
+        else if (inst->IsCallEnd()) {
+            allocator.EnableSpill(this, out);
             // push registers
             for (auto it = regs.rbegin(); it != regs.rend(); it++)
                 out << "\tpopq\t%" << registers[*it] << "\t\t# pop caller-save reg" << std::endl;
         }
-        else {
-            out << *inst;
+        else if (inst->IsCall()) {
+            // print call instruction
+            out << "\txorq\t%rax,\t%rax" << std::endl;      // some functions, like printf requires rax to be 0
 #if DEBUG
-            out << "\t# line " << lineNo++;
+            out << *inst << "\t # Line " << current_line << std::endl;
+#else
+            out << *inst << std::endl;
 #endif
-            out << std::endl;
+        }
+        else {
+#if DEBUG
+            out << *inst << "\t # Line " << current_line << std::endl;
+#else
+            out << *inst << std::endl;
+#endif
         }
         current_line++;
     }
@@ -192,17 +195,26 @@ void FunctionState::CreateArgument(llvm::Argument *arg) {
 }
 
 void FunctionState::CreateVirtualReg(Tree *t) {
+    // do nothing for PhiNode, because the register value has been pre-allocated
+    if (t->IsPhiNode()) {
+        return;
+    }
+    // if already allocated, do nothing
+    if (t->HasValue()) {
+        return;
+    }
+
     using namespace llvm;
     int v = allocator.CreateVirtualReg();
     // llvm::Value *val = t->GetLLVMValue();
     // assert(val && "llvm value should not be null");
-    t->val = v;
+    t->SetValue(v);
     t->UseAsVirtualRegister();
     RecordLiveStart(t);                 // newly allocated virtual register must be added to liveness
 }
 
 void FunctionState::CreatePhysicalReg(Tree *t, Register r) {
-    t->val = r;
+    t->SetValue(r);
     t->UseAsPhysicalRegister();
     RecordLiveStart(t);                 // newly allocated virtual register must be added to liveness
 }
@@ -309,44 +321,89 @@ void FunctionState::GenerateBinaryStmt(const char *op_raw, X86Operand *dst, X86O
 }
 
 void FunctionState::GeneratePushStmt(Tree *t) {
-    if (t->GetOpCode() == REG) {
-        auto operand = new X86Operand(this, OP_TYPE::X86Reg, t->GetValue().AsVirtualReg());
-        AddInst(new X86Inst("pushq", operand));
-        freeList.push_back(operand);
+    switch (t->GetOpCode()) {
+        case Load:
+        case REG:
+            {
+                auto operand = new X86Operand(this, OP_TYPE::X86Reg, t->GetValue().AsVirtualReg());
+                AddInst(new X86Inst("pushq", operand));
+                freeList.push_back(operand);
+                break;
+            }
+        case IMM:
+            {
+                auto operand = new X86Operand(this, OP_TYPE::X86Imm, t->GetValue().AsVirtualReg());
+                AddInst(new X86Inst("pushq", operand));
+                freeList.push_back(operand);
+                break;
+            }
+        case MEM:
+            {
+                auto operand = GetLocalMemoryAddress(t);
+                AddInst(new X86Inst("pushq", operand));
+                freeList.push_back(operand);
+                break;
+            }
+        default:
+            std::cerr << "GeneratePushStmt: " << t->GetOpCode() << std::endl;
+            assert(false && "inalid push operand type");
     }
-    else if (t->GetOpCode() == IMM) {
-        auto operand = new X86Operand(this, OP_TYPE::X86Imm, t->GetValue().AsVirtualReg());
-        AddInst(new X86Inst("pushq", operand));
-        freeList.push_back(operand);
-    }
+    local_bytes += 8;
 }
 
 void FunctionState::GeneratePushStmt(Register r) {
     auto operand = new X86Operand(this, r);
     AddInst(new X86Inst("pushq", operand));
     freeList.push_back(operand);
+    local_bytes += 8;
 }
 
 void FunctionState::GeneratePopStmt(Tree *t) {
-    if (t->GetOpCode() == REG) {
-        auto operand = new X86Operand(this, OP_TYPE::X86Reg, t->GetValue().AsVirtualReg());
-        AddInst(new X86Inst("popq", operand));
-        freeList.push_back(operand);
+    switch (t->GetOpCode()) {
+        case Load:
+        case REG:
+            {
+                auto operand = new X86Operand(this, OP_TYPE::X86Reg, t->GetValue().AsVirtualReg());
+                AddInst(new X86Inst("popq", operand));
+                freeList.push_back(operand);
+                break;
+            }
+        case IMM:
+            {
+                auto operand = new X86Operand(this, OP_TYPE::X86Imm, t->GetValue().AsVirtualReg());
+                AddInst(new X86Inst("popq", operand));
+                freeList.push_back(operand);
+                break;
+            }
+        case MEM:
+            {
+                auto operand = GetLocalMemoryAddress(t);
+                AddInst(new X86Inst("popq", operand));
+                freeList.push_back(operand);
+                break;
+            }
+        default:
+            std::cerr << "GeneratePopStmt: " << t->GetOpCode() << std::endl;
+            assert(false && "inalid push operand type");
     }
-    else if (t->GetOpCode() == IMM) {
-        auto operand = new X86Operand(this, OP_TYPE::X86Imm, t->GetValue().AsVirtualReg());
-        AddInst(new X86Inst("popq", operand));
-        freeList.push_back(operand);
-    }
+    local_bytes -= 8;
 }
 
 void FunctionState::GeneratePopStmt(Register r) {
     auto operand = new X86Operand(this, r);
     AddInst(new X86Inst("popq", operand));
     freeList.push_back(operand);
+    local_bytes -= 8;
 }
 
 void FunctionState::RecordLiveness(Tree *t) {
+    if (t->IsPhiNode()) {
+        // this must be a phi node,
+        // find the real reference for phi
+        t = phiChildToParent[t];
+        assert(t && "phinode must have its parent");
+    }
+
     t->RemoveRef();                      // decrease the reference counter
 
     if (!t->IsVirtualReg()) return;      // we only care about registers' references
@@ -365,12 +422,18 @@ void FunctionState::RecordLiveness(Tree *t) {
 }
 
 void FunctionState::RecordLiveStart(Tree *t) {
+    if (t->IsPhiNode()) {
+        // this must be a phi node,
+        // find the real reference for phi
+        t = phiChildToParent[t];
+        assert(t && "phinode must have its parent");
+    }
 #if DEBUG
     if (t->IsVirtualReg())
         std::cerr << "Virtual REG start: " << t->GetValue().AsVirtualReg() << "\tRefCnt: " << t->GetRefCount() 
                   << "\tLineNo: " << (assembly.size() - 1)<< std::endl;
 #endif
-    if (!t->IsPhysicalReg() && (t->IsVirtualReg() && t->GetRefCount() > 0)) {
+    if (!t->IsPhysicalReg() && (t->IsVirtualReg()/* && t->GetRefCount() > 0*/)) {
         int reg = t->val.AsVirtualReg();
         int startLine = assembly.size();
         allocator.RecordLiveStart(reg, startLine);
