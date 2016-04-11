@@ -171,6 +171,12 @@ X86Operand* Tree::AsX86Operand(FunctionState *fs) {
     if (operand) return operand;
     if (otype == -1) otype = op;      // default
     switch (otype) {
+        case Add:
+        case Sub:
+        case Mul:
+        case UDiv:
+        case SDiv:
+        case Load:
         case REG:
             if (IsPhysicalReg())
                 operand = new X86Operand(fs, val.AsVirtualReg());

@@ -322,6 +322,11 @@ void FunctionState::GenerateBinaryStmt(const char *op_raw, X86Operand *dst, X86O
 
 void FunctionState::GeneratePushStmt(Tree *t) {
     switch (t->GetOpCode()) {
+        case Add:
+        case Sub:
+        case Mul:
+        case UDiv:
+        case SDiv:
         case Load:
         case REG:
             {
@@ -360,6 +365,11 @@ void FunctionState::GeneratePushStmt(Register r) {
 
 void FunctionState::GeneratePopStmt(Tree *t) {
     switch (t->GetOpCode()) {
+        case Add:
+        case Sub:
+        case Mul:
+        case UDiv:
+        case SDiv:
         case Load:
         case REG:
             {

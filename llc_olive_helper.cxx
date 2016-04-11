@@ -519,6 +519,7 @@ void MakeGlobalVariable(Module *module, std::ostream &out) {
             out << "\t.comm \t" << global.getComdat() << std::endl;
 
         switch (global.getAlignment()) {
+            case 0:
             case 1:
             {
                 assert(global.getNumOperands() > 0);
@@ -533,6 +534,7 @@ void MakeGlobalVariable(Module *module, std::ostream &out) {
             }
             default:
             {
+                // errs() << "alignment: " << global.getAlignment() << "\n";
                 assert(global.getNumOperands() > 0);
                 Value *v = global.getOperand(0);
                 if (ConstantInt *cnstInt = dyn_cast<ConstantInt>(v)) {
