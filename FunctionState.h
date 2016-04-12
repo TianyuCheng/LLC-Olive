@@ -41,8 +41,6 @@ public:
     void CreateVirtualReg(Tree *t);
     void CreatePhysicalReg(Tree *t, Register r);
     void AssignVirtualReg(Tree *lhs, Tree *rhs);
-    void LoadFromReg(Tree *dst, Tree *src);
-    void LoadFromImm(Tree *dst, Tree *src);
     void LoadEffectiveAddress(Tree *dst, Tree *src);
 
     void GenerateStmt(const char *op);
@@ -198,6 +196,7 @@ private:
 
     int local_bytes;
     int num_args;
+    int num_regs;
     int current_line;
 
     // information about instruction and registers

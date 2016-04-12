@@ -27,7 +27,7 @@ class Tree
 {
 public:
     Tree(int opcode)
-        : op(opcode), val(0), refcnt(0), level(1), operand(nullptr), 
+        : op(opcode), val(-1), refcnt(0), level(1), operand(nullptr), 
           otype(-1), isReg(false), isPhysicalReg(false), computed(false), 
           isPtr(false), isPhi(false), suffix("q"), phiParent(nullptr),
           cnstInt(64, 0), cnstFP(0.0), hasValue(false)
@@ -40,9 +40,10 @@ public:
           isPtr(false), isPhi(false), suffix("q"), phiParent(nullptr),
           cnstInt(64, 0), cnstFP(0.0), hasValue(false)
     {
+        SetValue(v);        // hasValue=true
     }
     Tree(int opcode, Tree *l, Tree *r)
-        : op(opcode), val(0), refcnt(0), level(1), operand(nullptr), 
+        : op(opcode), val(-1), refcnt(0), level(1), operand(nullptr), 
           otype(-1), isReg(false), isPhysicalReg(false), computed(false), 
           isPtr(false), isPhi(false), suffix("q"), phiParent(nullptr),
           cnstInt(64, 0), cnstFP(0.0), hasValue(false)
@@ -81,6 +82,7 @@ public:
     bool IsPhysicalReg() const { return isPhysicalReg; }
     bool IsPointer() const { return isPtr; }
     bool IsPhiNode() const { return isPhi; }
+    bool IsMemory() const { return otype == MEM; }
     int  GetVirtualReg() const { return val.AsVirtualReg(); }
     int  GetPhysicalReg() const { return val.AsVirtualReg(); }
 

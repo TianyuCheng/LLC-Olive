@@ -8,10 +8,10 @@
 #define burm_imm_NT 7
 #define burm_mem_NT 8
 #define burm_ptr_NT 9
-#define burm_bptr_NT 10
-#define burm_cond_NT 11
-#define burm_label_NT 12
-#define burm_args_NT 13
+#define burm_cond_NT 10
+#define burm_label_NT 11
+#define burm_args_NT 12
+#define burm___NT 13
 extern int burm_max_nt;
 
 
@@ -60,11 +60,6 @@ void ptr_action(struct burm_state *_s,
 FUNCTION_STATE fstate);
 
 
-void bptr_action(struct burm_state *_s, 
-
-FUNCTION_STATE fstate);
-
-
 void cond_action(struct burm_state *_s, 
 
 FUNCTION_STATE fstate);
@@ -97,10 +92,10 @@ static NODEPTR burm_np;
 #define burm_imm_NT 7
 #define burm_mem_NT 8
 #define burm_ptr_NT 9
-#define burm_bptr_NT 10
-#define burm_cond_NT 11
-#define burm_label_NT 12
-#define burm_args_NT 13
+#define burm_cond_NT 10
+#define burm_label_NT 11
+#define burm_args_NT 12
+#define burm___NT 13
 extern int burm_max_nt;
 int burm_max_nt = 13;
 
@@ -115,43 +110,42 @@ std::string burm_ntname[] = {
   "imm",
   "mem",
   "ptr",
-  "bptr",
   "cond",
   "label",
   "args",
+  "_",
   ""
 };
 
 static short burm_nts_0[] = { burm_reg_NT, 0 };
 static short burm_nts_1[] = { burm_mem_NT, 0 };
 static short burm_nts_2[] = { burm_imm_NT, 0 };
-static short burm_nts_3[] = { 0 };
-static short burm_nts_4[] = { burm_ptr_NT, 0 };
-static short burm_nts_5[] = { burm_ri_NT, 0 };
-static short burm_nts_6[] = { burm_imm_NT, burm_mem_NT, 0 };
-static short burm_nts_7[] = { burm_reg_NT, burm_mem_NT, 0 };
+static short burm_nts_3[] = { burm_ptr_NT, 0 };
+static short burm_nts_4[] = { 0 };
+static short burm_nts_5[] = { burm___NT, 0 };
+static short burm_nts_6[] = { burm_ri_NT, 0 };
+static short burm_nts_7[] = { burm_ri_NT, burm_mem_NT, 0 };
 static short burm_nts_8[] = { burm_mem_NT, burm_mem_NT, 0 };
-static short burm_nts_9[] = { burm_imm_NT, burm_imm_NT, 0 };
-static short burm_nts_10[] = { burm_reg_NT, burm_rim_NT, 0 };
-static short burm_nts_11[] = { burm_ri_NT, burm_reg_NT, 0 };
-static short burm_nts_12[] = { burm_imm_NT, burm_reg_NT, 0 };
-static short burm_nts_13[] = { burm_rm_NT, burm_rm_NT, 0 };
-static short burm_nts_14[] = { burm_rm_NT, burm_imm_NT, 0 };
-static short burm_nts_15[] = { burm_cond_NT, 0 };
-static short burm_nts_16[] = { burm_reg_NT, burm_imm_NT, 0 };
-static short burm_nts_17[] = { burm_reg_NT, burm_reg_NT, 0 };
-static short burm_nts_18[] = { burm_label_NT, 0 };
-static short burm_nts_19[] = { burm_cond_NT, burm_label_NT, burm_label_NT, 0 };
-static short burm_nts_20[] = { burm_args_NT, 0 };
-static short burm_nts_21[] = { burm_value_NT, burm_args_NT, 0 };
-static short burm_nts_22[] = { burm_ri_NT, burm_imm_NT, burm_imm_NT, 0 };
-static short burm_nts_23[] = { burm_mem_NT, burm_imm_NT, burm_imm_NT, 0 };
-static short burm_nts_24[] = { burm_ri_NT, burm_ri_NT, burm_reg_NT, 0 };
-static short burm_nts_25[] = { burm_mem_NT, burm_imm_NT, burm_reg_NT, 0 };
-static short burm_nts_26[] = { burm_bptr_NT, burm_imm_NT, 0 };
-static short burm_nts_27[] = { burm_bptr_NT, burm_reg_NT, 0 };
-static short burm_nts_28[] = { burm_mem_NT, burm_imm_NT, 0 };
-static short burm_nts_29[] = { burm_mem_NT, burm_reg_NT, 0 };
+static short burm_nts_9[] = { burm_ri_NT, burm_ptr_NT, 0 };
+static short burm_nts_10[] = { burm_mem_NT, burm_ptr_NT, 0 };
+static short burm_nts_11[] = { burm_ptr_NT, burm_mem_NT, 0 };
+static short burm_nts_12[] = { burm_imm_NT, burm_imm_NT, 0 };
+static short burm_nts_13[] = { burm_reg_NT, burm_rim_NT, 0 };
+static short burm_nts_14[] = { burm_ri_NT, burm_reg_NT, 0 };
+static short burm_nts_15[] = { burm_imm_NT, burm_reg_NT, 0 };
+static short burm_nts_16[] = { burm_rm_NT, burm_rm_NT, 0 };
+static short burm_nts_17[] = { burm_rm_NT, burm_imm_NT, 0 };
+static short burm_nts_18[] = { burm_cond_NT, 0 };
+static short burm_nts_19[] = { burm_reg_NT, burm_imm_NT, 0 };
+static short burm_nts_20[] = { burm_reg_NT, burm_reg_NT, 0 };
+static short burm_nts_21[] = { burm_label_NT, 0 };
+static short burm_nts_22[] = { burm_cond_NT, burm_label_NT, burm_label_NT, 0 };
+static short burm_nts_23[] = { burm_args_NT, 0 };
+static short burm_nts_24[] = { burm_value_NT, burm_args_NT, 0 };
+static short burm_nts_25[] = { burm_reg_NT, burm___NT, burm_imm_NT, 0 };
+static short burm_nts_26[] = { burm_reg_NT, burm___NT, burm_reg_NT, 0 };
+static short burm_nts_27[] = { burm_mem_NT, burm___NT, burm_imm_NT, 0 };
+static short burm_nts_28[] = { burm_mem_NT, burm___NT, burm_reg_NT, 0 };
 
 short *burm_nts[] = {
   burm_nts_0,  /* 0 */
@@ -159,74 +153,70 @@ short *burm_nts[] = {
   burm_nts_0,  /* 2 */
   burm_nts_2,  /* 3 */
   burm_nts_1,  /* 4 */
-  burm_nts_0,  /* 5 */
-  burm_nts_2,  /* 6 */
-  burm_nts_0,  /* 7 */
-  burm_nts_1,  /* 8 */
-  burm_nts_0,  /* 9 */
-  burm_nts_2,  /* 10 */
-  burm_nts_1,  /* 11 */
-  burm_nts_3,  /* 12 */
-  burm_nts_3,  /* 13 */
-  burm_nts_3,  /* 14 */
-  burm_nts_3,  /* 15 */
+  burm_nts_3,  /* 5 */
+  burm_nts_0,  /* 6 */
+  burm_nts_2,  /* 7 */
+  burm_nts_0,  /* 8 */
+  burm_nts_1,  /* 9 */
+  burm_nts_0,  /* 10 */
+  burm_nts_2,  /* 11 */
+  burm_nts_1,  /* 12 */
+  burm_nts_4,  /* 13 */
+  burm_nts_4,  /* 14 */
+  burm_nts_4,  /* 15 */
   burm_nts_4,  /* 16 */
-  burm_nts_3,  /* 17 */
-  burm_nts_3,  /* 18 */
+  burm_nts_4,  /* 17 */
+  burm_nts_4,  /* 18 */
   burm_nts_5,  /* 19 */
-  burm_nts_2,  /* 20 */
-  burm_nts_0,  /* 21 */
-  burm_nts_2,  /* 22 */
-  burm_nts_0,  /* 23 */
-  burm_nts_2,  /* 24 */
-  burm_nts_1,  /* 25 */
-  burm_nts_6,  /* 26 */
-  burm_nts_7,  /* 27 */
-  burm_nts_8,  /* 28 */
-  burm_nts_9,  /* 29 */
-  burm_nts_9,  /* 30 */
-  burm_nts_10,  /* 31 */
-  burm_nts_11,  /* 32 */
-  burm_nts_9,  /* 33 */
-  burm_nts_9,  /* 34 */
-  burm_nts_10,  /* 35 */
-  burm_nts_12,  /* 36 */
-  burm_nts_9,  /* 37 */
-  burm_nts_9,  /* 38 */
-  burm_nts_10,  /* 39 */
-  burm_nts_11,  /* 40 */
-  burm_nts_9,  /* 41 */
-  burm_nts_9,  /* 42 */
-  burm_nts_13,  /* 43 */
-  burm_nts_9,  /* 44 */
-  burm_nts_9,  /* 45 */
-  burm_nts_13,  /* 46 */
-  burm_nts_14,  /* 47 */
-  burm_nts_14,  /* 48 */
-  burm_nts_15,  /* 49 */
-  burm_nts_9,  /* 50 */
-  burm_nts_16,  /* 51 */
-  burm_nts_17,  /* 52 */
-  burm_nts_18,  /* 53 */
-  burm_nts_19,  /* 54 */
-  burm_nts_20,  /* 55 */
-  burm_nts_3,  /* 56 */
-  burm_nts_21,  /* 57 */
+  burm_nts_6,  /* 20 */
+  burm_nts_2,  /* 21 */
+  burm_nts_6,  /* 22 */
+  burm_nts_1,  /* 23 */
+  burm_nts_7,  /* 24 */
+  burm_nts_8,  /* 25 */
+  burm_nts_9,  /* 26 */
+  burm_nts_10,  /* 27 */
+  burm_nts_11,  /* 28 */
+  burm_nts_12,  /* 29 */
+  burm_nts_12,  /* 30 */
+  burm_nts_13,  /* 31 */
+  burm_nts_14,  /* 32 */
+  burm_nts_12,  /* 33 */
+  burm_nts_12,  /* 34 */
+  burm_nts_13,  /* 35 */
+  burm_nts_15,  /* 36 */
+  burm_nts_12,  /* 37 */
+  burm_nts_12,  /* 38 */
+  burm_nts_13,  /* 39 */
+  burm_nts_14,  /* 40 */
+  burm_nts_12,  /* 41 */
+  burm_nts_12,  /* 42 */
+  burm_nts_16,  /* 43 */
+  burm_nts_12,  /* 44 */
+  burm_nts_12,  /* 45 */
+  burm_nts_16,  /* 46 */
+  burm_nts_17,  /* 47 */
+  burm_nts_17,  /* 48 */
+  burm_nts_18,  /* 49 */
+  burm_nts_12,  /* 50 */
+  burm_nts_19,  /* 51 */
+  burm_nts_20,  /* 52 */
+  burm_nts_21,  /* 53 */
+  burm_nts_22,  /* 54 */
+  burm_nts_23,  /* 55 */
+  burm_nts_4,  /* 56 */
+  burm_nts_24,  /* 57 */
   burm_nts_0,  /* 58 */
   burm_nts_0,  /* 59 */
   burm_nts_0,  /* 60 */
   burm_nts_0,  /* 61 */
   burm_nts_1,  /* 62 */
-  burm_nts_22,  /* 63 */
-  burm_nts_23,  /* 64 */
-  burm_nts_24,  /* 65 */
-  burm_nts_25,  /* 66 */
-  burm_nts_26,  /* 67 */
-  burm_nts_27,  /* 68 */
-  burm_nts_28,  /* 69 */
-  burm_nts_29,  /* 70 */
-  burm_nts_0,  /* 71 */
-  burm_nts_1,  /* 72 */
+  burm_nts_25,  /* 63 */
+  burm_nts_26,  /* 64 */
+  burm_nts_27,  /* 65 */
+  burm_nts_28,  /* 66 */
+  burm_nts_19,  /* 67 */
+  burm_nts_20,  /* 68 */
 };
 
 char burm_arity[] = {
@@ -390,30 +380,30 @@ std::string burm_string[] = {
   /* 2 */  "value: reg",
   /* 3 */  "value: imm",
   /* 4 */  "value: mem",
-  /* 5 */  "ri: reg",
-  /* 6 */  "ri: imm",
-  /* 7 */  "rm: reg",
-  /* 8 */  "rm: mem",
-  /* 9 */  "rim: reg",
-  /* 10 */  "rim: imm",
-  /* 11 */  "rim: mem",
-  /* 12 */  "reg: REG",
-  /* 13 */  "imm: Load(IMM)",
-  /* 14 */  "imm: IMM",
-  /* 15 */  "mem: MEM",
-  /* 16 */  "mem: ptr",
+  /* 5 */  "reg: ptr",
+  /* 6 */  "ri: reg",
+  /* 7 */  "ri: imm",
+  /* 8 */  "rm: reg",
+  /* 9 */  "rm: mem",
+  /* 10 */  "rim: reg",
+  /* 11 */  "rim: imm",
+  /* 12 */  "rim: mem",
+  /* 13 */  "reg: REG",
+  /* 14 */  "imm: Load(IMM)",
+  /* 15 */  "imm: IMM",
+  /* 16 */  "mem: MEM",
   /* 17 */  "mem: GlobalValue",
   /* 18 */  "label: LABEL",
-  /* 19 */  "reg: PHI(ri)",
-  /* 20 */  "stmt: Ret(imm)",
-  /* 21 */  "stmt: Ret(reg)",
-  /* 22 */  "mem: Alloca(imm)",
-  /* 23 */  "reg: Load(reg)",
-  /* 24 */  "reg: Load(imm)",
-  /* 25 */  "reg: Load(mem)",
-  /* 26 */  "stmt: Store(imm,mem)",
-  /* 27 */  "stmt: Store(reg,mem)",
-  /* 28 */  "stmt: Store(mem,mem)",
+  /* 19 */  "reg: PHI(_)",
+  /* 20 */  "stmt: Ret(ri)",
+  /* 21 */  "mem: Alloca(imm)",
+  /* 22 */  "reg: Load(ri)",
+  /* 23 */  "reg: Load(mem)",
+  /* 24 */  "stmt: Store(ri,mem)",
+  /* 25 */  "stmt: Store(mem,mem)",
+  /* 26 */  "stmt: Store(ri,ptr)",
+  /* 27 */  "stmt: Store(mem,ptr)",
+  /* 28 */  "stmt: Store(ptr,mem)",
   /* 29 */  "imm: Add(imm,imm)",
   /* 30 */  "reg: Add(imm,imm)",
   /* 31 */  "reg: Add(reg,rim)",
@@ -448,16 +438,12 @@ std::string burm_string[] = {
   /* 60 */  "reg: ZExt(reg)",
   /* 61 */  "reg: BitCast(reg)",
   /* 62 */  "reg: BitCast(mem)",
-  /* 63 */  "ptr: GetElementPtr(ri,imm,imm)",
-  /* 64 */  "ptr: GetElementPtr(mem,imm,imm)",
-  /* 65 */  "ptr: GetElementPtr(ri,ri,reg)",
-  /* 66 */  "ptr: GetElementPtr(mem,imm,reg)",
-  /* 67 */  "ptr: GetElementPtr(bptr,imm,DUMMY)",
-  /* 68 */  "ptr: GetElementPtr(bptr,reg,DUMMY)",
-  /* 69 */  "ptr: GetElementPtr(mem,imm,DUMMY)",
-  /* 70 */  "ptr: GetElementPtr(mem,reg,DUMMY)",
-  /* 71 */  "bptr: Load(reg)",
-  /* 72 */  "bptr: Load(mem)",
+  /* 63 */  "ptr: GetElementPtr(reg,_,imm)",
+  /* 64 */  "ptr: GetElementPtr(reg,_,reg)",
+  /* 65 */  "ptr: GetElementPtr(mem,_,imm)",
+  /* 66 */  "ptr: GetElementPtr(mem,_,reg)",
+  /* 67 */  "ptr: GetElementPtr(reg,imm,DUMMY)",
+  /* 68 */  "ptr: GetElementPtr(reg,reg,DUMMY)",
 };
 
 
@@ -535,86 +521,78 @@ int burm_file_numbers[] = {
   /* 66 */  0,
   /* 67 */  0,
   /* 68 */  0,
-  /* 69 */  0,
-  /* 70 */  0,
-  /* 71 */  0,
-  /* 72 */  0,
 };
 
 int burm_line_numbers[] = {
-  /* 0 */  30,
-  /* 1 */  31,
-  /* 2 */  33,
-  /* 3 */  34,
-  /* 4 */  35,
-  /* 5 */  37,
-  /* 6 */  38,
-  /* 7 */  40,
-  /* 8 */  41,
-  /* 9 */  43,
-  /* 10 */  44,
-  /* 11 */  45,
-  /* 12 */  47,
-  /* 13 */  48,
-  /* 14 */  49,
-  /* 15 */  50,
-  /* 16 */  51,
-  /* 17 */  52,
-  /* 18 */  53,
-  /* 19 */  55,
-  /* 20 */  62,
-  /* 21 */  79,
-  /* 22 */  96,
+  /* 0 */  29,
+  /* 1 */  30,
+  /* 2 */  32,
+  /* 3 */  33,
+  /* 4 */  34,
+  /* 5 */  36,
+  /* 6 */  37,
+  /* 7 */  38,
+  /* 8 */  40,
+  /* 9 */  41,
+  /* 10 */  43,
+  /* 11 */  44,
+  /* 12 */  45,
+  /* 13 */  47,
+  /* 14 */  48,
+  /* 15 */  49,
+  /* 16 */  50,
+  /* 17 */  51,
+  /* 18 */  52,
+  /* 19 */  54,
+  /* 20 */  61,
+  /* 21 */  80,
+  /* 22 */  118,
   /* 23 */  133,
-  /* 24 */  147,
-  /* 25 */  158,
-  /* 26 */  169,
-  /* 27 */  180,
-  /* 28 */  191,
-  /* 29 */  207,
-  /* 30 */  220,
-  /* 31 */  236,
-  /* 32 */  252,
-  /* 33 */  268,
-  /* 34 */  281,
-  /* 35 */  297,
-  /* 36 */  313,
-  /* 37 */  330,
-  /* 38 */  343,
-  /* 39 */  359,
-  /* 40 */  375,
-  /* 41 */  392,
-  /* 42 */  405,
-  /* 43 */  421,
-  /* 44 */  439,
-  /* 45 */  452,
-  /* 46 */  468,
-  /* 47 */  486,
-  /* 48 */  511,
-  /* 49 */  536,
-  /* 50 */  537,
-  /* 51 */  550,
-  /* 52 */  562,
-  /* 53 */  574,
-  /* 54 */  587,
-  /* 55 */  648,
-  /* 56 */  673,
-  /* 57 */  676,
-  /* 58 */  697,
-  /* 59 */  705,
-  /* 60 */  713,
-  /* 61 */  721,
-  /* 62 */  731,
-  /* 63 */  741,
-  /* 64 */  769,
-  /* 65 */  805,
-  /* 66 */  833,
-  /* 67 */  869,
-  /* 68 */  896,
-  /* 69 */  923,
-  /* 70 */  957,
-  /* 71 */  991,
-  /* 72 */  1002,
+  /* 24 */  145,
+  /* 25 */  157,
+  /* 26 */  174,
+  /* 27 */  196,
+  /* 28 */  214,
+  /* 29 */  234,
+  /* 30 */  248,
+  /* 31 */  265,
+  /* 32 */  282,
+  /* 33 */  299,
+  /* 34 */  313,
+  /* 35 */  330,
+  /* 36 */  347,
+  /* 37 */  365,
+  /* 38 */  379,
+  /* 39 */  396,
+  /* 40 */  413,
+  /* 41 */  431,
+  /* 42 */  445,
+  /* 43 */  462,
+  /* 44 */  481,
+  /* 45 */  495,
+  /* 46 */  512,
+  /* 47 */  531,
+  /* 48 */  557,
+  /* 49 */  583,
+  /* 50 */  584,
+  /* 51 */  598,
+  /* 52 */  611,
+  /* 53 */  624,
+  /* 54 */  637,
+  /* 55 */  698,
+  /* 56 */  726,
+  /* 57 */  729,
+  /* 58 */  753,
+  /* 59 */  762,
+  /* 60 */  771,
+  /* 61 */  780,
+  /* 62 */  790,
+  /* 63 */  800,
+  /* 64 */  827,
+  /* 65 */  854,
+  /* 66 */  886,
+  /* 67 */  918,
+  /* 68 */  945,
 };
 
 #pragma GCC diagnostic push
@@ -625,7 +603,8 @@ static short burm_decode_stmt[] = {
   0,
   1,
   20,
-  21,
+  24,
+  25,
   26,
   27,
   28,
@@ -643,30 +622,30 @@ static short burm_decode_value[] = {
 
 static short burm_decode_ri[] = {
    -1,
-  5,
   6,
+  7,
 };
 
 static short burm_decode_rm[] = {
    -1,
-  7,
   8,
+  9,
 };
 
 static short burm_decode_rim[] = {
    -1,
-  9,
   10,
   11,
+  12,
 };
 
 static short burm_decode_reg[] = {
    -1,
-  12,
+  5,
+  13,
   19,
+  22,
   23,
-  24,
-  25,
   30,
   31,
   32,
@@ -692,8 +671,8 @@ static short burm_decode_reg[] = {
 
 static short burm_decode_imm[] = {
    -1,
-  13,
   14,
+  15,
   29,
   33,
   37,
@@ -703,10 +682,9 @@ static short burm_decode_imm[] = {
 
 static short burm_decode_mem[] = {
    -1,
-  15,
   16,
   17,
-  22,
+  21,
 };
 
 static short burm_decode_ptr[] = {
@@ -717,14 +695,6 @@ static short burm_decode_ptr[] = {
   66,
   67,
   68,
-  69,
-  70,
-};
-
-static short burm_decode_bptr[] = {
-   -1,
-  71,
-  72,
 };
 
 static short burm_decode_cond[] = {
@@ -745,6 +715,10 @@ static short burm_decode_args[] = {
   57,
 };
 
+static short burm_decode__[] = {
+   -1,
+};
+
 int burm_rule(struct burm_state *state, int goalnt) {
   burm_assert(goalnt >= 1 && goalnt <= 13,
         PANIC("Bad goal nonterminal %d in burm_rule\n", goalnt));
@@ -760,10 +734,10 @@ int burm_rule(struct burm_state *state, int goalnt) {
   case burm_imm_NT:  return burm_decode_imm[((struct burm_state *)state)->rule.burm_imm];
   case burm_mem_NT:  return burm_decode_mem[((struct burm_state *)state)->rule.burm_mem];
   case burm_ptr_NT:  return burm_decode_ptr[((struct burm_state *)state)->rule.burm_ptr];
-  case burm_bptr_NT:  return burm_decode_bptr[((struct burm_state *)state)->rule.burm_bptr];
   case burm_cond_NT:  return burm_decode_cond[((struct burm_state *)state)->rule.burm_cond];
   case burm_label_NT:  return burm_decode_label[((struct burm_state *)state)->rule.burm_label];
   case burm_args_NT:  return burm_decode_args[((struct burm_state *)state)->rule.burm_args];
+  case burm___NT:  return burm_decode__[((struct burm_state *)state)->rule.burm__];
   default:
     burm_assert(0, PANIC("Bad goal nonterminal %d in burm_rule\n", goalnt));
   }
@@ -827,63 +801,63 @@ int burm_cost_code(COST *_c, int _ern,struct burm_state *_s)
 {
 
 
- (*_c).cost = _s->cost[burm_reg_NT].cost;                    
+ (*_c).cost = _s->cost[burm_ptr_NT].cost;                    
 }
   break;
   case 6:
 {
 
 
- (*_c).cost = _s->cost[burm_imm_NT].cost;                    
+ (*_c).cost = _s->cost[burm_reg_NT].cost;                    
 }
   break;
   case 7:
 {
 
 
- (*_c).cost = _s->cost[burm_reg_NT].cost;                    
+ (*_c).cost = _s->cost[burm_imm_NT].cost;                    
 }
   break;
   case 8:
 {
 
 
- (*_c).cost = _s->cost[burm_mem_NT].cost;                    
+ (*_c).cost = _s->cost[burm_reg_NT].cost;                    
 }
   break;
   case 9:
 {
 
 
- (*_c).cost = _s->cost[burm_reg_NT].cost;                    
+ (*_c).cost = _s->cost[burm_mem_NT].cost;                    
 }
   break;
   case 10:
 {
 
 
- (*_c).cost = _s->cost[burm_imm_NT].cost;                    
+ (*_c).cost = _s->cost[burm_reg_NT].cost;                    
 }
   break;
   case 11:
 {
 
 
- (*_c).cost = _s->cost[burm_mem_NT].cost;                    
+ (*_c).cost = _s->cost[burm_imm_NT].cost;                    
 }
   break;
   case 12:
 {
 
 
- (*_c).cost = 1;                                
+ (*_c).cost = _s->cost[burm_mem_NT].cost;                    
 }
   break;
   case 13:
 {
 
 
- (*_c).cost = 0;                                
+ (*_c).cost = 1;                                
 }
   break;
   case 14:
@@ -897,14 +871,14 @@ int burm_cost_code(COST *_c, int _ern,struct burm_state *_s)
 {
 
 
- (*_c).cost = 10;                               
+ (*_c).cost = 0;                                
 }
   break;
   case 16:
 {
 
 
- return 1;                                         
+ (*_c).cost = 10;                               
 }
   break;
   case 17:
@@ -922,6 +896,7 @@ int burm_cost_code(COST *_c, int _ern,struct burm_state *_s)
 }
   break;
   case 19:
+    _children = GET_KIDS(_s->node);
 {
 
 
@@ -932,63 +907,63 @@ int burm_cost_code(COST *_c, int _ern,struct burm_state *_s)
 {
 
 
- (*_c).cost = _s->kids[0]->cost[burm_imm_NT].cost + 1;                
+ (*_c).cost = _s->kids[0]->cost[burm_ri_NT].cost + 1;                
 }
   break;
   case 21:
 {
 
 
- (*_c).cost = _s->kids[0]->cost[burm_reg_NT].cost + 1;                
+ (*_c).cost = _s->kids[0]->cost[burm_imm_NT].cost + 1;    
 }
   break;
   case 22:
 {
 
 
- (*_c).cost = _s->kids[0]->cost[burm_imm_NT].cost + 1;    
+ (*_c).cost = _s->kids[0]->cost[burm_ri_NT].cost + 1;    
 }
   break;
   case 23:
 {
 
 
- (*_c).cost = _s->kids[0]->cost[burm_reg_NT].cost + 1;    
+ (*_c).cost = _s->kids[0]->cost[burm_mem_NT].cost + 5;    
 }
   break;
   case 24:
 {
 
 
- (*_c).cost = _s->kids[0]->cost[burm_imm_NT].cost + 1;    
+ if (_s->kids[0]->node->IsPointer()) return 0; else (*_c).cost = _s->kids[0]->cost[burm_ri_NT].cost + _s->kids[1]->cost[burm_mem_NT].cost;    
 }
   break;
   case 25:
 {
 
 
- (*_c).cost = _s->kids[0]->cost[burm_mem_NT].cost + 1;    
+ (*_c).cost = _s->kids[0]->cost[burm_mem_NT].cost + _s->kids[1]->cost[burm_mem_NT].cost;    
 }
   break;
   case 26:
 {
 
 
- (*_c).cost = _s->kids[0]->cost[burm_imm_NT].cost + _s->kids[1]->cost[burm_mem_NT].cost;    
+ (*_c).cost = _s->kids[0]->cost[burm_ri_NT].cost + _s->kids[1]->cost[burm_ptr_NT].cost;    
 }
   break;
   case 27:
 {
 
 
- (*_c).cost = _s->kids[0]->cost[burm_reg_NT].cost + _s->kids[1]->cost[burm_mem_NT].cost;    
+ (*_c).cost = _s->kids[0]->cost[burm_mem_NT].cost + _s->kids[1]->cost[burm_ptr_NT].cost;    
 }
   break;
   case 28:
 {
 
 
- (*_c).cost = _s->kids[0]->cost[burm_mem_NT].cost + _s->kids[1]->cost[burm_mem_NT].cost;    
+ (*_c).cost = _s->kids[0]->cost[burm_ptr_NT].cost + _s->kids[1]->cost[burm_mem_NT].cost;    
 }
   break;
   case 29:
@@ -1233,70 +1208,42 @@ int burm_cost_code(COST *_c, int _ern,struct burm_state *_s)
 {
 
 
- (*_c).cost = _s->kids[0]->cost[burm_ri_NT].cost + _s->kids[1]->cost[burm_imm_NT].cost + _s->kids[2]->cost[burm_imm_NT].cost + 5; 
+ (*_c).cost = _s->kids[0]->cost[burm_reg_NT].cost + _s->kids[2]->cost[burm_imm_NT].cost + 5; 
 }
   break;
   case 64:
 {
 
 
- (*_c).cost = _s->kids[0]->cost[burm_mem_NT].cost + _s->kids[1]->cost[burm_imm_NT].cost + _s->kids[2]->cost[burm_imm_NT].cost + 5; 
+ (*_c).cost = _s->kids[0]->cost[burm_reg_NT].cost + _s->kids[2]->cost[burm_reg_NT].cost + 5; 
 }
   break;
   case 65:
 {
 
 
- (*_c).cost = _s->kids[0]->cost[burm_ri_NT].cost + _s->kids[1]->cost[burm_ri_NT].cost + _s->kids[2]->cost[burm_reg_NT].cost + 5; 
+ (*_c).cost = _s->kids[0]->cost[burm_mem_NT].cost + _s->kids[2]->cost[burm_imm_NT].cost + 5; 
 }
   break;
   case 66:
 {
 
 
- (*_c).cost = _s->kids[0]->cost[burm_mem_NT].cost + _s->kids[1]->cost[burm_imm_NT].cost + _s->kids[2]->cost[burm_reg_NT].cost + 5; 
+ (*_c).cost = _s->kids[0]->cost[burm_mem_NT].cost + _s->kids[2]->cost[burm_reg_NT].cost + 5; 
 }
   break;
   case 67:
 {
 
 
- (*_c).cost = _s->kids[0]->cost[burm_bptr_NT].cost + _s->kids[1]->cost[burm_imm_NT].cost + 5; 
+ (*_c).cost = _s->kids[0]->cost[burm_reg_NT].cost + _s->kids[1]->cost[burm_imm_NT].cost + 5; 
 }
   break;
   case 68:
 {
 
 
- (*_c).cost = _s->kids[0]->cost[burm_bptr_NT].cost + _s->kids[1]->cost[burm_reg_NT].cost + 5; 
-}
-  break;
-  case 69:
-{
-
-
- (*_c).cost = _s->kids[0]->cost[burm_mem_NT].cost + _s->kids[1]->cost[burm_imm_NT].cost + 5; 
-}
-  break;
-  case 70:
-{
-
-
- (*_c).cost = _s->kids[0]->cost[burm_mem_NT].cost + _s->kids[1]->cost[burm_reg_NT].cost + 5; 
-}
-  break;
-  case 71:
-{
-
-
- (*_c).cost = _s->kids[0]->cost[burm_reg_NT].cost + 1;    
-}
-  break;
-  case 72:
-{
-
-
- (*_c).cost = _s->kids[0]->cost[burm_mem_NT].cost + 1;    
+ (*_c).cost = _s->kids[0]->cost[burm_reg_NT].cost + _s->kids[1]->cost[burm_reg_NT].cost + 5; 
 }
   break;
   }
@@ -1345,11 +1292,6 @@ FUNCTION_STATE fstate);
 
 
 void ptr_action(struct burm_state *_s, 
-
-FUNCTION_STATE fstate);
-
-
-void bptr_action(struct burm_state *_s, 
 
 FUNCTION_STATE fstate);
 
@@ -1408,9 +1350,6 @@ void burm_exec(struct burm_state *state, int nterm, ...)
     case burm_ptr_NT:
       ptr_action(state,va_arg(ap,FUNCTION_STATE));
       break;
-    case burm_bptr_NT:
-      bptr_action(state,va_arg(ap,FUNCTION_STATE));
-      break;
     case burm_cond_NT:
       cond_action(state,va_arg(ap,FUNCTION_STATE));
       break;
@@ -1439,7 +1378,6 @@ void burm_exec(struct burm_state *state, int nterm, ...)
   (n == burm_imm_NT)? burm_exec(s,n,a): \
   (n == burm_mem_NT)? burm_exec(s,n,a): \
   (n == burm_ptr_NT)? burm_exec(s,n,a): \
-  (n == burm_bptr_NT)? burm_exec(s,n,a): \
   (n == burm_cond_NT)? burm_exec(s,n,a): \
   (n == burm_label_NT)? burm_exec(s,n,a): \
   (n == burm_args_NT)? burm_exec(s,n,a): \
@@ -1481,13 +1419,15 @@ FUNCTION_STATE fstate)
 
 
             if (_s->node->IsComputed()) return;
+            // _s->node->SetComputed(true);
             /*
              * IR Ret takes a register argument
              * X86 Ret takes no argument, return value is passed by %eax
              */
-            imm_action(_s->kids[0],fstate);
+            ri_action(_s->kids[0],fstate);
             fstate->CreatePhysicalReg(_s->node, RAX);
-            fstate->LoadFromImm(_s->node, _s->kids[0]->node);
+            fstate->GenerateMovStmt(_s->node, _s->kids[0]->node);
+
             // this will record the ending in liveness range for a register
             // if the input is a register, and the register dies
             fstate->RecordLiveness(_s->kids[0]->node);
@@ -1498,26 +1438,44 @@ FUNCTION_STATE fstate)
         
 }
   break;
-  case 21:
+  case 24:
 {
 
 
 
             if (_s->node->IsComputed()) return;
-            /*
-             * IR Ret takes a register argument
-             * X86 Ret takes no argument, return value is passed by %eax
-             */
-            reg_action(_s->kids[0],fstate);
-            fstate->CreatePhysicalReg(_s->node, RAX);
-            fstate->LoadFromReg(_s->node, _s->kids[0]->node);
+            // _s->node->SetComputed(true);
+
+            ri_action(_s->kids[0],fstate);
+            mem_action(_s->kids[1],fstate);
+            fstate->GenerateMovStmt(_s->kids[1]->node, _s->kids[0]->node, _s->kids[1]->node->GetSuffix());
             // this will record the ending in liveness range for a register
             // if the input is a register, and the register dies
             fstate->RecordLiveness(_s->kids[0]->node);
-            std::stringstream ss;
-            ss << "jmp \t.LFE" << fstate->GetFunctionID();
-            std::string s = ss.str();
-            fstate->GenerateStmt(s.c_str());
+            fstate->RecordLiveness(_s->kids[1]->node);
+        
+}
+  break;
+  case 25:
+{
+
+
+
+            if (_s->node->IsComputed()) return;
+            // _s->node->SetComputed(true);
+
+            mem_action(_s->kids[0],fstate);
+            mem_action(_s->kids[1],fstate);
+
+            Tree *t1 = (new Tree(REG))->GetTreeRef();
+            fstate->CreateVirtualReg(t1);
+
+            fstate->GenerateMovStmt(t1, _s->kids[0]->node, _s->kids[1]->node->GetSuffix());
+            fstate->GenerateMovStmt(_s->kids[1]->node, t1, _s->kids[1]->node->GetSuffix());
+
+            fstate->RecordLiveness(t1);
+            fstate->RecordLiveness(_s->kids[0]->node);
+            fstate->RecordLiveness(_s->kids[1]->node);
         
 }
   break;
@@ -1527,10 +1485,21 @@ FUNCTION_STATE fstate)
 
 
             if (_s->node->IsComputed()) return;
+            // _s->node->SetComputed(true);
 
-            imm_action(_s->kids[0],fstate);
-            mem_action(_s->kids[1],fstate);
-            fstate->GenerateMovStmt(_s->kids[1]->node, _s->kids[0]->node, _s->kids[1]->node->GetSuffix());
+            ri_action(_s->kids[0],fstate);
+            ptr_action(_s->kids[1],fstate);
+
+            if (_s->kids[0]->node->IsPointer()) {
+                // llvm::errs() << "Store ptr to ptr!\n";
+                // fstate->LoadEffectiveAddress(_s->kids[1]->node, _s->kids[0]->node);
+                _s->kids[0]->node->SetX86Operand(_s->kids[1]->node->AsX86Operand(fstate));
+            }
+            else {
+                // llvm::errs() << "Store ri to ptr!\n";
+                fstate->GenerateMovStmt(_s->kids[1]->node, _s->kids[0]->node, _s->kids[1]->node->GetSuffix());
+            }
+
             // this will record the ending in liveness range for a register
             // if the input is a register, and the register dies
             fstate->RecordLiveness(_s->kids[0]->node);
@@ -1544,12 +1513,19 @@ FUNCTION_STATE fstate)
 
 
             if (_s->node->IsComputed()) return;
+            // _s->node->SetComputed(true);
 
-            reg_action(_s->kids[0],fstate);
-            mem_action(_s->kids[1],fstate);
-            fstate->GenerateMovStmt(_s->kids[1]->node, _s->kids[0]->node, _s->kids[1]->node->GetSuffix());
-            // this will record the ending in liveness range for a register
-            // if the input is a register, and the register dies
+            mem_action(_s->kids[0],fstate);
+            ptr_action(_s->kids[1],fstate);
+
+            Tree *t1 = (new Tree(REG))->GetTreeRef();
+            fstate->CreateVirtualReg(t1);
+
+            // llvm::errs() << "Store mem to ptr!\n";
+            fstate->GenerateMovStmt(t1, _s->kids[0]->node, _s->kids[1]->node->GetSuffix());
+            fstate->GenerateMovStmt(_s->kids[1]->node, t1, _s->kids[1]->node->GetSuffix());
+
+            fstate->RecordLiveness(t1);
             fstate->RecordLiveness(_s->kids[0]->node);
             fstate->RecordLiveness(_s->kids[1]->node);
         
@@ -1561,15 +1537,19 @@ FUNCTION_STATE fstate)
 
 
             if (_s->node->IsComputed()) return;
+            // _s->node->SetComputed(true);
 
-            mem_action(_s->kids[0],fstate);
+            ptr_action(_s->kids[0],fstate);
             mem_action(_s->kids[1],fstate);
+
+            // using namespace llvm;
+            // _s->node->GetInst()->print(errs()); errs() << "\n";
+            // Value *v = _s->node->GetInst()->getOperand(0);
 
             Tree *t1 = (new Tree(REG))->GetTreeRef();
             fstate->CreateVirtualReg(t1);
 
-            fstate->GenerateMovStmt(t1, _s->kids[0]->node, _s->kids[1]->node->GetSuffix());
-            fstate->GenerateMovStmt(_s->kids[1]->node, t1, _s->kids[1]->node->GetSuffix());
+            fstate->LoadEffectiveAddress(_s->kids[1]->node, _s->kids[0]->node);
 
             fstate->RecordLiveness(t1);
             fstate->RecordLiveness(_s->kids[0]->node);
@@ -1719,14 +1699,14 @@ FUNCTION_STATE fstate)
   if(_s->rule.burm_ri==0)
     NO_ACTION(ri);
   switch(_ern){
-  case 5:
+  case 6:
 {
 
 
  reg_action(_s,fstate); /*fstate->RecordLiveness($1);*/ 
 }
   break;
-  case 6:
+  case 7:
 {
 
 
@@ -1747,14 +1727,14 @@ FUNCTION_STATE fstate)
   if(_s->rule.burm_rm==0)
     NO_ACTION(rm);
   switch(_ern){
-  case 7:
+  case 8:
 {
 
 
  reg_action(_s,fstate); /*fstate->RecordLiveness($1);*/ 
 }
   break;
-  case 8:
+  case 9:
 {
 
 
@@ -1775,21 +1755,21 @@ FUNCTION_STATE fstate)
   if(_s->rule.burm_rim==0)
     NO_ACTION(rim);
   switch(_ern){
-  case 9:
+  case 10:
 {
 
 
  reg_action(_s,fstate); /*fstate->RecordLiveness($1);*/ 
 }
   break;
-  case 10:
+  case 11:
 {
 
 
  imm_action(_s,fstate); /*fstate->RecordLiveness($1);*/ 
 }
   break;
-  case 11:
+  case 12:
 {
 
 
@@ -1810,7 +1790,14 @@ FUNCTION_STATE fstate)
   if(_s->rule.burm_reg==0)
     NO_ACTION(reg);
   switch(_ern){
-  case 12:
+  case 5:
+{
+
+
+ ptr_action(_s,fstate); /*fstate->RecordLiveness($1);*/ 
+}
+  break;
+  case 13:
 {
 
 
@@ -1818,15 +1805,37 @@ FUNCTION_STATE fstate)
 }
   break;
   case 19:
+    _children = GET_KIDS(_s->node);
 {
 
 
 
             // PHI is special because its register is pre-allocated
             // ri should have already been computed
-            fstate->RecordLiveStart(_s->node);     // start recording liveness for phi
+            fstate->RecordLiveStart(_children[-2]);     // start recording liveness for phi
+            fstate->GenerateMovStmt(_children[-2], _children[0]);
+            fstate->RecordLiveness(_children[0]);
+        
+}
+  break;
+  case 22:
+{
+
+
+
+            if (_s->node->IsComputed()) return;
+            // _s->node->SetComputed(true);
+            /*
+             * IR Load takes one arguments for allocation size
+             * X86 uses mov instruction, which takes two arguments
+             */
+            ri_action(_s->kids[0],fstate);
+            fstate->AssignVirtualReg(_s->node, _s->kids[0]->node);    // assign a virtual register to the inst
             fstate->GenerateMovStmt(_s->node, _s->kids[0]->node);
+            // this will record the ending in liveness range for a register
+            // if the input is a register, and the register dies
             fstate->RecordLiveness(_s->kids[0]->node);
+            _s->node->UseAsRegister();
         
 }
   break;
@@ -1836,43 +1845,7 @@ FUNCTION_STATE fstate)
 
 
             if (_s->node->IsComputed()) return;
-            /*
-             * IR Load takes one arguments for allocation size
-             * X86 uses mov instruction, which takes two arguments
-             */
-            reg_action(_s->kids[0],fstate);
-            fstate->AssignVirtualReg(_s->node, _s->kids[0]->node);    // assign a virtual register to the inst
-            fstate->LoadFromReg(_s->node, _s->kids[0]->node);
-            // this will record the ending in liveness range for a register
-            // if the input is a register, and the register dies
-            fstate->RecordLiveness(_s->kids[0]->node);
-            _s->node->UseAsRegister();
-        
-}
-  break;
-  case 24:
-{
-
-
-
-            if (_s->node->IsComputed()) return;
-
-            imm_action(_s->kids[0],fstate);
-            fstate->CreateVirtualReg(_s->node);      // assign a virtual register to the inst
-            fstate->GenerateMovStmt(_s->node, _s->kids[0]->node);
-            // this will record the ending in liveness range for a register
-            // if the input is a register, and the register dies
-            fstate->RecordLiveness(_s->kids[0]->node);
-            _s->node->UseAsRegister();
-        
-}
-  break;
-  case 25:
-{
-
-
-
-            if (_s->node->IsComputed()) return;
+            // _s->node->SetComputed(true);
 
             mem_action(_s->kids[0],fstate);
             fstate->CreateVirtualReg(_s->node);      // assign a virtual register to the inst
@@ -1890,6 +1863,7 @@ FUNCTION_STATE fstate)
 
 
             if (_s->node->IsComputed()) return;
+            // _s->node->SetComputed(true);
 
             imm_action(_s->kids[0],fstate);
             imm_action(_s->kids[1],fstate);
@@ -1912,6 +1886,7 @@ FUNCTION_STATE fstate)
 
 
             if (_s->node->IsComputed()) return;
+            // _s->node->SetComputed(true);
             /*
              * IR Add takes two arguments
              * X86 Add takes two argument, both operands cannot be from memory in the instruction
@@ -1934,6 +1909,7 @@ FUNCTION_STATE fstate)
 
 
             if (_s->node->IsComputed()) return;
+            // _s->node->SetComputed(true);
             /*
              * IR Add takes two arguments
              * X86 Add takes two argument, both operands cannot be from memory in the instruction
@@ -1956,6 +1932,7 @@ FUNCTION_STATE fstate)
 
 
             if (_s->node->IsComputed()) return;
+            // _s->node->SetComputed(true);
 
             imm_action(_s->kids[0],fstate);
             imm_action(_s->kids[1],fstate);
@@ -1978,6 +1955,7 @@ FUNCTION_STATE fstate)
 
 
             if (_s->node->IsComputed()) return;
+            // _s->node->SetComputed(true);
             /*
              * IR Sub takes two arguments
              * X86 Sub takes two argument, both operands cannot be from memory in the instruction
@@ -2000,6 +1978,7 @@ FUNCTION_STATE fstate)
 
 
             if (_s->node->IsComputed()) return;
+            // _s->node->SetComputed(true);
             /*
              * IR Sub takes two arguments
              * X86 Sub takes two argument, both operands cannot be from memory in the instruction
@@ -2023,6 +2002,7 @@ FUNCTION_STATE fstate)
 
 
             if (_s->node->IsComputed()) return;
+            // _s->node->SetComputed(true);
 
             imm_action(_s->kids[0],fstate);
             imm_action(_s->kids[1],fstate);
@@ -2045,6 +2025,7 @@ FUNCTION_STATE fstate)
 
 
             if (_s->node->IsComputed()) return;
+            // _s->node->SetComputed(true);
             /*
              * IR Mul takes two arguments
              * X86 Mul takes two argument, both operands cannot be from memory in the instruction
@@ -2067,6 +2048,7 @@ FUNCTION_STATE fstate)
 
 
             if (_s->node->IsComputed()) return;
+            // _s->node->SetComputed(true);
             /*
              * IR Mul takes two arguments
              * X86 Mul takes two argument, both operands cannot be from memory in the instruction
@@ -2090,6 +2072,7 @@ FUNCTION_STATE fstate)
 
 
             if (_s->node->IsComputed()) return;
+            // _s->node->SetComputed(true);
 
             imm_action(_s->kids[0],fstate);
             imm_action(_s->kids[1],fstate);
@@ -2112,6 +2095,7 @@ FUNCTION_STATE fstate)
 
 
             if (_s->node->IsComputed()) return;
+            // _s->node->SetComputed(true);
             /*
              * IR Mul takes two arguments
              * X86 Mul takes one argument, perform %rax = %rax / src
@@ -2136,6 +2120,7 @@ FUNCTION_STATE fstate)
 
 
             if (_s->node->IsComputed()) return;
+            // _s->node->SetComputed(true);
 
             imm_action(_s->kids[0],fstate);
             imm_action(_s->kids[1],fstate);
@@ -2158,6 +2143,7 @@ FUNCTION_STATE fstate)
 
 
             if (_s->node->IsComputed()) return;
+            // _s->node->SetComputed(true);
             /*
              * IR Mul takes two arguments
              * X86 Mul takes one argument, perform %rax = %rax / src
@@ -2182,6 +2168,7 @@ FUNCTION_STATE fstate)
 
 
             if (_s->node->IsComputed()) return;
+            // _s->node->SetComputed(true);
             /*
              * IR Mul takes two arguments
              * X86 Mul takes one argument, perform %rax = %rax / src
@@ -2213,6 +2200,7 @@ FUNCTION_STATE fstate)
 
 
             if (_s->node->IsComputed()) return;
+            // _s->node->SetComputed(true);
             /*
              * IR Mul takes two arguments
              * X86 Mul takes one argument, perform %rax = %rax / src
@@ -2241,6 +2229,9 @@ FUNCTION_STATE fstate)
 {
 
 
+
+            if (_s->node->IsComputed()) return;
+            // _s->node->SetComputed(true);
 
             int num_args = std::min(6, fstate->GetNumArgs());
 
@@ -2274,10 +2265,11 @@ FUNCTION_STATE fstate)
 
 
             if (_s->node->IsComputed()) return;
+            // _s->node->SetComputed(true);
 
             reg_action(_s->kids[0],fstate);
             fstate->CreateVirtualReg(_s->node);
-            fstate->LoadFromReg(_s->node, _s->kids[0]->node);
+            fstate->GenerateMovStmt(_s->node, _s->kids[0]->node);
             fstate->RecordLiveness(_s->kids[0]->node);
         
 }
@@ -2288,10 +2280,11 @@ FUNCTION_STATE fstate)
 
 
             if (_s->node->IsComputed()) return;
+            // _s->node->SetComputed(true);
 
             reg_action(_s->kids[0],fstate);
             fstate->CreateVirtualReg(_s->node);
-            fstate->LoadFromReg(_s->node, _s->kids[0]->node);
+            fstate->GenerateMovStmt(_s->node, _s->kids[0]->node);
             fstate->RecordLiveness(_s->kids[0]->node);
         
 }
@@ -2302,10 +2295,11 @@ FUNCTION_STATE fstate)
 
 
             if (_s->node->IsComputed()) return;
+            // _s->node->SetComputed(true);
 
             reg_action(_s->kids[0],fstate);
             fstate->CreateVirtualReg(_s->node);
-            fstate->LoadFromReg(_s->node, _s->kids[0]->node);
+            fstate->GenerateMovStmt(_s->node, _s->kids[0]->node);
             fstate->RecordLiveness(_s->kids[0]->node);
         
 }
@@ -2316,7 +2310,7 @@ FUNCTION_STATE fstate)
 
 
             if (_s->node->IsComputed()) return;
-            _s->node->SetComputed(true);
+            // _s->node->SetComputed(true);
 
             // std::cerr << "=============BitCast REG REF " << _s->node->GetRefCount() << std::endl;
             reg_action(_s->kids[0],fstate);
@@ -2332,7 +2326,7 @@ FUNCTION_STATE fstate)
 
 
             if (_s->node->IsComputed()) return;
-            _s->node->SetComputed(true);
+            // _s->node->SetComputed(true);
 
             // std::cerr << "-------------BitCast REG REF " << _s->node->GetRefCount() << std::endl;
             mem_action(_s->kids[0],fstate);
@@ -2356,14 +2350,14 @@ FUNCTION_STATE fstate)
   if(_s->rule.burm_imm==0)
     NO_ACTION(imm);
   switch(_ern){
-  case 13:
+  case 14:
 {
 
 
  _s->node->UseAsImmediate(); /*                           */ 
 }
   break;
-  case 14:
+  case 15:
 {
 
 
@@ -2376,6 +2370,7 @@ FUNCTION_STATE fstate)
 
 
             if (_s->node->IsComputed()) return;
+            // _s->node->SetComputed(true);
 
             imm_action(_s->kids[0],fstate);
             imm_action(_s->kids[1],fstate);
@@ -2395,6 +2390,7 @@ FUNCTION_STATE fstate)
 
 
             if (_s->node->IsComputed()) return;
+            // _s->node->SetComputed(true);
 
             imm_action(_s->kids[0],fstate);
             imm_action(_s->kids[1],fstate);
@@ -2414,6 +2410,7 @@ FUNCTION_STATE fstate)
 
 
             if (_s->node->IsComputed()) return;
+            // _s->node->SetComputed(true);
 
             imm_action(_s->kids[0],fstate);
             imm_action(_s->kids[1],fstate);
@@ -2433,6 +2430,7 @@ FUNCTION_STATE fstate)
 
 
             if (_s->node->IsComputed()) return;
+            // _s->node->SetComputed(true);
 
             imm_action(_s->kids[0],fstate);
             imm_action(_s->kids[1],fstate);
@@ -2452,6 +2450,7 @@ FUNCTION_STATE fstate)
 
 
             if (_s->node->IsComputed()) return;
+            // _s->node->SetComputed(true);
 
             imm_action(_s->kids[0],fstate);
             imm_action(_s->kids[1],fstate);
@@ -2479,18 +2478,11 @@ FUNCTION_STATE fstate)
   if(_s->rule.burm_mem==0)
     NO_ACTION(mem);
   switch(_ern){
-  case 15:
-{
-
-
- _s->node->UseAsMemory();    /*fstate->RecordLiveness($1);*/ 
-}
-  break;
   case 16:
 {
 
 
- ptr_action(_s,fstate); _s->node->UseAsMemory();  
+ _s->node->UseAsMemory();    /*fstate->RecordLiveness($1);*/ 
 }
   break;
   case 17:
@@ -2500,12 +2492,13 @@ FUNCTION_STATE fstate)
  
 }
   break;
-  case 22:
+  case 21:
 {
 
 
 
             if (_s->node->IsComputed()) return;
+            // _s->node->SetComputed(true);
             /*
              * IR Alloca takes one arguments for allocation size
              * X86 does not have correspondence for Alloca, but only uses $esp - size
@@ -2563,7 +2556,7 @@ FUNCTION_STATE fstate)
 
 
             if (_s->node->IsComputed()) return;
-            _s->node->SetComputed(true);
+            // _s->node->SetComputed(true);
 
             // get size of array elements
             using namespace llvm;
@@ -2571,9 +2564,9 @@ FUNCTION_STATE fstate)
             assert(inst && "GetElementPtr must be not null");
             int size = GetTypeSize(inst->getSourceElementType());
 
-            ri_action(_s->kids[0],fstate);
-            imm_action(_s->kids[1],fstate);
+            reg_action(_s->kids[0],fstate);
             imm_action(_s->kids[2],fstate);
+
             X86Operand *ptr = new X86Operand(fstate, OP_TYPE::X86Mem,
                 _s->kids[0]->node->AsX86Operand(fstate),         // base
                 0,
@@ -2584,7 +2577,6 @@ FUNCTION_STATE fstate)
             _s->node->SetSuffix(GetTypeSuffix(inst->getSourceElementType()));
 
             fstate->RecordLiveness(_s->kids[0]->node);
-            fstate->RecordLiveness(_s->kids[1]->node);
             fstate->RecordLiveness(_s->kids[2]->node);
             _s->node->UseAsMemory();
             _s->node->UseAsPtr();
@@ -2597,36 +2589,27 @@ FUNCTION_STATE fstate)
 
 
             if (_s->node->IsComputed()) return;
-            _s->node->SetComputed(true);
+            // _s->node->SetComputed(true);
 
             // get size of array elements
             using namespace llvm;
             GetElementPtrInst *inst = dyn_cast<GetElementPtrInst>(_s->node->GetInst());
             assert(inst && "GetElementPtr must be not null");
             int size = GetTypeSize(inst->getSourceElementType());
-            const char *suffix = GetTypeSuffix(inst->getSourceElementType()).c_str();
 
-            mem_action(_s->kids[0],fstate);
-
-            Tree *t1 = (new Tree(REG))->GetTreeRef();
-            fstate->CreateVirtualReg(t1);
-            fstate->LoadEffectiveAddress(t1, _s->kids[0]->node);
-
-            imm_action(_s->kids[1],fstate);
-            imm_action(_s->kids[2],fstate);
+            reg_action(_s->kids[0],fstate);
+            reg_action(_s->kids[2],fstate);
 
             X86Operand *ptr = new X86Operand(fstate, OP_TYPE::X86Mem,
-                t1->AsX86Operand(fstate),         // base
-                0,
-                0,
-                size * _s->kids[2]->node->GetValue().val.i64s       // offset
+                _s->kids[0]->node->AsX86Operand(fstate),         // base
+                _s->kids[1]->node->AsX86Operand(fstate),         // index
+                size,                             // element size
+                0
             );
             _s->node->SetX86Operand(ptr);
-            _s->node->SetSuffix(suffix);
+            _s->node->SetSuffix(GetTypeSuffix(inst->getSourceElementType()));
 
-            fstate->RecordLiveness(t1);
             fstate->RecordLiveness(_s->kids[0]->node);
-            fstate->RecordLiveness(_s->kids[1]->node);
             fstate->RecordLiveness(_s->kids[2]->node);
             _s->node->UseAsMemory();
             _s->node->UseAsPtr();
@@ -2639,7 +2622,7 @@ FUNCTION_STATE fstate)
 
 
             if (_s->node->IsComputed()) return;
-            _s->node->SetComputed(true);
+            // _s->node->SetComputed(true);
 
             // get size of array elements
             using namespace llvm;
@@ -2647,20 +2630,24 @@ FUNCTION_STATE fstate)
             assert(inst && "GetElementPtr must be not null");
             int size = GetTypeSize(inst->getSourceElementType());
 
-            ri_action(_s->kids[0],fstate);
-            ri_action(_s->kids[1],fstate);
-            reg_action(_s->kids[2],fstate);
+            mem_action(_s->kids[0],fstate);
+            imm_action(_s->kids[2],fstate);
+
+            Tree *t1 = (new Tree(REG))->GetTreeRef();
+            fstate->CreateVirtualReg(t1);
+            fstate->LoadEffectiveAddress(t1, _s->kids[0]->node);
+
             X86Operand *ptr = new X86Operand(fstate, OP_TYPE::X86Mem,
-                _s->kids[0]->node->AsX86Operand(fstate),         // base
-                _s->kids[2]->node->AsX86Operand(fstate),         // index
-                size,                             // element size
-                0                                 // offset
+                t1->AsX86Operand(fstate),         // base
+                0,
+                0,
+                size * _s->kids[2]->node->GetValue().val.i64s    // offset
             );
             _s->node->SetX86Operand(ptr);
             _s->node->SetSuffix(GetTypeSuffix(inst->getSourceElementType()));
 
+            fstate->RecordLiveness(t1);
             fstate->RecordLiveness(_s->kids[0]->node);
-            fstate->RecordLiveness(_s->kids[1]->node);
             fstate->RecordLiveness(_s->kids[2]->node);
             _s->node->UseAsMemory();
             _s->node->UseAsPtr();
@@ -2673,23 +2660,20 @@ FUNCTION_STATE fstate)
 
 
             if (_s->node->IsComputed()) return;
-            _s->node->SetComputed(true);
+            // _s->node->SetComputed(true);
 
             // get size of array elements
             using namespace llvm;
             GetElementPtrInst *inst = dyn_cast<GetElementPtrInst>(_s->node->GetInst());
             assert(inst && "GetElementPtr must be not null");
             int size = GetTypeSize(inst->getSourceElementType());
-            const char *suffix = GetTypeSuffix(inst->getSourceElementType()).c_str();
 
             mem_action(_s->kids[0],fstate);
+            reg_action(_s->kids[2],fstate);
 
             Tree *t1 = (new Tree(REG))->GetTreeRef();
             fstate->CreateVirtualReg(t1);
             fstate->LoadEffectiveAddress(t1, _s->kids[0]->node);
-
-            imm_action(_s->kids[1],fstate);
-            reg_action(_s->kids[2],fstate);
 
             X86Operand *ptr = new X86Operand(fstate, OP_TYPE::X86Mem,
                 t1->AsX86Operand(fstate),         // base
@@ -2702,7 +2686,6 @@ FUNCTION_STATE fstate)
 
             fstate->RecordLiveness(t1);
             fstate->RecordLiveness(_s->kids[0]->node);
-            fstate->RecordLiveness(_s->kids[1]->node);
             fstate->RecordLiveness(_s->kids[2]->node);
             _s->node->UseAsMemory();
             _s->node->UseAsPtr();
@@ -2715,22 +2698,22 @@ FUNCTION_STATE fstate)
 
 
             if (_s->node->IsComputed()) return;
-            _s->node->SetComputed(true);
+            // _s->node->SetComputed(true);
 
             // get size of array elements
             using namespace llvm;
             GetElementPtrInst *inst = dyn_cast<GetElementPtrInst>(_s->node->GetInst());
             assert(inst && "GetElementPtr must be not null");
             int size = GetTypeSize(inst->getSourceElementType());
-            const char *suffix = GetTypeSuffix(inst->getSourceElementType()).c_str();
 
-            bptr_action(_s->kids[0],fstate);
+            reg_action(_s->kids[0],fstate);
             imm_action(_s->kids[1],fstate);
+
             X86Operand *ptr = new X86Operand(fstate, OP_TYPE::X86Mem,
                 _s->kids[0]->node->AsX86Operand(fstate),         // base
-                nullptr,
-                0,                             
-                size * _s->kids[1]->node->GetValue().val.i32s   // index
+                0,
+                0,
+                size * _s->kids[1]->node->GetValue().val.i64s    // offset
             );
             _s->node->SetX86Operand(ptr);
             _s->node->SetSuffix(GetTypeSuffix(inst->getSourceElementType()));
@@ -2748,158 +2731,30 @@ FUNCTION_STATE fstate)
 
 
             if (_s->node->IsComputed()) return;
-            _s->node->SetComputed(true);
+            // _s->node->SetComputed(true);
 
             // get size of array elements
             using namespace llvm;
             GetElementPtrInst *inst = dyn_cast<GetElementPtrInst>(_s->node->GetInst());
             assert(inst && "GetElementPtr must be not null");
             int size = GetTypeSize(inst->getSourceElementType());
-            const char *suffix = GetTypeSuffix(inst->getSourceElementType()).c_str();
-
-            bptr_action(_s->kids[0],fstate);
-            reg_action(_s->kids[1],fstate);
-            X86Operand *ptr = new X86Operand(fstate, OP_TYPE::X86Mem,
-                _s->kids[0]->node->AsX86Operand(fstate),         // base
-                _s->kids[1]->node->AsX86Operand(fstate),         // displacement
-                size,                             
-                0
-            );
-            _s->node->SetX86Operand(ptr);
-            _s->node->SetSuffix(GetTypeSuffix(inst->getSourceElementType()));
-
-            fstate->RecordLiveness(_s->kids[0]->node);
-            fstate->RecordLiveness(_s->kids[1]->node);
-            _s->node->UseAsMemory();
-            _s->node->UseAsPtr();
-        
-}
-  break;
-  case 69:
-{
-
-
-
-            if (_s->node->IsComputed()) return;
-            _s->node->SetComputed(true);
-
-            // get size of array elements
-            using namespace llvm;
-            GetElementPtrInst *inst = dyn_cast<GetElementPtrInst>(_s->node->GetInst());
-            assert(inst && "GetElementPtr must be not null");
-            int size = GetTypeSize(inst->getSourceElementType());
-            const char *suffix = GetTypeSuffix(inst->getSourceElementType()).c_str();
-
-            mem_action(_s->kids[0],fstate);
-
-            Tree *t1 = (new Tree(REG))->GetTreeRef();
-            fstate->CreateVirtualReg(t1);
-            fstate->LoadEffectiveAddress(t1, _s->kids[0]->node);
-
-            imm_action(_s->kids[1],fstate);
-
-            X86Operand *ptr = new X86Operand(fstate, OP_TYPE::X86Mem,
-                t1->AsX86Operand(fstate),         // base
-                nullptr,
-                0,                             
-                size * _s->kids[1]->node->GetValue().val.i32s   // index
-            );
-            _s->node->SetX86Operand(ptr);
-            _s->node->SetSuffix(GetTypeSuffix(inst->getSourceElementType()));
-
-            fstate->RecordLiveness(t1);
-            fstate->RecordLiveness(_s->kids[0]->node);
-            fstate->RecordLiveness(_s->kids[1]->node);
-            _s->node->UseAsMemory();
-            _s->node->UseAsPtr();
-        
-}
-  break;
-  case 70:
-{
-
-
-
-            if (_s->node->IsComputed()) return;
-            _s->node->SetComputed(true);
-
-            // get size of array elements
-            using namespace llvm;
-            GetElementPtrInst *inst = dyn_cast<GetElementPtrInst>(_s->node->GetInst());
-            assert(inst && "GetElementPtr must be not null");
-            int size = GetTypeSize(inst->getSourceElementType());
-            const char *suffix = GetTypeSuffix(inst->getSourceElementType()).c_str();
-
-            mem_action(_s->kids[0],fstate);
-
-            Tree *t1 = (new Tree(REG))->GetTreeRef();
-            fstate->CreateVirtualReg(t1);
-            fstate->LoadEffectiveAddress(t1, _s->kids[0]->node);
-
-            reg_action(_s->kids[1],fstate);
-
-            X86Operand *ptr = new X86Operand(fstate, OP_TYPE::X86Mem,
-                t1->AsX86Operand(fstate),         // base
-                _s->kids[1]->node->AsX86Operand(fstate),         // displacement
-                size,                             
-                0
-            );
-            _s->node->SetX86Operand(ptr);
-            _s->node->SetSuffix(GetTypeSuffix(inst->getSourceElementType()));
-
-            fstate->RecordLiveness(t1);
-            fstate->RecordLiveness(_s->kids[0]->node);
-            fstate->RecordLiveness(_s->kids[1]->node);
-            _s->node->UseAsMemory();
-            _s->node->UseAsPtr();
-        
-}
-  break;
-  }
-}
-
-
-void bptr_action(struct burm_state *_s, 
-
-FUNCTION_STATE fstate)
-{
-  struct burm_state *_t;
-  int _ern=burm_decode_bptr[_s->rule.burm_bptr];
-  NODEPTR *_children;
-  if(_s->rule.burm_bptr==0)
-    NO_ACTION(bptr);
-  switch(_ern){
-  case 71:
-{
-
-
-
-            if (_s->node->IsComputed()) return;
 
             reg_action(_s->kids[0],fstate);
-            fstate->CreateVirtualReg(_s->node);      // assign a virtual register to the inst
-            fstate->GenerateMovStmt(_s->node, _s->kids[0]->node);
-            // this will record the ending in liveness range for a register
-            // if the input is a register, and the register dies
+            reg_action(_s->kids[1],fstate);
+
+            X86Operand *ptr = new X86Operand(fstate, OP_TYPE::X86Mem,
+                _s->kids[0]->node->AsX86Operand(fstate),         // base
+                _s->kids[1]->node->AsX86Operand(fstate),         // index
+                size,                             // element size
+                0
+            );
+            _s->node->SetX86Operand(ptr);
+            _s->node->SetSuffix(GetTypeSuffix(inst->getSourceElementType()));
+
             fstate->RecordLiveness(_s->kids[0]->node);
-            _s->node->UseAsRegister();
-        
-}
-  break;
-  case 72:
-{
-
-
-
-            if (_s->node->IsComputed()) return;
-
-            mem_action(_s->kids[0],fstate);
-            fstate->CreateVirtualReg(_s->node);      // assign a virtual register to the inst
-            fstate->LoadEffectiveAddress(_s->node, _s->kids[0]->node);
-            // this will record the ending in liveness range for a register
-            // if the input is a register, and the register dies
-            fstate->RecordLiveness(_s->kids[0]->node);
-            _s->node->UseAsRegister();
+            fstate->RecordLiveness(_s->kids[1]->node);
+            _s->node->UseAsMemory();
+            _s->node->UseAsPtr();
         
 }
   break;
@@ -2923,6 +2778,7 @@ FUNCTION_STATE fstate)
 
  
             if (_s->node->IsComputed()) return;
+            // _s->node->SetComputed(true);
 
             imm_action(_s->kids[0],fstate);
             imm_action(_s->kids[1],fstate);
@@ -2942,6 +2798,7 @@ FUNCTION_STATE fstate)
 
  
             if (_s->node->IsComputed()) return;
+            // _s->node->SetComputed(true);
 
             reg_action(_s->kids[0],fstate);
             imm_action(_s->kids[1],fstate);
@@ -2960,6 +2817,7 @@ FUNCTION_STATE fstate)
 
  
             if (_s->node->IsComputed()) return;
+            // _s->node->SetComputed(true);
 
             reg_action(_s->kids[0],fstate);
             reg_action(_s->kids[1],fstate);
@@ -3021,6 +2879,9 @@ FUNCTION_STATE fstate, int n)
 
 
 
+            if (_s->node->IsComputed()) return;
+            // _s->node->SetComputed(true);
+
             if (n < 6) {
                 // arguments in registers are added in order
                 value_action(_s->kids[0],fstate);
@@ -3052,16 +2913,16 @@ static void burm_closure_ptr(struct burm_state *, COST);
 static void burm_closure_cond(struct burm_state *, COST);
 
 static void burm_closure_reg(struct burm_state *s, COST c) {
-  if(burm_cost_code(&c,9,s) && COST_LESS(c,s->cost[burm_rim_NT])) {
-burm_trace(burm_np, 9, c);     s->cost[burm_rim_NT] = c ;
+  if(burm_cost_code(&c,10,s) && COST_LESS(c,s->cost[burm_rim_NT])) {
+burm_trace(burm_np, 10, c);     s->cost[burm_rim_NT] = c ;
     s->rule.burm_rim = 1;
   }
-  if(burm_cost_code(&c,7,s) && COST_LESS(c,s->cost[burm_rm_NT])) {
-burm_trace(burm_np, 7, c);     s->cost[burm_rm_NT] = c ;
+  if(burm_cost_code(&c,8,s) && COST_LESS(c,s->cost[burm_rm_NT])) {
+burm_trace(burm_np, 8, c);     s->cost[burm_rm_NT] = c ;
     s->rule.burm_rm = 1;
   }
-  if(burm_cost_code(&c,5,s) && COST_LESS(c,s->cost[burm_ri_NT])) {
-burm_trace(burm_np, 5, c);     s->cost[burm_ri_NT] = c ;
+  if(burm_cost_code(&c,6,s) && COST_LESS(c,s->cost[burm_ri_NT])) {
+burm_trace(burm_np, 6, c);     s->cost[burm_ri_NT] = c ;
     s->rule.burm_ri = 1;
   }
   if(burm_cost_code(&c,2,s) && COST_LESS(c,s->cost[burm_value_NT])) {
@@ -3075,12 +2936,12 @@ burm_trace(burm_np, 0, c);     s->cost[burm_stmt_NT] = c ;
 }
 
 static void burm_closure_imm(struct burm_state *s, COST c) {
-  if(burm_cost_code(&c,10,s) && COST_LESS(c,s->cost[burm_rim_NT])) {
-burm_trace(burm_np, 10, c);     s->cost[burm_rim_NT] = c ;
+  if(burm_cost_code(&c,11,s) && COST_LESS(c,s->cost[burm_rim_NT])) {
+burm_trace(burm_np, 11, c);     s->cost[burm_rim_NT] = c ;
     s->rule.burm_rim = 2;
   }
-  if(burm_cost_code(&c,6,s) && COST_LESS(c,s->cost[burm_ri_NT])) {
-burm_trace(burm_np, 6, c);     s->cost[burm_ri_NT] = c ;
+  if(burm_cost_code(&c,7,s) && COST_LESS(c,s->cost[burm_ri_NT])) {
+burm_trace(burm_np, 7, c);     s->cost[burm_ri_NT] = c ;
     s->rule.burm_ri = 2;
   }
   if(burm_cost_code(&c,3,s) && COST_LESS(c,s->cost[burm_value_NT])) {
@@ -3090,12 +2951,12 @@ burm_trace(burm_np, 3, c);     s->cost[burm_value_NT] = c ;
 }
 
 static void burm_closure_mem(struct burm_state *s, COST c) {
-  if(burm_cost_code(&c,11,s) && COST_LESS(c,s->cost[burm_rim_NT])) {
-burm_trace(burm_np, 11, c);     s->cost[burm_rim_NT] = c ;
+  if(burm_cost_code(&c,12,s) && COST_LESS(c,s->cost[burm_rim_NT])) {
+burm_trace(burm_np, 12, c);     s->cost[burm_rim_NT] = c ;
     s->rule.burm_rim = 3;
   }
-  if(burm_cost_code(&c,8,s) && COST_LESS(c,s->cost[burm_rm_NT])) {
-burm_trace(burm_np, 8, c);     s->cost[burm_rm_NT] = c ;
+  if(burm_cost_code(&c,9,s) && COST_LESS(c,s->cost[burm_rm_NT])) {
+burm_trace(burm_np, 9, c);     s->cost[burm_rm_NT] = c ;
     s->rule.burm_rm = 2;
   }
   if(burm_cost_code(&c,4,s) && COST_LESS(c,s->cost[burm_value_NT])) {
@@ -3109,17 +2970,17 @@ burm_trace(burm_np, 1, c);     s->cost[burm_stmt_NT] = c ;
 }
 
 static void burm_closure_ptr(struct burm_state *s, COST c) {
-  if(burm_cost_code(&c,16,s) && COST_LESS(c,s->cost[burm_mem_NT])) {
-burm_trace(burm_np, 16, c);     s->cost[burm_mem_NT] = c ;
-    s->rule.burm_mem = 2;
-    burm_closure_mem(s, c );
+  if(burm_cost_code(&c,5,s) && COST_LESS(c,s->cost[burm_reg_NT])) {
+burm_trace(burm_np, 5, c);     s->cost[burm_reg_NT] = c ;
+    s->rule.burm_reg = 1;
+    burm_closure_reg(s, c );
   }
 }
 
 static void burm_closure_cond(struct burm_state *s, COST c) {
   if(burm_cost_code(&c,49,s) && COST_LESS(c,s->cost[burm_stmt_NT])) {
 burm_trace(burm_np, 49, c);     s->cost[burm_stmt_NT] = c ;
-    s->rule.burm_stmt = 8;
+    s->rule.burm_stmt = 9;
   }
 }
 
@@ -3146,10 +3007,10 @@ struct burm_state *burm_alloc_state(NODEPTR u,int op,int arity)
   p->rule.burm_imm =
   p->rule.burm_mem =
   p->rule.burm_ptr =
-  p->rule.burm_bptr =
   p->rule.burm_cond =
   p->rule.burm_label =
   p->rule.burm_args =
+  p->rule.burm__ =
     0;
   p->cost[1] =
   p->cost[2] =
@@ -3191,16 +3052,8 @@ struct burm_state *burm_label1(NODEPTR u) {
     children=GET_KIDS(u);
     for(i=0;i<arity;i++)
       k[i]=burm_label1(children[i]);
-    if (   /* stmt: Ret(reg) */
-      k[0]->rule.burm_reg
-    ) {
-      if(burm_cost_code(&c,21,s) && COST_LESS(c,s->cost[burm_stmt_NT])) {
-burm_trace(burm_np, 21, c);         s->cost[burm_stmt_NT] = c ;
-        s->rule.burm_stmt = 4;
-      }
-    }
-    if (   /* stmt: Ret(imm) */
-      k[0]->rule.burm_imm
+    if (   /* stmt: Ret(ri) */
+      k[0]->rule.burm_ri
     ) {
       if(burm_cost_code(&c,20,s) && COST_LESS(c,s->cost[burm_stmt_NT])) {
 burm_trace(burm_np, 20, c);         s->cost[burm_stmt_NT] = c ;
@@ -3222,7 +3075,7 @@ burm_trace(burm_np, 20, c);         s->cost[burm_stmt_NT] = c ;
     ) {
       if(burm_cost_code(&c,54,s) && COST_LESS(c,s->cost[burm_stmt_NT])) {
 burm_trace(burm_np, 54, c);         s->cost[burm_stmt_NT] = c ;
-        s->rule.burm_stmt = 10;
+        s->rule.burm_stmt = 11;
       }
     }
     if (   /* stmt: Br(label,DUMMY,DUMMY) */
@@ -3232,7 +3085,7 @@ burm_trace(burm_np, 54, c);         s->cost[burm_stmt_NT] = c ;
     ) {
       if(burm_cost_code(&c,53,s) && COST_LESS(c,s->cost[burm_stmt_NT])) {
 burm_trace(burm_np, 53, c);         s->cost[burm_stmt_NT] = c ;
-        s->rule.burm_stmt = 9;
+        s->rule.burm_stmt = 10;
       }
     }
     break;
@@ -3654,9 +3507,9 @@ burm_trace(burm_np, 44, c);         s->cost[burm_imm_NT] = c ;
     if (   /* mem: Alloca(imm) */
       k[0]->rule.burm_imm
     ) {
-      if(burm_cost_code(&c,22,s) && COST_LESS(c,s->cost[burm_mem_NT])) {
-burm_trace(burm_np, 22, c);         s->cost[burm_mem_NT] = c ;
-        s->rule.burm_mem = 4;
+      if(burm_cost_code(&c,21,s) && COST_LESS(c,s->cost[burm_mem_NT])) {
+burm_trace(burm_np, 21, c);         s->cost[burm_mem_NT] = c ;
+        s->rule.burm_mem = 3;
         burm_closure_mem(s, c );
       }
     }
@@ -3668,54 +3521,29 @@ burm_trace(burm_np, 22, c);         s->cost[burm_mem_NT] = c ;
     children=GET_KIDS(u);
     for(i=0;i<arity;i++)
       k[i]=burm_label1(children[i]);
-    if (   /* bptr: Load(mem) */
-      k[0]->rule.burm_mem
-    ) {
-      if(burm_cost_code(&c,72,s) && COST_LESS(c,s->cost[burm_bptr_NT])) {
-burm_trace(burm_np, 72, c);         s->cost[burm_bptr_NT] = c ;
-        s->rule.burm_bptr = 2;
-      }
-    }
-    if (   /* bptr: Load(reg) */
-      k[0]->rule.burm_reg
-    ) {
-      if(burm_cost_code(&c,71,s) && COST_LESS(c,s->cost[burm_bptr_NT])) {
-burm_trace(burm_np, 71, c);         s->cost[burm_bptr_NT] = c ;
-        s->rule.burm_bptr = 1;
-      }
-    }
     if (   /* reg: Load(mem) */
       k[0]->rule.burm_mem
     ) {
-      if(burm_cost_code(&c,25,s) && COST_LESS(c,s->cost[burm_reg_NT])) {
-burm_trace(burm_np, 25, c);         s->cost[burm_reg_NT] = c ;
+      if(burm_cost_code(&c,23,s) && COST_LESS(c,s->cost[burm_reg_NT])) {
+burm_trace(burm_np, 23, c);         s->cost[burm_reg_NT] = c ;
         s->rule.burm_reg = 5;
         burm_closure_reg(s, c );
       }
     }
-    if (   /* reg: Load(imm) */
-      k[0]->rule.burm_imm
+    if (   /* reg: Load(ri) */
+      k[0]->rule.burm_ri
     ) {
-      if(burm_cost_code(&c,24,s) && COST_LESS(c,s->cost[burm_reg_NT])) {
-burm_trace(burm_np, 24, c);         s->cost[burm_reg_NT] = c ;
+      if(burm_cost_code(&c,22,s) && COST_LESS(c,s->cost[burm_reg_NT])) {
+burm_trace(burm_np, 22, c);         s->cost[burm_reg_NT] = c ;
         s->rule.burm_reg = 4;
-        burm_closure_reg(s, c );
-      }
-    }
-    if (   /* reg: Load(reg) */
-      k[0]->rule.burm_reg
-    ) {
-      if(burm_cost_code(&c,23,s) && COST_LESS(c,s->cost[burm_reg_NT])) {
-burm_trace(burm_np, 23, c);         s->cost[burm_reg_NT] = c ;
-        s->rule.burm_reg = 3;
         burm_closure_reg(s, c );
       }
     }
     if (   /* imm: Load(IMM) */
       k[0]->op == 66	/* IMM */
     ) {
-      if(burm_cost_code(&c,13,s) && COST_LESS(c,s->cost[burm_imm_NT])) {
-burm_trace(burm_np, 13, c);         s->cost[burm_imm_NT] = c ;
+      if(burm_cost_code(&c,14,s) && COST_LESS(c,s->cost[burm_imm_NT])) {
+burm_trace(burm_np, 14, c);         s->cost[burm_imm_NT] = c ;
         s->rule.burm_imm = 1;
         burm_closure_imm(s, c );
       }
@@ -3728,31 +3556,49 @@ burm_trace(burm_np, 13, c);         s->cost[burm_imm_NT] = c ;
     children=GET_KIDS(u);
     for(i=0;i<arity;i++)
       k[i]=burm_label1(children[i]);
-    if (   /* stmt: Store(mem,mem) */
-      k[0]->rule.burm_mem && 
+    if (   /* stmt: Store(ptr,mem) */
+      k[0]->rule.burm_ptr && 
       k[1]->rule.burm_mem
     ) {
       if(burm_cost_code(&c,28,s) && COST_LESS(c,s->cost[burm_stmt_NT])) {
 burm_trace(burm_np, 28, c);         s->cost[burm_stmt_NT] = c ;
-        s->rule.burm_stmt = 7;
+        s->rule.burm_stmt = 8;
       }
     }
-    if (   /* stmt: Store(reg,mem) */
-      k[0]->rule.burm_reg && 
-      k[1]->rule.burm_mem
+    if (   /* stmt: Store(mem,ptr) */
+      k[0]->rule.burm_mem && 
+      k[1]->rule.burm_ptr
     ) {
       if(burm_cost_code(&c,27,s) && COST_LESS(c,s->cost[burm_stmt_NT])) {
 burm_trace(burm_np, 27, c);         s->cost[burm_stmt_NT] = c ;
-        s->rule.burm_stmt = 6;
+        s->rule.burm_stmt = 7;
       }
     }
-    if (   /* stmt: Store(imm,mem) */
-      k[0]->rule.burm_imm && 
-      k[1]->rule.burm_mem
+    if (   /* stmt: Store(ri,ptr) */
+      k[0]->rule.burm_ri && 
+      k[1]->rule.burm_ptr
     ) {
       if(burm_cost_code(&c,26,s) && COST_LESS(c,s->cost[burm_stmt_NT])) {
 burm_trace(burm_np, 26, c);         s->cost[burm_stmt_NT] = c ;
+        s->rule.burm_stmt = 6;
+      }
+    }
+    if (   /* stmt: Store(mem,mem) */
+      k[0]->rule.burm_mem && 
+      k[1]->rule.burm_mem
+    ) {
+      if(burm_cost_code(&c,25,s) && COST_LESS(c,s->cost[burm_stmt_NT])) {
+burm_trace(burm_np, 25, c);         s->cost[burm_stmt_NT] = c ;
         s->rule.burm_stmt = 5;
+      }
+    }
+    if (   /* stmt: Store(ri,mem) */
+      k[0]->rule.burm_ri && 
+      k[1]->rule.burm_mem
+    ) {
+      if(burm_cost_code(&c,24,s) && COST_LESS(c,s->cost[burm_stmt_NT])) {
+burm_trace(burm_np, 24, c);         s->cost[burm_stmt_NT] = c ;
+        s->rule.burm_stmt = 4;
       }
     }
     break;
@@ -3763,30 +3609,8 @@ burm_trace(burm_np, 26, c);         s->cost[burm_stmt_NT] = c ;
     children=GET_KIDS(u);
     for(i=0;i<arity;i++)
       k[i]=burm_label1(children[i]);
-    if (   /* ptr: GetElementPtr(mem,reg,DUMMY) */
-      k[0]->rule.burm_mem && 
-      k[1]->rule.burm_reg && 
-      k[2]->op == 0	/* DUMMY */
-    ) {
-      if(burm_cost_code(&c,70,s) && COST_LESS(c,s->cost[burm_ptr_NT])) {
-burm_trace(burm_np, 70, c);         s->cost[burm_ptr_NT] = c ;
-        s->rule.burm_ptr = 8;
-        burm_closure_ptr(s, c );
-      }
-    }
-    if (   /* ptr: GetElementPtr(mem,imm,DUMMY) */
-      k[0]->rule.burm_mem && 
-      k[1]->rule.burm_imm && 
-      k[2]->op == 0	/* DUMMY */
-    ) {
-      if(burm_cost_code(&c,69,s) && COST_LESS(c,s->cost[burm_ptr_NT])) {
-burm_trace(burm_np, 69, c);         s->cost[burm_ptr_NT] = c ;
-        s->rule.burm_ptr = 7;
-        burm_closure_ptr(s, c );
-      }
-    }
-    if (   /* ptr: GetElementPtr(bptr,reg,DUMMY) */
-      k[0]->rule.burm_bptr && 
+    if (   /* ptr: GetElementPtr(reg,reg,DUMMY) */
+      k[0]->rule.burm_reg && 
       k[1]->rule.burm_reg && 
       k[2]->op == 0	/* DUMMY */
     ) {
@@ -3796,8 +3620,8 @@ burm_trace(burm_np, 68, c);         s->cost[burm_ptr_NT] = c ;
         burm_closure_ptr(s, c );
       }
     }
-    if (   /* ptr: GetElementPtr(bptr,imm,DUMMY) */
-      k[0]->rule.burm_bptr && 
+    if (   /* ptr: GetElementPtr(reg,imm,DUMMY) */
+      k[0]->rule.burm_reg && 
       k[1]->rule.burm_imm && 
       k[2]->op == 0	/* DUMMY */
     ) {
@@ -3807,9 +3631,9 @@ burm_trace(burm_np, 67, c);         s->cost[burm_ptr_NT] = c ;
         burm_closure_ptr(s, c );
       }
     }
-    if (   /* ptr: GetElementPtr(mem,imm,reg) */
+    if (   /* ptr: GetElementPtr(mem,_,reg) */
       k[0]->rule.burm_mem && 
-      k[1]->rule.burm_imm && 
+      1  && 
       k[2]->rule.burm_reg
     ) {
       if(burm_cost_code(&c,66,s) && COST_LESS(c,s->cost[burm_ptr_NT])) {
@@ -3818,10 +3642,10 @@ burm_trace(burm_np, 66, c);         s->cost[burm_ptr_NT] = c ;
         burm_closure_ptr(s, c );
       }
     }
-    if (   /* ptr: GetElementPtr(ri,ri,reg) */
-      k[0]->rule.burm_ri && 
-      k[1]->rule.burm_ri && 
-      k[2]->rule.burm_reg
+    if (   /* ptr: GetElementPtr(mem,_,imm) */
+      k[0]->rule.burm_mem && 
+      1  && 
+      k[2]->rule.burm_imm
     ) {
       if(burm_cost_code(&c,65,s) && COST_LESS(c,s->cost[burm_ptr_NT])) {
 burm_trace(burm_np, 65, c);         s->cost[burm_ptr_NT] = c ;
@@ -3829,10 +3653,10 @@ burm_trace(burm_np, 65, c);         s->cost[burm_ptr_NT] = c ;
         burm_closure_ptr(s, c );
       }
     }
-    if (   /* ptr: GetElementPtr(mem,imm,imm) */
-      k[0]->rule.burm_mem && 
-      k[1]->rule.burm_imm && 
-      k[2]->rule.burm_imm
+    if (   /* ptr: GetElementPtr(reg,_,reg) */
+      k[0]->rule.burm_reg && 
+      1  && 
+      k[2]->rule.burm_reg
     ) {
       if(burm_cost_code(&c,64,s) && COST_LESS(c,s->cost[burm_ptr_NT])) {
 burm_trace(burm_np, 64, c);         s->cost[burm_ptr_NT] = c ;
@@ -3840,9 +3664,9 @@ burm_trace(burm_np, 64, c);         s->cost[burm_ptr_NT] = c ;
         burm_closure_ptr(s, c );
       }
     }
-    if (   /* ptr: GetElementPtr(ri,imm,imm) */
-      k[0]->rule.burm_ri && 
-      k[1]->rule.burm_imm && 
+    if (   /* ptr: GetElementPtr(reg,_,imm) */
+      k[0]->rule.burm_reg && 
+      1  && 
       k[2]->rule.burm_imm
     ) {
       if(burm_cost_code(&c,63,s) && COST_LESS(c,s->cost[burm_ptr_NT])) {
@@ -4091,17 +3915,16 @@ burm_trace(burm_np, 50, c);         s->cost[burm_cond_NT] = c ;
     s=burm_alloc_state(u,op,arity);
     SET_STATE(u,s);
     k=s->kids;
-    children=GET_KIDS(u);
-    for(i=0;i<arity;i++)
-      k[i]=burm_label1(children[i]);
-    if (   /* reg: PHI(ri) */
-      k[0]->rule.burm_ri
-    ) {
-      if(burm_cost_code(&c,19,s) && COST_LESS(c,s->cost[burm_reg_NT])) {
-burm_trace(burm_np, 19, c);         s->cost[burm_reg_NT] = c ;
-        s->rule.burm_reg = 2;
-        burm_closure_reg(s, c );
-      }
+        /*immediate rule: reg: PHI(_) */
+    if(burm_cost_code(&c,19,s) && COST_LESS(c,s->cost[burm_reg_NT])) {
+burm_trace(burm_np, 19, c);       s->cost[burm_reg_NT] = c ;
+      s->rule.burm_reg = 3;
+      immed_matched=1;
+      burm_closure_reg(s, c );
+    }
+    if(immed_matched){
+      for(i=0;i<arity;i++)k[i]=0;
+      return s;
     }
     break;
   case 54:		/* Call */
@@ -4210,9 +4033,9 @@ burm_trace(burm_np, 55, c);         s->cost[burm_reg_NT] = c ;
     SET_STATE(u,s);
     k=0;
     {  		/* reg: REG */
-      if(burm_cost_code(&c,12,s) && COST_LESS(c,s->cost[burm_reg_NT])) {
-burm_trace(burm_np, 12, c);         s->cost[burm_reg_NT] = c ;
-        s->rule.burm_reg = 1;
+      if(burm_cost_code(&c,13,s) && COST_LESS(c,s->cost[burm_reg_NT])) {
+burm_trace(burm_np, 13, c);         s->cost[burm_reg_NT] = c ;
+        s->rule.burm_reg = 2;
         burm_closure_reg(s, c );
       }
     }
@@ -4226,8 +4049,8 @@ burm_trace(burm_np, 12, c);         s->cost[burm_reg_NT] = c ;
     SET_STATE(u,s);
     k=0;
     {  		/* imm: IMM */
-      if(burm_cost_code(&c,14,s) && COST_LESS(c,s->cost[burm_imm_NT])) {
-burm_trace(burm_np, 14, c);         s->cost[burm_imm_NT] = c ;
+      if(burm_cost_code(&c,15,s) && COST_LESS(c,s->cost[burm_imm_NT])) {
+burm_trace(burm_np, 15, c);         s->cost[burm_imm_NT] = c ;
         s->rule.burm_imm = 2;
         burm_closure_imm(s, c );
       }
@@ -4242,8 +4065,8 @@ burm_trace(burm_np, 14, c);         s->cost[burm_imm_NT] = c ;
     SET_STATE(u,s);
     k=0;
     {  		/* mem: MEM */
-      if(burm_cost_code(&c,15,s) && COST_LESS(c,s->cost[burm_mem_NT])) {
-burm_trace(burm_np, 15, c);         s->cost[burm_mem_NT] = c ;
+      if(burm_cost_code(&c,16,s) && COST_LESS(c,s->cost[burm_mem_NT])) {
+burm_trace(burm_np, 16, c);         s->cost[burm_mem_NT] = c ;
         s->rule.burm_mem = 1;
         burm_closure_mem(s, c );
       }
@@ -4315,7 +4138,7 @@ burm_trace(burm_np, 56, c);         s->cost[burm_args_NT] = c ;
     {  		/* mem: GlobalValue */
       if(burm_cost_code(&c,17,s) && COST_LESS(c,s->cost[burm_mem_NT])) {
 burm_trace(burm_np, 17, c);         s->cost[burm_mem_NT] = c ;
-        s->rule.burm_mem = 3;
+        s->rule.burm_mem = 2;
         burm_closure_mem(s, c );
       }
     }
@@ -4382,14 +4205,14 @@ NODEPTR *burm_kids(NODEPTR p, int eruleno, NODEPTR kids[]) {
   burm_assert(kids, PANIC("NULL kids in burm_kids\n"));
   switch (eruleno) {
   case 49: /* stmt: cond */
-  case 16: /* mem: ptr */
-  case 11: /* rim: mem */
-  case 10: /* rim: imm */
-  case 9: /* rim: reg */
-  case 8: /* rm: mem */
-  case 7: /* rm: reg */
-  case 6: /* ri: imm */
-  case 5: /* ri: reg */
+  case 12: /* rim: mem */
+  case 11: /* rim: imm */
+  case 10: /* rim: reg */
+  case 9: /* rm: mem */
+  case 8: /* rm: reg */
+  case 7: /* ri: imm */
+  case 6: /* ri: reg */
+  case 5: /* reg: ptr */
   case 4: /* value: mem */
   case 3: /* value: imm */
   case 2: /* value: reg */
@@ -4400,13 +4223,11 @@ NODEPTR *burm_kids(NODEPTR p, int eruleno, NODEPTR kids[]) {
   case 56: /* args: NOARGS */
   case 18: /* label: LABEL */
   case 17: /* mem: GlobalValue */
-  case 15: /* mem: MEM */
-  case 14: /* imm: IMM */
-  case 13: /* imm: Load(IMM) */
-  case 12: /* reg: REG */
+  case 16: /* mem: MEM */
+  case 15: /* imm: IMM */
+  case 14: /* imm: Load(IMM) */
+  case 13: /* reg: REG */
     break;
-  case 72: /* bptr: Load(mem) */
-  case 71: /* bptr: Load(reg) */
   case 62: /* reg: BitCast(mem) */
   case 61: /* reg: BitCast(reg) */
   case 60: /* reg: ZExt(reg) */
@@ -4414,19 +4235,15 @@ NODEPTR *burm_kids(NODEPTR p, int eruleno, NODEPTR kids[]) {
   case 58: /* reg: Trunc(reg) */
   case 55: /* reg: Call(args) */
   case 53: /* stmt: Br(label,DUMMY,DUMMY) */
-  case 25: /* reg: Load(mem) */
-  case 24: /* reg: Load(imm) */
-  case 23: /* reg: Load(reg) */
-  case 22: /* mem: Alloca(imm) */
-  case 21: /* stmt: Ret(reg) */
-  case 20: /* stmt: Ret(imm) */
-  case 19: /* reg: PHI(ri) */
+  case 23: /* reg: Load(mem) */
+  case 22: /* reg: Load(ri) */
+  case 21: /* mem: Alloca(imm) */
+  case 20: /* stmt: Ret(ri) */
+  case 19: /* reg: PHI(_) */
     kids[0] = burm_child(p,0);
     break;
-  case 70: /* ptr: GetElementPtr(mem,reg,DUMMY) */
-  case 69: /* ptr: GetElementPtr(mem,imm,DUMMY) */
-  case 68: /* ptr: GetElementPtr(bptr,reg,DUMMY) */
-  case 67: /* ptr: GetElementPtr(bptr,imm,DUMMY) */
+  case 68: /* ptr: GetElementPtr(reg,reg,DUMMY) */
+  case 67: /* ptr: GetElementPtr(reg,imm,DUMMY) */
   case 57: /* args: ARGS(value,args) */
   case 52: /* cond: ICmp(reg,reg) */
   case 51: /* cond: ICmp(reg,imm) */
@@ -4451,16 +4268,18 @@ NODEPTR *burm_kids(NODEPTR p, int eruleno, NODEPTR kids[]) {
   case 31: /* reg: Add(reg,rim) */
   case 30: /* reg: Add(imm,imm) */
   case 29: /* imm: Add(imm,imm) */
-  case 28: /* stmt: Store(mem,mem) */
-  case 27: /* stmt: Store(reg,mem) */
-  case 26: /* stmt: Store(imm,mem) */
+  case 28: /* stmt: Store(ptr,mem) */
+  case 27: /* stmt: Store(mem,ptr) */
+  case 26: /* stmt: Store(ri,ptr) */
+  case 25: /* stmt: Store(mem,mem) */
+  case 24: /* stmt: Store(ri,mem) */
     kids[0] = burm_child(p,0);
     kids[1] = burm_child(p,1);
     break;
-  case 66: /* ptr: GetElementPtr(mem,imm,reg) */
-  case 65: /* ptr: GetElementPtr(ri,ri,reg) */
-  case 64: /* ptr: GetElementPtr(mem,imm,imm) */
-  case 63: /* ptr: GetElementPtr(ri,imm,imm) */
+  case 66: /* ptr: GetElementPtr(mem,_,reg) */
+  case 65: /* ptr: GetElementPtr(mem,_,imm) */
+  case 64: /* ptr: GetElementPtr(reg,_,reg) */
+  case 63: /* ptr: GetElementPtr(reg,_,imm) */
   case 54: /* stmt: Br(cond,label,label) */
     kids[0] = burm_child(p,0);
     kids[1] = burm_child(p,1);

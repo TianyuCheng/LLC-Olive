@@ -2,7 +2,7 @@
 #define DEBUG 0
 
 FunctionState::FunctionState(std::string name, int n, int f, int l)
-    : function_name(name), function_id(f), label_id(l), local_bytes(8), num_args(0), allocator(n), current_line(0)
+    : function_name(name), function_id(f), label_id(l), local_bytes(8), num_args(0), allocator(n), current_line(0), num_regs(n)
 {
     // initialize function state here
     // local_bytes is initiated to 8 for saved rip
@@ -163,14 +163,6 @@ X86Operand* FunctionState::GetLocalMemoryAddress(int offset) {
     return local;
 }
 
-// void FunctionState::RestoreStack() {
-//     if (local_bytes > 0)
-//         assembly.push_back(new X86Inst("addq",
-//                 new X86Operand(this, RSP),   // should be rsp
-//                 new X86Operand(this, OP_TYPE::X86Imm, local_bytes)
-//         ));
-// }
-
 void FunctionState::CreateArgument(llvm::Argument *arg) {
     Tree *t = nullptr;
     X86Operand *op = nullptr;
@@ -198,13 +190,9 @@ void FunctionState::CreateArgument(llvm::Argument *arg) {
 
 void FunctionState::CreateVirtualReg(Tree *t) {
     // do nothing for PhiNode, because the register value has been pre-allocated
-    if (t->IsPhiNode()) {
-        return;
-    }
+    if (t->IsPhiNode()) { return; }
     // if already allocated, do nothing
-    if (t->HasValue()) {
-        return;
-    }
+    if (t->HasValue()) { return; }
 
     using namespace llvm;
     int v = allocator.CreateVirtualReg();
@@ -222,9 +210,15 @@ void FunctionState::CreatePhysicalReg(Tree *t, Register r) {
 }
 
 void FunctionState::AssignVirtualReg(Tree *lhs, Tree *rhs) {
-    lhs->UseAsVirtualRegister();
     // if (rhs->IsVirtualReg()) std::cerr << "FOUND RHS TO BE A PHYSICAL REG" << std::endl;
     // if (rhs->IsPhysicalReg()) std::cerr << "FOUND RHS TO BE A PHYSICAL REG" << std::endl;
+
+    // do nothing for PhiNode, because the register value has been pre-allocated
+    if (lhs->IsPhiNode()) { return; }
+    // if already allocated, do nothing
+    if (lhs->HasValue()) { return; }
+
+    lhs->UseAsVirtualRegister();
 
     if (rhs->IsVirtualReg() && rhs->GetRefCount() == 1) {
         // this register is about to be free, we can reuse it
@@ -235,27 +229,20 @@ void FunctionState::AssignVirtualReg(Tree *lhs, Tree *rhs) {
         // we will still be using rhs in the future, 
         // so better not overwrite the rhs
         CreateVirtualReg(lhs);      // assign a virtual register to the inst
-        LoadFromReg(lhs, rhs);
+        GenerateMovStmt(lhs, rhs);
     }
 }
 
-void FunctionState::LoadFromReg(Tree *dst, Tree *src) {
-    // if (src->IsVirtualReg() && dst->IsVirtualReg())
-    //     if (src->GetValue().AsVirtualReg() != dst->GetValue().AsVirtualReg())
-    //         return;
-    // if (src->IsPhysicalReg() && dst->IsPhysicalReg())
-    //     if (src->GetValue().AsVirtualReg() != dst->GetValue().AsVirtualReg())
-    //         return;
-    // only copy register when src and dst are different
-    GenerateMovStmt(dst, src);
-}
-
-void FunctionState::LoadFromImm(Tree *dst, Tree *src) {
-    GenerateMovStmt(dst, src);
-}
-
 void FunctionState::LoadEffectiveAddress(Tree *dst, Tree *src) {
-    GenerateBinaryStmt("lea", dst, src, "q");
+    if (dst->IsMemory() && src->IsMemory()) {
+        Tree *t1 = (new Tree(REG))->GetTreeRef();
+        CreateVirtualReg(t1);
+        GenerateBinaryStmt("lea", t1, src, "q");
+        GenerateBinaryStmt("mov", dst, t1, "q");
+    }
+    else {
+        GenerateBinaryStmt("lea", dst, src, "q");
+    }
 }
 
 void FunctionState::GenerateLabelStmt(const char *l) {
@@ -267,22 +254,25 @@ void FunctionState::GenerateLabelStmt(Tree *t) {
 }
 
 void FunctionState::GenerateMovStmt(Tree *dst, Tree *src, const char *suffix) {
-    assert(!(dst->GetOpCode() == MEM && src->GetOpCode() == MEM) && "src and dst cannot both come from memory");
-    // Keep this one-line function, since we might want 
-    // to migrate to different operand sizes, so we will
-    // be using movb, movw, movl, movq according to the
-    // operands
-    if (src->GetOpCode() == IMM)
+    // special cases:
+    // 1. dst and src are both pointers
+    if (dst->IsMemory() && src->IsMemory()) {
+        Tree *t1 = (new Tree(REG))->GetTreeRef();
+        CreateVirtualReg(t1);
+        GenerateBinaryStmt("mov", t1, src, suffix);
+        GenerateBinaryStmt("mov", dst, t1, suffix);
+    }
+    else {
+        if (dst->IsVirtualReg() && src->IsVirtualReg() && dst->GetValue().AsVirtualReg() == src->GetValue().AsVirtualReg())
+            return;
+        if (dst->IsPhysicalReg() && src->IsPhysicalReg() && dst->GetValue().AsVirtualReg() == src->GetValue().AsVirtualReg())
+            return;
         GenerateBinaryStmt("mov", dst, src, suffix);
-    else
-        GenerateBinaryStmt("mov", dst, src, suffix);
+    }
 }
 
 void FunctionState::GenerateMovStmt(X86Operand *dst, X86Operand *src, const char *suffix) {
-    if (src->GetType() == OP_TYPE::X86Imm)
-        GenerateBinaryStmt("mov", dst, src, suffix);
-    else
-        GenerateBinaryStmt("mov", dst, src, suffix);
+    GenerateBinaryStmt("mov", dst, src, suffix);
 }
 
 void FunctionState::GenerateStmt(const char *op) {
