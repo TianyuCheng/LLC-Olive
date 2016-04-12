@@ -447,11 +447,16 @@ void FunctionState::RecordLiveStart(Tree *t) {
 // ========================================================
 // register allocation
 int  FunctionState::CreateSpill(std::ostream &out, int reg_idx) {
-    // std::cerr << "Spill out physical reg: " << reg_idx << std::endl;
-    X86Operand operand(this, reg_idx);
-    X86Inst inst("pushq", &operand);
-    local_bytes += 8;
-    out << inst << "\t# spill reg: " << registers[reg_idx] << " at OFFSET: " << -local_bytes << std::endl;
+    // // std::cerr << "Spill out physical reg: " << reg_idx << std::endl;
+
+    local_bytes += 8;       // pre-assign space for register spill
+    int offset = -local_bytes;
+
+    X86Operand *operand1 = GetLocalMemoryAddress(offset);
+    X86Operand operand2(this, reg_idx);
+    X86Inst inst("movq", operand1, &operand2);
+    out << inst << "\t# create spill reg at OFFSET: " << offset << std::endl;
+    delete operand1;
     return -local_bytes;
 }
 

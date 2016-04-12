@@ -7,7 +7,7 @@ OPT			:=$(BIN_ROOT)/opt
 OLIVE		:=./olive/olive
 EXE			:=$(BIN_ROOT)/llc-olive
 
-NUM_REGS  	:= 6
+NUM_REGS  	:= 3
 # colorful terminal output
 RED  =`tput setaf 1`
 GREEN=`tput setaf 2`
