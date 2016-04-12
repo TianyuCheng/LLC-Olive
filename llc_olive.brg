@@ -131,7 +131,6 @@ reg:    Load(ri)            { $cost[0].cost = $cost[2].cost + 1;    } = {
              */
             $action[2](fstate);
             fstate->AssignVirtualReg($0, $2);    // assign a virtual register to the inst
-            fstate->GenerateMovStmt($0, $2);
             // this will record the ending in liveness range for a register
             // if the input is a register, and the register dies
             fstate->RecordLiveness($2);
@@ -739,6 +738,7 @@ args:   ARGS(value, args)        { $cost[0].cost = $cost[2].cost + $cost[3].cost
 
             if (n < 6) {
                 // arguments in registers are added in order
+                $action[3](fstate, n + 1);
                 $action[2](fstate);
 
                 $0->SetValue(params_regs[n]);
@@ -747,7 +747,6 @@ args:   ARGS(value, args)        { $cost[0].cost = $cost[2].cost + $cost[3].cost
                 else                  fstate->LoadEffectiveAddress($0, $2);
                 fstate->RecordLiveness($2);
 
-                $action[3](fstate, n + 1);
             } else {
                 // arguments in memory are added in reversed order
                 // more than 6 argments should be pushed on stack in reversed order

@@ -550,52 +550,52 @@ int burm_line_numbers[] = {
   /* 21 */  68,
   /* 22 */  87,
   /* 23 */  125,
-  /* 24 */  140,
-  /* 25 */  152,
-  /* 26 */  164,
-  /* 27 */  181,
-  /* 28 */  203,
-  /* 29 */  221,
-  /* 30 */  241,
-  /* 31 */  255,
-  /* 32 */  272,
-  /* 33 */  289,
-  /* 34 */  306,
-  /* 35 */  320,
-  /* 36 */  337,
-  /* 37 */  354,
-  /* 38 */  372,
-  /* 39 */  386,
-  /* 40 */  403,
-  /* 41 */  420,
-  /* 42 */  438,
-  /* 43 */  452,
-  /* 44 */  469,
-  /* 45 */  488,
-  /* 46 */  502,
-  /* 47 */  519,
-  /* 48 */  538,
-  /* 49 */  564,
-  /* 50 */  590,
-  /* 51 */  591,
-  /* 52 */  605,
-  /* 53 */  618,
-  /* 54 */  631,
-  /* 55 */  644,
-  /* 56 */  705,
-  /* 57 */  733,
-  /* 58 */  736,
-  /* 59 */  760,
-  /* 60 */  769,
-  /* 61 */  778,
-  /* 62 */  787,
-  /* 63 */  794,
-  /* 64 */  801,
-  /* 65 */  833,
-  /* 66 */  865,
-  /* 67 */  894,
-  /* 68 */  923,
-  /* 69 */  955,
+  /* 24 */  139,
+  /* 25 */  151,
+  /* 26 */  163,
+  /* 27 */  180,
+  /* 28 */  202,
+  /* 29 */  220,
+  /* 30 */  240,
+  /* 31 */  254,
+  /* 32 */  271,
+  /* 33 */  288,
+  /* 34 */  305,
+  /* 35 */  319,
+  /* 36 */  336,
+  /* 37 */  353,
+  /* 38 */  371,
+  /* 39 */  385,
+  /* 40 */  402,
+  /* 41 */  419,
+  /* 42 */  437,
+  /* 43 */  451,
+  /* 44 */  468,
+  /* 45 */  487,
+  /* 46 */  501,
+  /* 47 */  518,
+  /* 48 */  537,
+  /* 49 */  563,
+  /* 50 */  589,
+  /* 51 */  590,
+  /* 52 */  604,
+  /* 53 */  617,
+  /* 54 */  630,
+  /* 55 */  643,
+  /* 56 */  704,
+  /* 57 */  732,
+  /* 58 */  735,
+  /* 59 */  759,
+  /* 60 */  768,
+  /* 61 */  777,
+  /* 62 */  786,
+  /* 63 */  793,
+  /* 64 */  800,
+  /* 65 */  832,
+  /* 66 */  864,
+  /* 67 */  893,
+  /* 68 */  922,
+  /* 69 */  954,
 };
 
 #pragma GCC diagnostic push
@@ -1853,7 +1853,6 @@ FUNCTION_STATE fstate)
              */
             ri_action(_s->kids[0],fstate);
             fstate->AssignVirtualReg(_s->node, _s->kids[0]->node);    // assign a virtual register to the inst
-            fstate->GenerateMovStmt(_s->node, _s->kids[0]->node);
             // this will record the ending in liveness range for a register
             // if the input is a register, and the register dies
             fstate->RecordLiveness(_s->kids[0]->node);
@@ -2914,6 +2913,7 @@ FUNCTION_STATE fstate, int n)
 
             if (n < 6) {
                 // arguments in registers are added in order
+                args_action(_s->kids[1],fstate, n + 1);
                 value_action(_s->kids[0],fstate);
 
                 _s->node->SetValue(params_regs[n]);
@@ -2922,7 +2922,6 @@ FUNCTION_STATE fstate, int n)
                 else                  fstate->LoadEffectiveAddress(_s->node, _s->kids[0]->node);
                 fstate->RecordLiveness(_s->kids[0]->node);
 
-                args_action(_s->kids[1],fstate, n + 1);
             } else {
                 // arguments in memory are added in reversed order
                 // more than 6 argments should be pushed on stack in reversed order

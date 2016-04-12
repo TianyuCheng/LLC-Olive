@@ -13,12 +13,12 @@ long long recursive_args(
     if (a == 1) {
         return 1;
     } else {
+        printf("a: %llu\tb: %llu\tc: %llu\n", a, b, c);
+        printf("d: %llu\te: %llu\tf: %llu\n", d, e, f);
+        printf("g: %llu\th: %llu\ti: %llu\n", g, h, i);
         long long ret = a + b - c + d - e + f - g + h - i;
-        printf("a: %llu\tb: %llu\tc: %llu\n",   a, b, c);
-        printf("d: %llu\te: %llu\tf: %llu\n",   d, e, f);
-        printf("g: %llu\th: %llu\ti: %llu\n\n", g, h, i);
+        printf("ret: %llu  \n", ret);
         long long rec = recursive_args(a - 1, b, c, d, e, f, g, h, i);
-        printf("ret: %llu\n  ", ret);
         printf("rec: %llu\n\n", rec);
         return ret * rec;
     }
@@ -26,6 +26,6 @@ long long recursive_args(
 
 int main()
 {
-    long long ret = recursive_args(9, 8, 7, 6, 5, 4, 3, 2, 1);
+    long long ret = recursive_args(2, 8, 7, 6, 5, 4, 3, 2, 1);
     return ret;
 }
