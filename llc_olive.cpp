@@ -583,19 +583,19 @@ int burm_line_numbers[] = {
   /* 54 */  638,
   /* 55 */  651,
   /* 56 */  712,
-  /* 57 */  740,
-  /* 58 */  743,
-  /* 59 */  767,
-  /* 60 */  776,
-  /* 61 */  785,
-  /* 62 */  794,
-  /* 63 */  802,
-  /* 64 */  809,
-  /* 65 */  841,
-  /* 66 */  873,
-  /* 67 */  902,
-  /* 68 */  931,
-  /* 69 */  963,
+  /* 57 */  751,
+  /* 58 */  754,
+  /* 59 */  778,
+  /* 60 */  787,
+  /* 61 */  796,
+  /* 62 */  805,
+  /* 63 */  813,
+  /* 64 */  820,
+  /* 65 */  852,
+  /* 66 */  884,
+  /* 67 */  913,
+  /* 68 */  942,
+  /* 69 */  974,
 };
 
 #pragma GCC diagnostic push
@@ -2260,29 +2260,40 @@ FUNCTION_STATE fstate)
             if (_s->node->IsComputed()) return;
             // _s->node->SetComputed(true);
 
-            int num_args = std::min(6, fstate->GetNumArgs());
+            int callee_args = _s->node->GetNumArgs();
+            int caller_args = fstate->GetNumArgs();
+            int reg_args = std::min(6, caller_args);
 
-            fstate->AddInst(new X86Inst("call-begin", true));
-
-            // Need to preserve caller_saved_regs
-            for (int i = 1; i < 1 + num_args; i++)
+            // Need to preserve caller_saved_regs, but we try to be economical (just save the ones we use)
+            for (int i = 1; i < 1 + reg_args; i++)
                 fstate->GeneratePushStmt(caller_saved_regs[i]);
+            fstate->AddInst(new X86Inst("call-begin", true));
 
             args_action(_s->kids[0],fstate, 0);
 
-            std::stringstream ss;
-            ss << "call\t" << _s->node->GetFuncName();
-            std::string s = ss.str();
-            fstate->GenerateStmt(s.c_str());
+            // register push and pops will be handled in FunctionState::PrintAssembly
+            {
+                std::stringstream ss;
+                ss << "call\t" << _s->node->GetFuncName();
+                std::string s = ss.str();
+                fstate->GenerateStmt(s.c_str());
+            }
+            if (callee_args > 6)
+            {
+                std::stringstream ss;
+                ss << "addq\t$" << (callee_args - 6) * 8 << ",\t%rsp";
+                std::string s = ss.str();
+                fstate->GenerateStmt(s.c_str());
+            }
 
             fstate->CreatePhysicalReg(_s->node, RAX);
             _s->node->UseAsPhysicalRegister();
 
+            fstate->AddInst(new X86Inst("call-end", true));
             // Need to restore caller_saved_regs
-            for (int i = num_args; i > 0; i--)
+            for (int i = reg_args; i > 0; i--)
                 fstate->GeneratePopStmt(caller_saved_regs[i]);
 
-            fstate->AddInst(new X86Inst("call-end", true));
         
 }
   break;

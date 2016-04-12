@@ -43,7 +43,7 @@ void SimpleRegisterAllocator::Allocate(FunctionState *fstate, std::ostream &out,
 }
 
 int SimpleRegisterAllocator::GetRegToSpill(std::ostream &out, FunctionState *fstate, int line) {
-    assert(spillable % 2 == 0 && "Not spillable while preparing function call. You must have exhaust your registers!");
+    // assert(spillable % 2 == 0 && "Not spillable while preparing function call. You must have exhaust your registers!");
 
     int distance = -1;
     int phy_reg_to_spill = -1;
@@ -53,17 +53,20 @@ int SimpleRegisterAllocator::GetRegToSpill(std::ostream &out, FunctionState *fst
         if (!CanSpill(vir_reg)) continue;
 
         LiveRange *range = liveness[vir_reg];
-        std::vector<int> &innerpoints = range->innerpoints;
-        int num_points = innerpoints.size();
+        if (range) {
+            assert(range && "range must be not null");
+            std::vector<int> &innerpoints = range->innerpoints;
+            int num_points = innerpoints.size();
 
-        // find out the virtual register that has the furtherest use in the future
-        for (int i = 0; i < num_points - 1; i++) {
-            if (innerpoints[i] <= line && innerpoints[i+1] >= line) {
-                int dist = innerpoints[i+1] - line;
-                if (dist >= distance) {
-                    distance = dist;
-                    phy_reg_to_spill = phy_reg;
-                    break;
+            // find out the virtual register that has the furtherest use in the future
+            for (int i = 0; i < num_points - 1; i++) {
+                if (innerpoints[i] <= line && innerpoints[i+1] >= line) {
+                    int dist = innerpoints[i+1] - line;
+                    if (dist >= distance) {
+                        distance = dist;
+                        phy_reg_to_spill = phy_reg;
+                        break;
+                    }
                 }
             }
         }
@@ -95,6 +98,7 @@ int SimpleRegisterAllocator::GetFreeReg(std::ostream &out, FunctionState *fstate
         // if this physical register is not assigned to some virtual register
         if (vir_reg == -1) return phy_reg;
 
+#if 1
         // if the virtual register that is assigned is not live anymore
         LiveRange *range = liveness[vir_reg];
         if (!range) {
@@ -104,10 +108,13 @@ int SimpleRegisterAllocator::GetFreeReg(std::ostream &out, FunctionState *fstate
                 std::cerr << it->first << std::endl;
             assert(false);
         }
+        assert(range && "range must not be null");
         if (line > range->endpoint) {
             virtual2machine[vir_reg] = -1;      // reset register assignment because the virtual register is expired
+            // virtual2machine[vir_reg] = fstate->CreateSpill(out, phy_reg);
             return phy_reg;
         }
+#endif
     }
 
     // if we cannot find a free physical register, then we have to spill
@@ -120,7 +127,6 @@ void SimpleRegisterAllocator::EnableSpill(FunctionState *fstate, std::ostream &o
 }
 void SimpleRegisterAllocator::DisableSpill(FunctionState *fstate, std::ostream &out) { 
     spillable++;
-    function_save_regs.clear();
 }
 
 int maxIndexVector (std::vector<int>& vec) {

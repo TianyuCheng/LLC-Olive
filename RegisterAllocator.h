@@ -37,6 +37,13 @@ static int REGS_OFFSET = 10;        // we start using registers from REGS_OFFSET
 class SimpleRegisterAllocator {
 public:
     SimpleRegisterAllocator(int n) : num_regs(n), spillable(0) {
+        Reset();
+    }
+    virtual ~SimpleRegisterAllocator() {
+        for (auto it = liveness.begin(); it != liveness.end(); ++it)
+            delete it->second;
+    }
+    void Reset() {
         // num_regs represents number of GENERAL PURPOSE REGISTERS:
         // r10, r11, r12, r13, r14, r15, r16
         for (int i = MAX_REGS-1; i >= std::max(REGS_OFFSET, MAX_REGS-num_regs); i--)
@@ -45,10 +52,12 @@ public:
         // R10 and R11 are disabled during function call arguments preparation
         disabled_regs.insert(R10);
         disabled_regs.insert(R11);
-    }
-    virtual ~SimpleRegisterAllocator() {
-        for (auto it = liveness.begin(); it != liveness.end(); ++it)
-            delete it->second;
+
+        for (int i = 0; i < virtual2machine.size(); i++)
+            virtual2machine[i] = -1;
+
+        spillable = 0;
+        nospills.clear();
     }
     void DumpVirtualRegs() {
         std::cerr << "##############################################" << std::endl;
@@ -139,7 +148,6 @@ private:
     std::map<int, int> register_status;
     std::vector<int> virtual2machine;   // map to value > 0 (good registers), value < 0 (memory), value = -1 (not allocated)
     std::vector<int> nospills;          // registers used in current instruction, cannot spill it
-    std::vector<Register> function_save_regs;
     std::set<Register> disabled_regs;
 };
 

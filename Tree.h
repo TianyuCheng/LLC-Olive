@@ -30,7 +30,7 @@ public:
         : op(opcode), val(-1), refcnt(0), level(1), operand(nullptr), 
           otype(-1), isReg(false), isPhysicalReg(false), computed(false), 
           isPtr(false), isPhi(false), suffix("q"), phiParent(nullptr),
-          cnstInt(64, 0), cnstFP(0.0), hasValue(false)
+          cnstInt(64, 0), cnstFP(0.0), hasValue(false), num_args(-1)
           
     {
     }
@@ -38,7 +38,7 @@ public:
         : op(opcode), val(v), refcnt(0), level(1), operand(nullptr), 
           otype(-1), isReg(false), isPhysicalReg(false), computed(false), 
           isPtr(false), isPhi(false), suffix("q"), phiParent(nullptr),
-          cnstInt(64, 0), cnstFP(0.0), hasValue(false)
+          cnstInt(64, 0), cnstFP(0.0), hasValue(false), num_args(-1)
     {
         SetValue(v);        // hasValue=true
     }
@@ -46,7 +46,7 @@ public:
         : op(opcode), val(-1), refcnt(0), level(1), operand(nullptr), 
           otype(-1), isReg(false), isPhysicalReg(false), computed(false), 
           isPtr(false), isPhi(false), suffix("q"), phiParent(nullptr),
-          cnstInt(64, 0), cnstFP(0.0), hasValue(false)
+          cnstInt(64, 0), cnstFP(0.0), hasValue(false), num_args(-1)
     {
         AddChild(l);
         AddChild(r);
@@ -59,6 +59,7 @@ public:
         // std::cerr << "GET OPCODE: " << op << std::endl;
         return op; 
     }
+    int GetNumArgs() const { return num_args; }
     
     void SetValue(VALUE v) { val = v; hasValue = true; }
     VALUE& GetValue() { return val; }
@@ -196,6 +197,7 @@ private:
 
     int level;
     int refcnt;
+    int num_args;
 
     bool isReg;
     bool computed;

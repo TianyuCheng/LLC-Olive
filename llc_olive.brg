@@ -713,29 +713,40 @@ reg:    Call(args)               { $cost[0].cost = $cost[2].cost + 5; } = {
             if ($0->IsComputed()) return;
             // $0->SetComputed(true);
 
-            int num_args = std::min(6, fstate->GetNumArgs());
+            int callee_args = $0->GetNumArgs();
+            int caller_args = fstate->GetNumArgs();
+            int reg_args = std::min(6, caller_args);
 
-            fstate->AddInst(new X86Inst("call-begin", true));
-
-            // Need to preserve caller_saved_regs
-            for (int i = 1; i < 1 + num_args; i++)
+            // Need to preserve caller_saved_regs, but we try to be economical (just save the ones we use)
+            for (int i = 1; i < 1 + reg_args; i++)
                 fstate->GeneratePushStmt(caller_saved_regs[i]);
+            fstate->AddInst(new X86Inst("call-begin", true));
 
             $action[2](fstate, 0);
 
-            std::stringstream ss;
-            ss << "call\t" << $0->GetFuncName();
-            std::string s = ss.str();
-            fstate->GenerateStmt(s.c_str());
+            // register push and pops will be handled in FunctionState::PrintAssembly
+            {
+                std::stringstream ss;
+                ss << "call\t" << $0->GetFuncName();
+                std::string s = ss.str();
+                fstate->GenerateStmt(s.c_str());
+            }
+            if (callee_args > 6)
+            {
+                std::stringstream ss;
+                ss << "addq\t$" << (callee_args - 6) * 8 << ",\t%rsp";
+                std::string s = ss.str();
+                fstate->GenerateStmt(s.c_str());
+            }
 
             fstate->CreatePhysicalReg($0, RAX);
             $0->UseAsPhysicalRegister();
 
+            fstate->AddInst(new X86Inst("call-end", true));
             // Need to restore caller_saved_regs
-            for (int i = num_args; i > 0; i--)
+            for (int i = reg_args; i > 0; i--)
                 fstate->GeneratePopStmt(caller_saved_regs[i]);
 
-            fstate->AddInst(new X86Inst("call-end", true));
         };
 args:   NOARGS                  { $cost[0].cost = 0;                  } = {
             // for args tree termination

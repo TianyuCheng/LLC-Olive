@@ -188,6 +188,8 @@ public:
     int GetLabelID() const { return label_id; }
     int GetFunctionID() const { return function_id; }
     int GetNumArgs() const { return num_args; }
+
+    int SimulateStack(std::ostream &out);
 private:
     // information about the function
     std::string function_name;
@@ -198,6 +200,8 @@ private:
     int num_args;
     int num_regs;
     int current_line;
+
+    bool simulation;
 
     // information about instruction and registers
     SimpleRegisterAllocator allocator;

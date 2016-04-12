@@ -24,6 +24,7 @@ Tree::~Tree() {
  * */
 void Tree::KidsAsArguments() {
     int n = GetNumKids();
+    num_args = n;
     if (n == 0) {
         // if no arg is provided, then terminate it
         AddChild(new Tree(NOARGS));

@@ -18,6 +18,26 @@ FunctionState::~FunctionState() {
     // for (auto operand : freeList)
     //     delete operand;
 }
+int FunctionState::SimulateStack(std::ostream &out) {
+    simulation = true;
+    int old_local_bytes = local_bytes;
+    // simulate spills to calculate total local bytes we need
+    for (X86Inst *inst : assembly) {
+        allocator.ResetNoSpills();          // reset registers that cannot be spilt
+        inst->ResolveRegs(this, out);
+
+        if (inst->IsCallBegin()) { allocator.DisableSpill(this, out); }
+        else if (inst->IsCallEnd()) { allocator.EnableSpill(this, out); }
+        current_line++;
+    }
+    int new_local_bytes = local_bytes;
+    // reset
+    local_bytes = old_local_bytes;
+    current_line = 0;
+    allocator.Reset();
+    simulation = false;
+    return new_local_bytes;
+}
 
 void FunctionState::PrintAssembly(std::ostream &out/*, RegisterAllocator &ra*/) {
 #if DEBUG
@@ -32,6 +52,7 @@ void FunctionState::PrintAssembly(std::ostream &out/*, RegisterAllocator &ra*/) 
     */
     // virtual2machine = ra.get_virtual2machine();
 
+    int new_local_bytes = SimulateStack(out);
     // print function entrance
     out << "\t.globl " << function_name << std::endl;
     out << "\t.type " << function_name  << ", @function"<< std::endl;
@@ -45,7 +66,7 @@ void FunctionState::PrintAssembly(std::ostream &out/*, RegisterAllocator &ra*/) 
         out << "\tpushq\t%" << registers[callee_saved_regs[i]] << "\t\t# push callee-saved reg" << std::endl;
 
     if (local_bytes - 4 * 8 > 0)
-        out << "\tsubq\t$" << (local_bytes - 4 * 8) << ",\t%rsp" << std::endl;
+        out << "\tsubq\t$" << (new_local_bytes - 4 * 8) << ",\t%rsp" << std::endl;
 
     std::vector<Register> regs;
 
@@ -107,6 +128,7 @@ void FunctionState::PrintAssembly(std::ostream &out/*, RegisterAllocator &ra*/) 
     for(auto it = locals.begin(); it != locals.end(); ++it ) {
         delete it->second;
     }
+    assert(local_bytes == new_local_bytes && "two simulations should have exactly the same result");
     current_line = 0;
 }
 
@@ -452,19 +474,23 @@ int  FunctionState::CreateSpill(std::ostream &out, int reg_idx) {
     local_bytes += 8;       // pre-assign space for register spill
     int offset = -local_bytes;
 
-    X86Operand *operand1 = GetLocalMemoryAddress(offset);
-    X86Operand operand2(this, reg_idx);
-    X86Inst inst("movq", operand1, &operand2);
-    out << inst << "\t# spill out reg " << registers[reg_idx] << " at OFFSET: " << offset << std::endl;
-    delete operand1;
+    if (!simulation) {
+        X86Operand *operand1 = GetLocalMemoryAddress(offset);
+        X86Operand operand2(this, reg_idx);
+        X86Inst inst("movq", operand1, &operand2);
+        out << inst << "\t# spill out reg " << registers[reg_idx] << " at OFFSET: " << offset << std::endl;
+        delete operand1;
+    }
     return -local_bytes;
 }
 
 void FunctionState::RestoreSpill(std::ostream &out, int reg_idx, int offset) {
-    // std::cerr << "restore physical reg: " << reg_idx << " from offset: " << offset << std::endl;
-    X86Operand operand1(this, reg_idx);
-    X86Operand *operand2 = GetLocalMemoryAddress(offset);
-    X86Inst inst("movq", &operand1, operand2);
-    out << inst << "\t# restore spilled reg " << registers[reg_idx] << " at OFFSET: " << offset << std::endl;
-    delete operand2;
+    if (!simulation) {
+        // std::cerr << "restore physical reg: " << reg_idx << " from offset: " << offset << std::endl;
+        X86Operand operand1(this, reg_idx);
+        X86Operand *operand2 = GetLocalMemoryAddress(offset);
+        X86Inst inst("movq", &operand1, operand2);
+        out << inst << "\t# restore spilled reg " << registers[reg_idx] << " at OFFSET: " << offset << std::endl;
+        delete operand2;
+    }
 }
