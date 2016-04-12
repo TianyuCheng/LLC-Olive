@@ -89,6 +89,9 @@ int SimpleRegisterAllocator::GetFreeReg(std::ostream &out, FunctionState *fstate
                     disabled_regs.end(), phy_reg) != disabled_regs.end())
             continue;
 
+        // registers used in current instruction is not spillable
+        if (!CanSpill(vir_reg)) continue;
+
         // if this physical register is not assigned to some virtual register
         if (vir_reg == -1) return phy_reg;
 

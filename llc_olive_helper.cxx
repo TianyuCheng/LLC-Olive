@@ -497,9 +497,6 @@ void MakeAssembly(Function &func, /*RegisterAllocator &ra,*/ std::ostream &out) 
         // replace the complicated/common tree expression with registers
         for (unsigned i = size; i < treeList.size(); i++) {
             Tree *t = treeList[i];
-            Instruction::getOpcodeName(t->GetOpCode());
-            t->GetLevel();
-            t->GetRefCount();
 #if VERBOSE > 2
             errs() << Instruction::getOpcodeName(t->GetOpCode()) << "\tLEVEL:\t" << t->GetLevel() << "\tRefCount:\t" << t->GetRefCount() << "\n";
             errs() << "NumOperands: " << t->GetNumKids() << "\n";
@@ -514,7 +511,8 @@ void MakeAssembly(Function &func, /*RegisterAllocator &ra,*/ std::ostream &out) 
                 for (unsigned i = 0; i < phiList.size(); i++) {
                     Tree *t = phiList[i];
                     // t->DisplayTree();
-                    // if (t->GetOpCode() == REG) t->GetTreeRef();
+                    // if (t->GetOpCode() == REG) t->GetTreeRef(); // for REG trees, we need to manually add 
+
                     fstate.AddInst(new X86Inst("#-------- PHI ---------#"));
                     gen(t, &fstate);        // generate each phi instruction
                     fstate.RecordLiveness(t);
@@ -705,6 +703,7 @@ int main(int argc, char *argv[])
 
     // data segment
     assemblyOut << "\t.data" << std::endl;
+    assert(module.get() && "module must exist");
     MakeGlobalVariable(module.get(), assemblyOut);
 
     // text segment

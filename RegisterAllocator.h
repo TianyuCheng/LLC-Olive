@@ -117,7 +117,13 @@ public:
         return it->second >= 0;
     }
 
-    void ResetNoSpills() { nospills.clear(); nospills.resize(0); }
+    void ResetNoSpills() { 
+#if DEBUG
+    std::cerr << "=========== RESET NO-SPILLS ===========" << std::endl;
+#endif
+        nospills.clear();
+        nospills.resize(0);
+    }
     bool CanSpill(int vir_reg) {
         auto it = std::find(nospills.begin(), nospills.end(), vir_reg);
         return it == nospills.end();

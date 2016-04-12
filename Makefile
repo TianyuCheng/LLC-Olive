@@ -7,7 +7,7 @@ OPT			:=$(BIN_ROOT)/opt
 OLIVE		:=./olive/olive
 EXE			:=$(BIN_ROOT)/llc-olive
 
-NUM_REGS  	:= 3
+NUM_REGS  	:= 6
 # colorful terminal output
 RED  =`tput setaf 1`
 GREEN=`tput setaf 2`
@@ -35,13 +35,13 @@ llc_olive.cpp: llc_olive.brg
 test: $(EXE) $(bitcodes) $(targets)
 
 %.s: %.bc
-	@$(EXE) --num_regs=$(NUM_REGS) $< -o $@
+	@$(EXE) --num_regs=$(NUM_REGS) $< -o $@ > $@.log
 
 %.bc: %.c
-	@$(CC) -O0 -emit-llvm $< -S -c -o $@
-	@#$(CC) -O0 -emit-llvm $< -S -c -o $@.tmp
-	@#$(OPT) -mem2reg $@.tmp -S -o $@
-	@#rm -rf $@.tmp
+	@#$(CC) -O0 -emit-llvm $< -S -c -o $@
+	@$(CC) -O0 -emit-llvm $< -S -c -o $@.tmp
+	@$(OPT) -mem2reg $@.tmp -S -o $@
+	@rm -rf $@.tmp
 
 clean:
 	@rm -rf $(EXE)
@@ -60,4 +60,4 @@ stampede: clean tar
 	@ssh tcheng@stampede.tacc.utexas.edu 'cd /work/03741/tcheng/llvm/tools/; rm -rf llc-olive; tar xvf ./assignment6.tar.gz; cd llc-olive; make clean test'
 
 .PHONY: opt compile tar test run push clean stampede
-.PRECIOUS: %.bc %.s
+.PRECIOUS: %.bc %.s %.log

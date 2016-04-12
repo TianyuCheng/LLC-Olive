@@ -51,9 +51,16 @@ mem:    MEM                 { $cost[0].cost = 10;                               
 mem:    GlobalValue         { $cost[0].cost = 1;                                } = { };
 label:  LABEL               { $cost[0].cost = 1;                                } = { };
 
-reg:    PHI(_)              { $cost[0].cost = 1;                                } = {
+reg:    PHI(imm)            { $cost[0].cost = 1;                                } = {
             // PHI is special because its register is pre-allocated
-            // ri should have already been computed
+            $action[2](fstate);
+            fstate->RecordLiveStart($0);     // start recording liveness for phi
+            fstate->GenerateMovStmt($0, $2);
+            fstate->RecordLiveness($2);
+        };
+reg:    PHI(reg)           { $cost[0].cost = 1;                                } = {
+            // PHI is special because its register is pre-allocated
+            // reg should have already been computed
             fstate->RecordLiveStart($0);     // start recording liveness for phi
             fstate->GenerateMovStmt($0, $2);
             fstate->RecordLiveness($2);
@@ -180,7 +187,7 @@ stmt:   Store(ri, ptr)      { $cost[0].cost = $cost[2].cost + $cost[3].cost;    
 
             if ($2->IsPointer()) {
                 // llvm::errs() << "Store ptr to ptr!\n";
-                // fstate->LoadEffectiveAddress($3, $2);
+                fstate->LoadEffectiveAddress($3, $2);
                 $2->SetX86Operand($3->AsX86Operand(fstate));
             }
             else {
@@ -750,7 +757,7 @@ args:   ARGS(value, args)        { $cost[0].cost = $cost[2].cost + $cost[3].cost
                 fstate->RecordLiveness($2);
             }
         };
-reg:    Trunc(reg)              { $cost[0].cost = $cost[2].cost + 3;              } = {
+reg:    Trunc(ri)              { $cost[0].cost = $cost[2].cost + 3;              } = {
             if ($0->IsComputed()) return;
             // $0->SetComputed(true);
 
@@ -759,7 +766,7 @@ reg:    Trunc(reg)              { $cost[0].cost = $cost[2].cost + 3;            
             fstate->GenerateMovStmt($0, $2);
             fstate->RecordLiveness($2);
         };
-reg:    SExt(reg)              { $cost[0].cost = $cost[2].cost + 3;              } = {
+reg:    SExt(ri)              { $cost[0].cost = $cost[2].cost + 3;              } = {
             if ($0->IsComputed()) return;
             // $0->SetComputed(true);
 
@@ -768,7 +775,7 @@ reg:    SExt(reg)              { $cost[0].cost = $cost[2].cost + 3;             
             fstate->GenerateMovStmt($0, $2);
             fstate->RecordLiveness($2);
         };
-reg:    ZExt(reg)              { $cost[0].cost = $cost[2].cost + 3;              } = {
+reg:    ZExt(ri)              { $cost[0].cost = $cost[2].cost + 3;              } = {
             if ($0->IsComputed()) return;
             // $0->SetComputed(true);
 
@@ -778,9 +785,6 @@ reg:    ZExt(reg)              { $cost[0].cost = $cost[2].cost + 3;             
             fstate->RecordLiveness($2);
         };
 reg:    BitCast(reg)            { $cost[0].cost = $cost[2].cost + 1; } = {
-            if ($0->IsComputed()) return;
-            // $0->SetComputed(true);
-
             // std::cerr << "=============BitCast REG REF " << $0->GetRefCount() << std::endl;
             $action[2](fstate);
             fstate->AssignVirtualReg($0, $2);    // assign a virtual register to the inst
@@ -788,9 +792,6 @@ reg:    BitCast(reg)            { $cost[0].cost = $cost[2].cost + 1; } = {
             $0->UseAsRegister();
         };
 reg:    BitCast(mem)            { $cost[0].cost = $cost[2].cost + 1; } = {
-            if ($0->IsComputed()) return;
-            // $0->SetComputed(true);
-
             // std::cerr << "-------------BitCast REG REF " << $0->GetRefCount() << std::endl;
             $action[2](fstate);
             fstate->CreateVirtualReg($0);    // assign a virtual register to the inst
@@ -798,9 +799,6 @@ reg:    BitCast(mem)            { $cost[0].cost = $cost[2].cost + 1; } = {
             $0->UseAsRegister();
         };
 ptr:    GetElementPtr(reg, _, imm)    { $cost[0].cost = $cost[2].cost + $cost[4].cost + 5; } = {
-            if ($0->IsComputed()) return;
-            // $0->SetComputed(true);
-
             // get size of array elements
             using namespace llvm;
             GetElementPtrInst *inst = dyn_cast<GetElementPtrInst>($1->GetInst());
@@ -810,8 +808,16 @@ ptr:    GetElementPtr(reg, _, imm)    { $cost[0].cost = $cost[2].cost + $cost[4]
             $action[2](fstate);
             $action[4](fstate);
 
+            // handle the case when reg is ptr (which is represented in the same way as mem)
+            Tree *t1 = $2;
+            if ($2->IsPointer()) {
+                t1 = (new Tree(REG))->GetTreeRef();
+                fstate->CreateVirtualReg(t1);
+                fstate->LoadEffectiveAddress(t1, $2);
+            }
+
             X86Operand *ptr = new X86Operand(fstate, OP_TYPE::X86Mem,
-                $2->AsX86Operand(fstate),         // base
+                t1->AsX86Operand(fstate),         // base
                 0,
                 0,
                 size * $4->GetValue().val.i64s    // offset
@@ -825,9 +831,6 @@ ptr:    GetElementPtr(reg, _, imm)    { $cost[0].cost = $cost[2].cost + $cost[4]
             $0->UseAsPtr();
         };
 ptr:    GetElementPtr(reg, _, reg)    { $cost[0].cost = $cost[2].cost + $cost[4].cost + 5; } = {
-            if ($0->IsComputed()) return;
-            // $0->SetComputed(true);
-
             // get size of array elements
             using namespace llvm;
             GetElementPtrInst *inst = dyn_cast<GetElementPtrInst>($1->GetInst());
@@ -837,8 +840,16 @@ ptr:    GetElementPtr(reg, _, reg)    { $cost[0].cost = $cost[2].cost + $cost[4]
             $action[2](fstate);
             $action[4](fstate);
 
+            // handle the case when reg is ptr (which is represented in the same way as mem)
+            Tree *t1 = $2;
+            if ($2->IsPointer()) {
+                t1 = (new Tree(REG))->GetTreeRef();
+                fstate->CreateVirtualReg(t1);
+                fstate->LoadEffectiveAddress(t1, $2);
+            }
+
             X86Operand *ptr = new X86Operand(fstate, OP_TYPE::X86Mem,
-                $2->AsX86Operand(fstate),         // base
+                t1->AsX86Operand(fstate),         // base
                 $3->AsX86Operand(fstate),         // index
                 size,                             // element size
                 0
@@ -852,9 +863,6 @@ ptr:    GetElementPtr(reg, _, reg)    { $cost[0].cost = $cost[2].cost + $cost[4]
             $0->UseAsPtr();
         };
 ptr:    GetElementPtr(mem, _, imm)    { $cost[0].cost = $cost[2].cost + $cost[4].cost + 5; } = {
-            if ($0->IsComputed()) return;
-            // $0->SetComputed(true);
-
             // get size of array elements
             using namespace llvm;
             GetElementPtrInst *inst = dyn_cast<GetElementPtrInst>($1->GetInst());
@@ -884,9 +892,6 @@ ptr:    GetElementPtr(mem, _, imm)    { $cost[0].cost = $cost[2].cost + $cost[4]
             $0->UseAsPtr();
         };
 ptr:    GetElementPtr(mem, _, reg)    { $cost[0].cost = $cost[2].cost + $cost[4].cost + 5; } = {
-            if ($0->IsComputed()) return;
-            // $0->SetComputed(true);
-
             // get size of array elements
             using namespace llvm;
             GetElementPtrInst *inst = dyn_cast<GetElementPtrInst>($1->GetInst());
@@ -916,9 +921,6 @@ ptr:    GetElementPtr(mem, _, reg)    { $cost[0].cost = $cost[2].cost + $cost[4]
             $0->UseAsPtr();
         };
 ptr:    GetElementPtr(reg, imm, DUMMY)    { $cost[0].cost = $cost[2].cost + $cost[3].cost + 5; } = {
-            if ($0->IsComputed()) return;
-            // $0->SetComputed(true);
-
             // get size of array elements
             using namespace llvm;
             GetElementPtrInst *inst = dyn_cast<GetElementPtrInst>($1->GetInst());
@@ -928,8 +930,16 @@ ptr:    GetElementPtr(reg, imm, DUMMY)    { $cost[0].cost = $cost[2].cost + $cos
             $action[2](fstate);
             $action[3](fstate);
 
+            // handle the case when reg is ptr (which is represented in the same way as mem)
+            Tree *t1 = $2;
+            if ($2->IsPointer()) {
+                t1 = (new Tree(REG))->GetTreeRef();
+                fstate->CreateVirtualReg(t1);
+                fstate->LoadEffectiveAddress(t1, $2);
+            }
+
             X86Operand *ptr = new X86Operand(fstate, OP_TYPE::X86Mem,
-                $2->AsX86Operand(fstate),         // base
+                t1->AsX86Operand(fstate),         // base
                 0,
                 0,
                 size * $3->GetValue().val.i64s    // offset
@@ -943,9 +953,6 @@ ptr:    GetElementPtr(reg, imm, DUMMY)    { $cost[0].cost = $cost[2].cost + $cos
             $0->UseAsPtr();
         };
 ptr:    GetElementPtr(reg, reg, DUMMY)    { $cost[0].cost = $cost[2].cost + $cost[3].cost + 5; } = {
-            if ($0->IsComputed()) return;
-            // $0->SetComputed(true);
-
             // get size of array elements
             using namespace llvm;
             GetElementPtrInst *inst = dyn_cast<GetElementPtrInst>($1->GetInst());
@@ -955,8 +962,16 @@ ptr:    GetElementPtr(reg, reg, DUMMY)    { $cost[0].cost = $cost[2].cost + $cos
             $action[2](fstate);
             $action[3](fstate);
 
+            // handle the case when reg is ptr (which is represented in the same way as mem)
+            Tree *t1 = $2;
+            if ($2->IsPointer()) {
+                t1 = (new Tree(REG))->GetTreeRef();
+                fstate->CreateVirtualReg(t1);
+                fstate->LoadEffectiveAddress(t1, $2);
+            }
+
             X86Operand *ptr = new X86Operand(fstate, OP_TYPE::X86Mem,
-                $2->AsX86Operand(fstate),         // base
+                t1->AsX86Operand(fstate),         // base
                 $3->AsX86Operand(fstate),         // index
                 size,                             // element size
                 0

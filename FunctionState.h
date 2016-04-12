@@ -153,7 +153,7 @@ public:
             }
             treeList.push_back(t);
             // llvm::errs() << "PHI-REG refcnt: " << phi_reg->GetRefCount() << "\n";
-            // RecordLiveStart(phi_reg->GetTreeRef());
+            // RecordLiveStart(phi_reg);
             // llvm::errs() << "------------------------ PHI END ------------------------\n";
         }
     }

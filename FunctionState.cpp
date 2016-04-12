@@ -15,8 +15,8 @@ FunctionState::~FunctionState() {
         delete inst;
     for (auto it = labelMap.begin(); it != labelMap.end(); ++it)
         delete it->second;
-    for (auto operand : freeList)
-        delete operand;
+    // for (auto operand : freeList)
+    //     delete operand;
 }
 
 void FunctionState::PrintAssembly(std::ostream &out/*, RegisterAllocator &ra*/) {
@@ -431,7 +431,7 @@ void FunctionState::RecordLiveStart(Tree *t) {
         t = t->GetParent();
         assert(t && "phinode must have its parent");
     }
-    if (!t->IsPhysicalReg() && (t->IsVirtualReg() && t->GetRefCount() > 0)) {
+    if (!t->IsPhysicalReg() && (t->IsVirtualReg()/* && t->GetRefCount() > 0*/)) {
 #if DEBUG
     if (t->IsVirtualReg())
         std::cerr << "Virtual REG start: " << t->GetValue().AsVirtualReg() << "\tRefCnt: " << t->GetRefCount() 
