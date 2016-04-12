@@ -455,7 +455,7 @@ int  FunctionState::CreateSpill(std::ostream &out, int reg_idx) {
     X86Operand *operand1 = GetLocalMemoryAddress(offset);
     X86Operand operand2(this, reg_idx);
     X86Inst inst("movq", operand1, &operand2);
-    out << inst << "\t# create spill reg at OFFSET: " << offset << std::endl;
+    out << inst << "\t# spill out reg " << registers[reg_idx] << " at OFFSET: " << offset << std::endl;
     delete operand1;
     return -local_bytes;
 }
@@ -465,6 +465,6 @@ void FunctionState::RestoreSpill(std::ostream &out, int reg_idx, int offset) {
     X86Operand operand1(this, reg_idx);
     X86Operand *operand2 = GetLocalMemoryAddress(offset);
     X86Inst inst("movq", &operand1, operand2);
-    out << inst << "\t# restore spill reg at OFFSET: " << offset << std::endl;
+    out << inst << "\t# restore spilled reg " << registers[reg_idx] << " at OFFSET: " << offset << std::endl;
     delete operand2;
 }
