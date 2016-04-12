@@ -7,7 +7,9 @@ OPT			:=$(BIN_ROOT)/opt
 OLIVE		:=./olive/olive
 EXE			:=$(BIN_ROOT)/llc-olive
 
+MEM2REG 	:= 0
 NUM_REGS  	:= 6
+
 # colorful terminal output
 RED  =`tput setaf 1`
 GREEN=`tput setaf 2`
@@ -25,9 +27,9 @@ tar:
 
 %: $(EXE) ./testcases/%.s
 	@echo -ne "${GREEN}[ ] TESTING $@ ... ${RESET}"
-	@$(CC) ./testcases/$@.s -o ./testcases/$@.actual > /tmp/$@.compile
+	@$(CC) ./testcases/$@.s -o ./testcases/$@.actual > /tmp/$@.compile	|| echo "fail to compile $@"
 	@$(CC) ./testcases/$@.bc -o ./testcases/$@.expected >/dev/null 2>/dev/null
-	@./test.sh $@
+	@./test.sh $@ || echo "segfault"
 
 llc_olive.cpp: llc_olive.brg
 	@$(OLIVE) $<
@@ -35,13 +37,16 @@ llc_olive.cpp: llc_olive.brg
 test: $(EXE) $(bitcodes) $(targets)
 
 %.s: %.bc
-	@$(EXE) --num_regs=$(NUM_REGS) $< -o $@ > $@.log
+	@$(EXE) --num_regs=$(NUM_REGS) $< -o $@	|| echo "segault"
 
 %.bc: %.c
-	@#$(CC) -O0 -emit-llvm $< -S -c -o $@
+ifeq (${MEM2REG}, 0)
+	@$(CC) -O0 -emit-llvm $< -S -c -o $@
+else
 	@$(CC) -O0 -emit-llvm $< -S -c -o $@.tmp
 	@$(OPT) -mem2reg $@.tmp -S -o $@
 	@rm -rf $@.tmp
+endif
 
 clean:
 	@rm -rf $(EXE)
@@ -60,4 +65,4 @@ stampede: clean tar
 	@ssh tcheng@stampede.tacc.utexas.edu 'cd /work/03741/tcheng/llvm/tools/; rm -rf llc-olive; tar xvf ./assignment6.tar.gz; cd llc-olive; make clean test'
 
 .PHONY: opt compile tar test run push clean stampede
-.PRECIOUS: %.bc %.s %.log
+.PRECIOUS: %.bc %.s

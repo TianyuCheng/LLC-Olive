@@ -26,6 +26,6 @@ long long recursive_args(
 
 int main()
 {
-    long long ret = recursive_args(2, 8, 7, 6, 5, 4, 3, 2, 1);
+    long long ret = recursive_args(9, 8, 7, 6, 5, 4, 3, 2, 1);
     return ret;
 }

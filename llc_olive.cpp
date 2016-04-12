@@ -550,52 +550,52 @@ int burm_line_numbers[] = {
   /* 21 */  68,
   /* 22 */  87,
   /* 23 */  125,
-  /* 24 */  139,
-  /* 25 */  151,
-  /* 26 */  163,
-  /* 27 */  180,
-  /* 28 */  202,
-  /* 29 */  220,
-  /* 30 */  240,
-  /* 31 */  254,
-  /* 32 */  271,
-  /* 33 */  288,
-  /* 34 */  305,
-  /* 35 */  319,
-  /* 36 */  336,
-  /* 37 */  353,
-  /* 38 */  371,
-  /* 39 */  385,
-  /* 40 */  402,
-  /* 41 */  419,
-  /* 42 */  437,
-  /* 43 */  451,
-  /* 44 */  468,
-  /* 45 */  487,
-  /* 46 */  501,
-  /* 47 */  518,
-  /* 48 */  537,
-  /* 49 */  563,
-  /* 50 */  589,
-  /* 51 */  590,
-  /* 52 */  604,
-  /* 53 */  617,
-  /* 54 */  630,
-  /* 55 */  643,
-  /* 56 */  704,
-  /* 57 */  732,
-  /* 58 */  735,
-  /* 59 */  759,
-  /* 60 */  768,
-  /* 61 */  777,
-  /* 62 */  786,
-  /* 63 */  793,
-  /* 64 */  800,
-  /* 65 */  832,
-  /* 66 */  864,
-  /* 67 */  893,
-  /* 68 */  922,
-  /* 69 */  954,
+  /* 24 */  140,
+  /* 25 */  152,
+  /* 26 */  164,
+  /* 27 */  181,
+  /* 28 */  203,
+  /* 29 */  221,
+  /* 30 */  241,
+  /* 31 */  255,
+  /* 32 */  272,
+  /* 33 */  290,
+  /* 34 */  308,
+  /* 35 */  322,
+  /* 36 */  339,
+  /* 37 */  357,
+  /* 38 */  375,
+  /* 39 */  389,
+  /* 40 */  406,
+  /* 41 */  424,
+  /* 42 */  443,
+  /* 43 */  457,
+  /* 44 */  474,
+  /* 45 */  493,
+  /* 46 */  507,
+  /* 47 */  524,
+  /* 48 */  543,
+  /* 49 */  569,
+  /* 50 */  595,
+  /* 51 */  596,
+  /* 52 */  610,
+  /* 53 */  624,
+  /* 54 */  638,
+  /* 55 */  651,
+  /* 56 */  712,
+  /* 57 */  740,
+  /* 58 */  743,
+  /* 59 */  767,
+  /* 60 */  776,
+  /* 61 */  785,
+  /* 62 */  794,
+  /* 63 */  802,
+  /* 64 */  809,
+  /* 65 */  841,
+  /* 66 */  873,
+  /* 67 */  902,
+  /* 68 */  931,
+  /* 69 */  963,
 };
 
 #pragma GCC diagnostic push
@@ -1852,7 +1852,8 @@ FUNCTION_STATE fstate)
              * X86 uses mov instruction, which takes two arguments
              */
             ri_action(_s->kids[0],fstate);
-            fstate->AssignVirtualReg(_s->node, _s->kids[0]->node);    // assign a virtual register to the inst
+            fstate->CreateVirtualReg(_s->node);      // assign a virtual register to the inst
+            fstate->GenerateMovStmt(_s->node, _s->kids[0]->node);
             // this will record the ending in liveness range for a register
             // if the input is a register, and the register dies
             fstate->RecordLiveness(_s->kids[0]->node);
@@ -1914,7 +1915,8 @@ FUNCTION_STATE fstate)
              */
             reg_action(_s->kids[0],fstate);
             rim_action(_s->kids[1],fstate);
-            fstate->AssignVirtualReg(_s->node, _s->kids[0]->node);    // assign a virtual register to the inst
+            fstate->CreateVirtualReg(_s->node);      // assign a virtual register to the inst
+            fstate->GenerateMovStmt(_s->node, _s->kids[0]->node);
             fstate->GenerateBinaryStmt("add", _s->node, _s->kids[1]->node);
             // this will record the ending in liveness range for a register
             // if the input is a register, and the register dies
@@ -1937,7 +1939,8 @@ FUNCTION_STATE fstate)
              */
             ri_action(_s->kids[0],fstate);
             reg_action(_s->kids[1],fstate);
-            fstate->AssignVirtualReg(_s->node, _s->kids[1]->node);    // assign a virtual register to the inst
+            fstate->CreateVirtualReg(_s->node);      // assign a virtual register to the inst
+            fstate->GenerateMovStmt(_s->node, _s->kids[1]->node);
             fstate->GenerateBinaryStmt("add", _s->node, _s->kids[0]->node);
             // this will record the ending in liveness range for a register
             // if the input is a register, and the register dies
@@ -1983,7 +1986,8 @@ FUNCTION_STATE fstate)
              */
             reg_action(_s->kids[0],fstate);
             rim_action(_s->kids[1],fstate);
-            fstate->AssignVirtualReg(_s->node, _s->kids[0]->node);    // assign a virtual register to the inst
+            fstate->CreateVirtualReg(_s->node);      // assign a virtual register to the inst
+            fstate->GenerateMovStmt(_s->node, _s->kids[0]->node);
             fstate->GenerateBinaryStmt("sub", _s->node, _s->kids[1]->node);
             // this will record the ending in liveness range for a register
             // if the input is a register, and the register dies
@@ -2053,7 +2057,8 @@ FUNCTION_STATE fstate)
              */
             reg_action(_s->kids[0],fstate);
             rim_action(_s->kids[1],fstate);
-            fstate->AssignVirtualReg(_s->node, _s->kids[0]->node);    // assign a virtual register to the inst
+            fstate->CreateVirtualReg(_s->node);      // assign a virtual register to the inst
+            fstate->GenerateMovStmt(_s->node, _s->kids[0]->node);
             fstate->GenerateBinaryStmt("imul", _s->node, _s->kids[1]->node);
             // this will record the ending in liveness range for a register
             // if the input is a register, and the register dies
@@ -2077,7 +2082,8 @@ FUNCTION_STATE fstate)
             ri_action(_s->kids[0],fstate);
             reg_action(_s->kids[1],fstate);
             // std::cerr << "IS REG A PHYSICAL REG? " << _s->kids[1]->node->IsPhysicalReg() << std::endl;
-            fstate->AssignVirtualReg(_s->node, _s->kids[1]->node);    // assign a virtual register to the inst
+            fstate->CreateVirtualReg(_s->node);      // assign a virtual register to the inst
+            fstate->GenerateMovStmt(_s->node, _s->kids[1]->node);
             fstate->GenerateBinaryStmt("imul", _s->node, _s->kids[0]->node);
             // this will record the ending in liveness range for a register
             // if the input is a register, and the register dies
@@ -2332,7 +2338,8 @@ FUNCTION_STATE fstate)
 
             // std::cerr << "=============BitCast REG REF " << _s->node->GetRefCount() << std::endl;
             reg_action(_s->kids[0],fstate);
-            fstate->AssignVirtualReg(_s->node, _s->kids[0]->node);    // assign a virtual register to the inst
+            fstate->CreateVirtualReg(_s->node);      // assign a virtual register to the inst
+            fstate->GenerateMovStmt(_s->node, _s->kids[0]->node);
             fstate->RecordLiveness(_s->kids[0]->node);
             _s->node->UseAsRegister();
         
@@ -2831,7 +2838,8 @@ FUNCTION_STATE fstate)
 
             reg_action(_s->kids[0],fstate);
             imm_action(_s->kids[1],fstate);
-            fstate->AssignVirtualReg(_s->node, _s->kids[0]->node);    // assign a virtual register to the inst
+            fstate->CreateVirtualReg(_s->node);      // assign a virtual register to the inst
+            fstate->GenerateMovStmt(_s->node, _s->kids[0]->node);
             fstate->GenerateBinaryStmt("cmp ", _s->node, _s->kids[1]->node);
             // this will record the ending in liveness range for a register
             // if the input is a register, and the register dies
@@ -2850,7 +2858,8 @@ FUNCTION_STATE fstate)
 
             reg_action(_s->kids[0],fstate);
             reg_action(_s->kids[1],fstate);
-            fstate->AssignVirtualReg(_s->node, _s->kids[0]->node);    // assign a virtual register to the inst
+            fstate->CreateVirtualReg(_s->node);      // assign a virtual register to the inst
+            fstate->GenerateMovStmt(_s->node, _s->kids[0]->node);
             fstate->GenerateBinaryStmt("cmp ", _s->node, _s->kids[1]->node);
             // this will record the ending in liveness range for a register
             // if the input is a register, and the register dies

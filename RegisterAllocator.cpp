@@ -116,50 +116,12 @@ int SimpleRegisterAllocator::GetFreeReg(std::ostream &out, FunctionState *fstate
 }
 
 void SimpleRegisterAllocator::EnableSpill(FunctionState *fstate, std::ostream &out) { 
-#if 0
-    out << "\t#== Starting Popping Regs" << std::endl;
-    for (auto phy_reg : function_save_regs) {
-        int vir_reg = register_status[phy_reg];
-        int offset = virtual2machine[vir_reg];
-        int free_reg_idx = phy_reg;
-        fstate->RestoreSpill(out, free_reg_idx, offset);
-        // double mapping
-        virtual2machine[vir_reg] = free_reg_idx;
-        register_status[free_reg_idx] = vir_reg;
-    }
-    if (function_save_regs.size() > 0)
-        out << "\taddq\t%rsp,\t" << (8 * function_save_regs.size()) << std::endl;
-
-    out << "\t#== Starting Enabling Spills" << std::endl;
-#endif
     spillable--;
 }
 void SimpleRegisterAllocator::DisableSpill(FunctionState *fstate, std::ostream &out) { 
-#if 0
-    function_save_regs.clear();
-
-    out << "\t#== Starting Pushing Regs" << std::endl;
-    for (int i = 1; i <= std::min(6, fstate->GetNumArgs()); i++) {
-        Register reg = caller_saved_regs[i];
-        function_save_regs.push_back(reg);
-    }
-    if (RegisterInUse(R10)) function_save_regs.push_back(R10);
-    if (RegisterInUse(R11)) function_save_regs.push_back(R11);
-
-    // push registers
-    for (auto phy_reg : function_save_regs) {
-        int vir_reg = register_status[phy_reg];
-        virtual2machine[vir_reg] = fstate->CreateSpill(out, phy_reg);
-        // register_status[phy_reg] = -2;
-    }
-
-    out << "\t#== Starting Disabling Spills" << std::endl;
-#endif
     spillable++;
     function_save_regs.clear();
 }
-
-
 
 int maxIndexVector (std::vector<int>& vec) {
     int max_elem = -1, max_index = 0;
